@@ -3,11 +3,11 @@ from nsl import types
 class Node:
     def _GetChildFields (self):
         return []
-    
+
     def Clone(self):
         import copy
         return copy.deepcopy(self)
-    
+
     def Traverse(self, visitor, ctx=None):
         '''Traverse all child members in the tree. A child member can be a
         dictionary (also OrderedDict), a list, a set or the child node itself.'''
@@ -38,7 +38,7 @@ class Program (Node):
 
     def _GetChildFields (self):
         return ['variables', 'functions', 'types']
-    
+
     def AddDeclaration (self, variable):
         self.variables.append (variable)
 
@@ -47,7 +47,7 @@ class Program (Node):
 
     def GetTypes(self):
         return self.types.values ()
-    
+
     def GetFunctions(self):
         return self.functions
 
@@ -56,14 +56,14 @@ class Program (Node):
 
     def AddType (self, decl):
         self.types [decl.GetName ()] = decl
-        
-class Expression(Node):    
+
+class Expression(Node):
     def __init__(self, children=[]):
         self.children = children
-        
+
     def _GetChildFields(self):
         return ['children']
-        
+
     def __iter__(self):
         return self.children.__iter__()
 
@@ -79,7 +79,7 @@ class CastExpression(UnaryExpression):
         Expression.__init__(self, [expr])
         self.type = targetType
         self.implicit = implicit
-        
+
     def GetTargetType (self):
         return self.type
 
@@ -90,19 +90,19 @@ class CallExpression(UnaryExpression):
         Expression.__init__(self, expressions)
         self.function = function
         self.expressions = expressions
-                
+
     def __str__(self):
         r = self.function.GetName () + ' ('
         r += ', '.join(['{0}'.format(str(expr)) for expr in self.expressions])
         return r + ')'
-    
+
     def GetArguments(self):
         return self.expressions
-    
+
     def ResolveType(self, scope):
-        self.function = types.ResolveFunction(self.function, 
+        self.function = types.ResolveFunction(self.function,
                                               scope, [expr.type for expr in self.expressions])
-    
+
 class VariableAccessExpression(UnaryExpression):
     pass
 
@@ -113,7 +113,7 @@ class ArrayExpression(VariableAccessExpression):
         Expression.__init__(self, [expression])
         self.id = id
         self.expression = expression
-        
+
     def GetParent(self):
         return self.id
 
@@ -121,22 +121,22 @@ class ArrayExpression(VariableAccessExpression):
         return str(self.id) + ' [' + str(self.expression) + ']'
 
 class MemberAccessExpression(VariableAccessExpression):
-    '''Expression of the form 'id.member', where id can be a 
+    '''Expression of the form 'id.member', where id can be a
     access nested expression itself.'''
     def __init__(self, id, member):
         Expression.__init__(self)
         self.id = id
         self.member = member
-        
+
     def GetMember(self):
         return self.member
-        
+
     def GetParent(self):
         return self.id
-        
+
     def __str__(self):
         return str(self.id) + '.' + str(self.member)
-        
+
 class Operation:
     ASSIGN = 1
     ADD = 102
@@ -144,10 +144,10 @@ class Operation:
     MUL = 104
     DIV = 105
     MOD = 106
-    
+
     UA_ADD = 120,
     UA_SUB = 121,
-    
+
     CMP_GT = 200
     CMP_LT = 201
     CMP_LE = 202
@@ -161,33 +161,33 @@ class Operation:
     BIT_AND = 401
     BIT_XOR = 402
     BIT_NOT = 403
-    
+
 def IsComparison(op):
     return op > 200 and op < 210
-    
+
 _op_str_map = {
     '='   : Operation.ASSIGN,
-    
+
     '+'   : Operation.ADD,
     '-'   : Operation.SUB,
     '/'   : Operation.DIV,
     '*'   : Operation.MUL,
     '%'   : Operation.MOD,
-    
+
     '++'  : Operation.UA_ADD,
     '--'  : Operation.UA_SUB,
-    
+
     '&&'  : Operation.LG_AND,
     '||'  : Operation.LG_OR,
     '!'   : Operation.LG_NOT,
-    
+
     '>'   : Operation.CMP_GT,
     '<'   : Operation.CMP_LT,
     '>='  : Operation.CMP_GE,
     '<='  : Operation.CMP_LE,
     '=='  : Operation.CMP_EQ,
     '!='  : Operation.CMP_NE,
-    
+
     '|'   : Operation.BIT_OR,
     '&'   : Operation.BIT_AND,
     '~'   : Operation.BIT_NOT,
@@ -195,45 +195,45 @@ _op_str_map = {
 }
 
 _str_op_map = {v : k for (k, v) in _op_str_map.items ()}
-    
+
 def StrToOp(op):
     assert op in _op_str_map, "Unknown operation: '{}".format (op)
     return _op_str_map [op]
-    
+
 def OpToStr(s):
     assert s in _str_op_map, "Unknown operation ID: '{}'".format (s)
     return _str_op_map [s]
-    
+
 class BinaryExpression(Expression):
     def __init__(self, op, left, right):
         Expression.__init__(self, [left, right])
         self.op = op
         self.left = left
         self.right = right
-        
+
     def GetLeft(self):
         return self.left
-    
+
     def GetRight(self):
         return self.right
-    
+
     def GetOperation(self):
         return self.op
-        
+
     def __str__(self):
         r = ''
         if (isinstance (self.left, BinaryExpression)):
             r += '(' + str (self.left) + ')'
         else:
             r += str (self.left)
-        
+
         r += ' ' + OpToStr(self.op) +  ' '
-        
+
         if (isinstance (self.right, BinaryExpression)):
             r += '(' + str (self.right) + ')'
         else:
             r += str (self.right)
-            
+
         return r
 class AssignmentExpression(BinaryExpression):
     def __init__(self, left, right):
@@ -249,13 +249,13 @@ class AffixExpression(UnaryExpression):
         self.op = op
         self.expr = expr
         self.affix = affix
-        
+
     def IsPostfix (self):
         return self.affix == Affix.POST
-    
+
     def IsPrefix (self):
         return self.affix == Affix.PRE
-        
+
     def GetOperation (self):
         return self.op
 
@@ -264,10 +264,13 @@ class LiteralExpression(UnaryExpression):
         Expression.__init__(self)
         self.value = value
         self.type = type
-        
+
+    def GetValue(self):
+        return self.value
+
     def __str__(self):
         return str (self.value)
-        
+
 class PrimaryExpression(UnaryExpression):
     def __init__(self, identifier):
         Expression.__init__(self)
@@ -283,39 +286,39 @@ class InvalidStructureDefinition(Exception):
     def __init__(self, structName, memberName):
         self.structName = structName
         self.memberName = memberName
-        
+
 class StructureDefinition(Node):
     def __init__(self, name, elements = list()):
         self.name = name
         self.elements = elements
-        
+
         # Check that all element names are unique
         elementNames = set()
         for e in elements:
             if e.GetName () in elementNames:
                 raise InvalidStructureDefinition()
             elementNames.add (e.GetName ())
-        
+
     def _GetChildFields(self):
         return ['elements']
-        
+
     def GetName(self):
         return self.name
-    
+
     def GetElements (self):
         return self.elements
-    
+
 class InterfaceDefinition(Node):
     def __init__(self, name, functions = list ()):
         self.name = name
         self.functions = functions
-        
+
     def _GetChildFields (self):
         return ['functions']
-    
+
     def GetFunctions (self):
         return self.functions
-    
+
     def GetName (self):
         return self.name
 
@@ -323,7 +326,7 @@ class Semantic:
     def __init__(self, semantic, slot = None):
         self.semantic = semantic
         self.slot = slot
-        
+
     def GetName(self):
         return self.semantic
 
@@ -332,57 +335,57 @@ class Semantic:
             return self.slot
         else:
             return default
-        
+
     def __str__ (self):
         if self.slot is not None:
             return '{}[{}]'.format (self.semantic, self.slot)
         else:
             return self.semantic
-        
+
     def __repr__(self):
         return 'Semantic ({}, {})'.format (repr(self.semantic), repr (self.slot))
 
 class VariableDeclaration(Node):
-    def __init__(self, type, symbol,
+    def __init__(self, elementType, symbol,
                  semantic = None,
                  initExpression = None,
                  arraySize = None):
         self.symbol = symbol
         self.semantic = semantic
         self.initExpression = initExpression
-        self.arraySize = arraySize
-        self.type = type
-        
+
+        if arraySize is not None:
+            self.type = types.ArrayType (elementType, arraySize)
+        else:
+            self.type = elementType
+
     def ResolveType(self, scope):
         self.type = types.Resolve(self.type, scope)
-        
+
         if self.HasSemantic():
             self.type.SetSemantic (self.semantic)
-            
+
         return self.type
-    
+
     def _GetChildFields(self):
         return ['initExpression']
-                
+
     def GetType(self):
         assert not isinstance (self.type, types.UnresolvedType)
-        if self.arraySize is not None:
-            return type.ArrayType (type, self.arraySize)
-        else:
-            return self.type
-        
+        return self.type
+
     def GetName(self):
         return self.symbol
-    
+
     def HasSemantic(self):
         return self.semantic is not None
-    
+
     def GetSemantic(self):
         return self.semantic
-    
+
     def HasInitializerExpression(self):
         return self.initExpression is not None
-    
+
     def GetInitializerExpression(self):
         return self.initExpression
 
@@ -397,20 +400,20 @@ class Argument(Node):
         self.type = type
         self.name = name
         self.modifiers = modifiers
-        
+
     def ResolveType(self, scope):
         self.type = types.Resolve(self.type, scope)
         return self.type
-    
+
     def GetType(self):
         return self.type
-    
+
     def GetName(self):
         return self.name
-    
+
     def HasName (self):
         return self.name is not None
-    
+
     def __str__(self):
         if self.name is not None:
             return '{} {}'.format (self.type.GetName (), self.name)
@@ -418,7 +421,7 @@ class Argument(Node):
             return '{} <unnamed>'.format (self.type.GetName ())
 
 class Function(Node):
-    def __init__(self, name, arguments = list (), 
+    def __init__(self, name, arguments = list (),
                  returnType = types.Void (), body = None,
                  isForwardDeclaration = False):
         self.name = name
@@ -426,33 +429,33 @@ class Function(Node):
         self.type = types.Function (name, returnType, arguments)
         self.arguments = arguments
         self.isForwardDeclaration = isForwardDeclaration
-        
+
     def ResolveType(self, scope):
         for arg in self.arguments:
             arg.ResolveType (scope)
-        
+
     def _GetChildFields(self):
         return ['arguments', 'body']
-        
+
     def GetName(self):
         return self.name
-    
+
     def GetType(self):
         return self.type
-    
+
     def GetArguments(self):
         return self.arguments
-    
+
     def GetBody(self):
         return self.body
-    
+
 class ShaderType:
     VERTEX      = 0
     HULL        = 1
     DOMAIN      = 2
     GEOMETRY    = 3
     PIXEL       = 4
-    
+
 def ShaderTypeToString(st):
     if st == ShaderType.VERTEX:
         return 'vertex'
@@ -476,9 +479,9 @@ def StringToShaderType(s):
         return ShaderType.HULL
     elif s == 'domain':
         return ShaderType.DOMAIN
-            
+
 class Shader(Function):
-    '''Shaders are a subclass of functions. The function name is 
+    '''Shaders are a subclass of functions. The function name is
     autogenerated from the shader type.'''
     def __init__(self, type, returnType, arguments = list (),
                  body = None):
@@ -495,10 +498,10 @@ class Shader(Function):
             self.name = 'GS_main'
 
         Function.__init__(self, self.name, arguments, returnType, body)
-        
+
     def GetShaderType(self):
         return self.shaderType
-            
+
 class Statement(Node):
     pass
 
@@ -508,177 +511,177 @@ class FlowStatement(Statement):
 class EmptyStatement(Statement):
     def Accept(self, visitor, ctx=None):
         pass
-        
+
 class ExpressionStatement(Statement):
     def __init__(self, expr):
         self.expression = expr
-        
+
     def _GetChildFields(self):
         return ['expression']
-                
+
     def GetExpression(self):
         return self.expression
-        
+
 class CompoundStatement(Statement):
     '''Compound statement consisting of zero or more statements.
     Compound statements also create a new visibility block.'''
     def __init__(self, stmts):
         self.statements = stmts
-        
+
     def GetStatements(self):
         return self.statements
-    
+
     def _GetChildFields(self):
         return ['statements']
-    
+
     def __len__(self):
         return len(self.statements)
-        
+
     def __iter__(self):
         '''Iterate over the statements.'''
         return self.statements.__iter__()
-            
+
 class ReturnStatement(FlowStatement):
     def __init__(self, expression):
         self.expression = expression
-        
+
     def _GetChildFields(self):
         return ['expression']
-        
+
     def GetExpression(self):
         return self.expression
-        
+
 class DeclarationStatement(Statement):
     def __init__(self, variableDeclarations):
         self.declarations = variableDeclarations
-    
+
     def GetDeclarations(self):
         return self.declarations
-    
+
     def _GetChildFields(self):
         return ['declarations']
-        
+
 class IfStatement(FlowStatement):
     def __init__(self, cond, true_path, else_path=None):
         self.cond = cond
         self.true_path = true_path
         self.else_path = else_path
-        
+
     def _GetChildFields(self):
         return ['cond', 'true_path', 'else_path']
-        
+
     def GetCondition(self):
         return self.cond
-    
+
     def GetTruePath(self):
         return self.true_path
-    
+
     def GetElsePath(self):
         return self.else_path
-    
+
     def HasElsePath(self):
         return self.else_path is not None
-        
+
 class ContinueStatement(FlowStatement):
     def __init__(self):
         pass
-    
+
 class BreakStatement(FlowStatement):
     def __init__(self):
         pass
-    
+
 class ForStatement(FlowStatement):
     def __init__(self, init, cond, next, body):
         self.init = init
         self.cond = cond
         self.next = next
         self.body = body
-    
+
     def _GetField(self):
         return ['init', 'next', 'body']
-    
+
     def GetBody (self):
         return self.body
-    
+
     def GetInitialization (self):
         return self.init
-    
+
     def GetCondition(self):
         return self.cond
-    
+
     def GetNext (self):
         return self.next
-    
+
 class DoStatement(FlowStatement):
     def __init__(self, cond, body):
         self.cond = cond
         self.body = body
-        
-    def _GetChildFields(self):
-        return ['body', 'cond']
-        
-    def GetCondition(self):
-        return self.body
-    
-    def GetBody (self):
-        return self.body
-    
-class WhileStatement(FlowStatement):
-    def __init__(self, cond, body):
-        self.cond = cond
-        self.body = body
-        
+
     def _GetChildFields(self):
         return ['body', 'cond']
 
     def GetCondition(self):
         return self.body
-    
+
     def GetBody (self):
         return self.body
-     
+
+class WhileStatement(FlowStatement):
+    def __init__(self, cond, body):
+        self.cond = cond
+        self.body = body
+
+    def _GetChildFields(self):
+        return ['body', 'cond']
+
+    def GetCondition(self):
+        return self.body
+
+    def GetBody (self):
+        return self.body
+
 class Visitor:
     def SetErrorHandler (self, errorHandler):
         self.errorHandler = errorHandler
-    
+
     def v_Generic (self, obj, ctx=None):
         fname = 'v_{}'.format (obj.__class__.__name__)
-        
+
         if hasattr(self, fname):
             func = getattr (self, fname)
             return func (obj, ctx)
         else:
             return self.v_Default (obj, ctx)
-    
+
     def v_Default(self, obj, ctx):
-        print ('Missing visit method: "{}.v_{}"'.format (self.__class__.__name__, 
+        print ('Missing visit method: "{}.v_{}"'.format (self.__class__.__name__,
                                                   obj.__class__.__name__))
         return None
-        
+
     def GetContext (self):
         return None
-    
+
     def v_Visit (self, obj, ctx=None):
         return self.v_Generic (obj, ctx)
-    
+
     def Visit(self, root):
         self.v_Generic (root, self.GetContext ())
-        
-class DefaultVisitor(Visitor):           
+
+class DefaultVisitor(Visitor):
     def v_Default(self, obj, ctx=None):
         '''Traverse further if possible.'''
         if hasattr (obj, 'Traverse'):
             obj.Traverse (self, ctx)
-        
+
 class DebugVisitor(Visitor):
     def GetContext (self):
         return 0
-    
+
     def v_Generic(self, obj, ctx=None):
         Visitor.v_Generic (self, obj, ctx)
         if hasattr (obj, 'Traverse'):
             obj.Traverse (self, ctx + 1)
-        
+
     def v_Default(self, obj, ctx):
         print (' '*ctx*2, obj.__class__.__name__,)
         print (' '*(ctx*2 + 4), str (obj))

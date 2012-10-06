@@ -1,19 +1,19 @@
 from collections import OrderedDict
-from nsl import ast, types
+from nsl import ast, types, Errors
 
 def ParseSwizzleMask(mask):
     '''Parse a swizzle mask into a list of element indices, starting
     at 0.
     '''
-    from .. import Utility, Errors
+    from .. import Utility
     # TODO: Check that a swizzle mask only contains xyzw or rgba
     if (Utility.ContainsAnyOf(mask, 'xyzw')):
         if (Utility.ContainsAnyOf (mask, 'rgba')):
-            raise Errors.ERROR_MIXED_SWIZZLE_MASK.Raise ()
+            Errors.ERROR_MIXED_SWIZZLE_MASK.Raise ()
     elif (Utility.ContainsAnyOf(mask, 'rgba')):
         if (Utility.ContainsAnyOf (mask, 'xyzw')):
-            raise Errors.ERROR_MIXED_SWIZZLE_MASK.Raise ()
-    output = []
+            Errors.ERROR_MIXED_SWIZZLE_MASK.Raise ()
+
     mapping = { 'x' : 0,
      'y' : 1,
      'z' : 2,
@@ -21,25 +21,24 @@ def ParseSwizzleMask(mask):
      'r' : 0,
      'g' : 1,
      'b' : 2,
-     'a' : 3 
-     }
-    for e in mask:
-        output.append (mapping[e])
-    return output
-            
+     'a' : 3
+    }
+
+    return [mapping [e] for e in mask]
+
 def ComputeSwizzleType(inType, mask):
     '''Compute the resulting type of a swizzle operation.
     @param inType: Must be a PrimitiveType
     @param mask: A valid swizzle mask
     '''
     outComponentCount = len (mask)
-    
+
     type = None
     if isinstance (inType, types.VectorType):
         type = inType.GetType ()
     else:
         type = inType
-            
+
     if outComponentCount == 1:
         return type
     else:
@@ -48,15 +47,15 @@ def ComputeSwizzleType(inType, mask):
         if inType.HasSemantic ():
             result.SetSemantic(inType.GetSemantic ())
         return result
-    
+
 class ComputeTypeVisitor(ast.DefaultVisitor):
     def GetContext(self):
         return [self.scope]
-    
+
     def __init__(self):
         self.ok = True
         self.scope = types.Scope ()
-        
+
     def v_StructureDefinition(self, decl, ctx):
         scope = ctx[-1]
         elements = OrderedDict ()
@@ -64,23 +63,23 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
             # Resolve here allows for nested types
             elements [t.GetName ()] = types.Resolve (t.GetType (), scope)
         scope.RegisterVariable (decl.GetName (), types.StructType(decl.GetName (), elements))
-    
+
     def v_InterfaceDefinition (self, decl, ctx):
         scope = ctx[-1]
         functions = []
         for f in decl.GetFunctions ():
             # Resolve here allows for nested types
             functions.append (types.Resolve (f.GetType (), scope))
-        scope.RegisterVariable (decl.GetName (), 
+        scope.RegisterVariable (decl.GetName (),
                                 types.ClassType(decl.GetName (), dict(), functions))
 
-        
+
     def v_CompoundStatement(self, stmt, ctx):
         ctx.append (types.Scope (ctx[-1]))
         for s in stmt:
             self.v_Visit (s, ctx)
         ctx.pop()
-        
+
     def _ProcessExpression(self, expr, scope):
         assert isinstance(expr, ast.Expression), 'Expression {1} has type {0} which is not an expression type'.format(type(expr), expr)
         # We type-cast here so we can process access trees separately
@@ -94,15 +93,13 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
                         # We allow both swizzling of vector and scalar types
                         expr.type = ComputeSwizzleType(p.type, expr.GetMember ())
                     else:
-                        # TODO: Throw exception
-                        pass
+                        Errors.ERROR_CANNOT_SWIZZLE_PRIMITIVE_TYPE.Raise ()
                 elif isinstance (p.type, types.StructType):
                     expr.type = p.type.GetMembers ().GetVariableType (expr.GetMember ())
                 else:
-                    # TODO: Throw exception
-                    pass
+                    Errors.ERROR_CANNOT_SWIZZLE_TYPE.Raise (p.type)
             elif isinstance (expr, ast.ArrayExpression):
-                expr.type = p.GetType ()
+                expr.type = p.type.GetType ()
         elif isinstance(expr, ast.PrimaryExpression):
             # Simply check the name
             expr.type = scope.GetVariableType (expr.GetName ())
@@ -110,10 +107,10 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
             # Walk through all children
             for c in expr:
                 self._ProcessExpression(c, scope)
-            
+
             # during the walking up, we can compute the expression
             # type as well
-            
+
             if isinstance(expr, ast.CallExpression):
                 # As we know the parameter types now, we can finally resolve
                 # overloaded functions
@@ -122,16 +119,16 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
             elif isinstance (expr, ast.AssignmentExpression):
                 expr.type = expr.GetLeft ().type
             elif isinstance (expr, ast.BinaryExpression):
-                expr.type = types.GetCombinedType (expr, 
+                expr.type = types.GetCombinedType (expr,
                                              expr.GetLeft ().type,
                                              expr.GetRight ().type)
-        
+
     def v_IfStatement(self, stmt, ctx):
         self._ProcessExpression(stmt.GetCondition(), ctx[-1])
         self.v_Visit (stmt.GetTruePath(), ctx)
         if stmt.HasElsePath():
             self.v_Visit (stmt.GetElsePath (), ctx)
-            
+
     def v_DeclarationStatement(self, stmt, ctx):
         scope = ctx[-1]
         for decl in stmt.GetDeclarations():
@@ -140,13 +137,13 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
             if decl.HasInitializerExpression():
                 self._ProcessExpression(decl.GetInitializerExpression (),
                                         scope)
-    
+
     def v_ExpressionStatement(self, stmt, ctx):
         self._ProcessExpression(stmt.GetExpression(), ctx[-1])
-    
+
     def v_ReturnStatement(self, stmt, ctx):
         self._ProcessExpression(stmt.GetExpression(), ctx[-1])
-    
+
     def v_Function(self, func, ctx):
         '''Computes the function type and processes all statements.'''
         func.ResolveType (ctx [-1])
@@ -157,13 +154,13 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
         ctx.append (scope)
         for (name, type) in func.GetType ().GetArguments().items ():
             scope.RegisterVariable (name, type)
-            
+
         self.v_Visit (func.GetBody(), ctx)
         ctx.pop ()
-    
+
     def v_Shader(self, shd, ctx=None):
         self.v_Function(shd, ctx)
-            
+
     def v_Program(self, prog, ctx):
         # Must visit types first
         for type in prog.GetTypes ():
@@ -172,7 +169,7 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
             self.v_Visit (decl, ctx)
         for func in prog.GetFunctions ():
             self.v_Visit (func, ctx)
-        
+
     def v_Generic(self, node, ctx):
         ast.Visitor.v_Generic (self, node, ctx)
 
@@ -194,14 +191,14 @@ class ComputeTypesPass(nsl.Pass.Pass):
         else:
             stdlib = pickle.load(open ('stdlib.cache', 'rb'))
         self.visitor.scope = stdlib
-    
+
     def GetName (self):
         return 'compute-types'
-        
+
     def Process (self, ast, ctx=None):
         self.visitor.Visit (ast)
-        
+
         return self.visitor.ok
-        
+
 def GetPass():
     return ComputeTypesPass ()
