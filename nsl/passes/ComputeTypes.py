@@ -6,13 +6,6 @@ def ParseSwizzleMask(mask):
     at 0.
     '''
     from .. import Utility
-    # TODO: Check that a swizzle mask only contains xyzw or rgba
-    if (Utility.ContainsAnyOf(mask, 'xyzw')):
-        if (Utility.ContainsAnyOf (mask, 'rgba')):
-            Errors.ERROR_MIXED_SWIZZLE_MASK.Raise ()
-    elif (Utility.ContainsAnyOf(mask, 'rgba')):
-        if (Utility.ContainsAnyOf (mask, 'xyzw')):
-            Errors.ERROR_MIXED_SWIZZLE_MASK.Raise ()
 
     mapping = { 'x' : 0,
      'y' : 1,

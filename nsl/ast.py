@@ -23,10 +23,10 @@ class Node:
                     visitor.v_Generic (c, ctx)
             elif cn == 'dict' or cn == 'OrderedDict':
                 for c in e.values ():
-                    assert isinstance (c, Node), 'Node child must be of type Node'
+                    assert isinstance (c, Node), 'Node child must be of type Node but was of type {}'.format (c.__class__.__name__)
                     visitor.v_Generic (c, ctx)
             else:
-                assert isinstance (e, Node), 'Node child must be of type Node'
+                assert isinstance (e, Node), 'Node child must be of type Node but was of type {}'.format (e.__class__.__name__)
                 visitor.v_Generic (e, ctx)
 
 class Program (Node):
@@ -56,6 +56,10 @@ class Program (Node):
 
     def AddType (self, decl):
         self.types [decl.GetName ()] = decl
+
+    def __str__(self):
+        return '''Program ({0} variable(s), {1} function(s), {2} type(s))'''.format(
+            len(self.variables), len(self.functions), len(self.types))
 
 class Expression(Node):
     def __init__(self, children=[]):
@@ -321,7 +325,7 @@ class StructureDefinition(Node):
         return self.name
 
     def __str__(self):
-        return 'struct {0} ({1} fields)'.format (self.GetName (), len (self.elements))
+        return 'struct {0} ({1} field(s))'.format (self.GetName (), len (self.elements))
 
     def GetElements (self):
         return self.elements
@@ -531,6 +535,10 @@ class Shader(Function):
     def GetShaderType(self):
         return self.shaderType
 
+    def __str__(self):
+        return '''shader: '{0}' ({1} argument(s))'''.format(
+            ShaderTypeToString(self.shaderType), len(self.arguments))
+
 class Statement(Node):
     pass
 
@@ -551,6 +559,9 @@ class ExpressionStatement(Statement):
     def GetExpression(self):
         return self.expression
 
+    def __str__(self):
+        return 'Expression'
+
 class CompoundStatement(Statement):
     '''Compound statement consisting of zero or more statements.
     Compound statements also create a new visibility block.'''
@@ -570,6 +581,9 @@ class CompoundStatement(Statement):
         '''Iterate over the statements.'''
         return self.statements.__iter__()
 
+    def __str__(self):
+        return '{0} statement(s)'.format (len(self))
+
 class ReturnStatement(FlowStatement):
     def __init__(self, expression):
         self.expression = expression
@@ -580,6 +594,9 @@ class ReturnStatement(FlowStatement):
     def GetExpression(self):
         return self.expression
 
+    def __str__(self):
+        return 'return ' + str(self.expression)
+
 class DeclarationStatement(Statement):
     def __init__(self, variableDeclarations):
         self.declarations = variableDeclarations
@@ -589,6 +606,9 @@ class DeclarationStatement(Statement):
 
     def _GetChildFields(self):
         return ['declarations']
+
+    def __str__(self):
+        return '{0} declaration(s)'.format(len(self.declarations))
 
 class IfStatement(FlowStatement):
     def __init__(self, cond, true_path, else_path=None):
@@ -701,16 +721,3 @@ class DefaultVisitor(Visitor):
         '''Traverse further if possible.'''
         if hasattr (obj, 'Traverse'):
             obj.Traverse (self, ctx)
-
-class DebugVisitor(Visitor):
-    def GetContext (self):
-        return 0
-
-    def v_Generic(self, obj, ctx=None):
-        Visitor.v_Generic (self, obj, ctx)
-        if hasattr (obj, 'Traverse'):
-            obj.Traverse (self, ctx + 1)
-
-    def v_Default(self, obj, ctx):
-        print (' '*ctx*2, obj.__class__.__name__,)
-        print (' '*(ctx*2 + 4), str (obj))
