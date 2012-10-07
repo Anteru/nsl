@@ -304,6 +304,7 @@ class StructType(ComplexType):
         self.name = name
         for (name, type) in declarations.items ():
             self.members.RegisterVariable(name, type)
+        self.declarations = declarations
 
     def __str__(self):
         return 'struct {}'.format(self.name)
@@ -356,6 +357,10 @@ class Function(Type):
     def GetMangledName(self):
         return '@{}->{}`{}'.format (self.name, str(self.returnType),
                                     ','.join ([str(arg) for arg in self.arguments.values ()]))
+
+    def __str__(self):
+        return 'function {0} ({1}) -> {2}'.format (self.name,
+            ', '.join(self.arguments.keys ()), self.returnType)
 
     def __repr__(self):
         return 'Function (\'{}\', {}, [{}])'.format (self.name, repr(self.returnType),

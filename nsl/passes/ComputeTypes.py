@@ -116,6 +116,8 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
                                              expr.GetLeft ().type,
                                              expr.GetRight ().type)
 
+        return expr.type
+
     def v_IfStatement(self, stmt, ctx):
         self._ProcessExpression(stmt.GetCondition(), ctx[-1])
         self.v_Visit (stmt.GetTruePath(), ctx)
@@ -132,10 +134,10 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
                                         scope)
 
     def v_ExpressionStatement(self, stmt, ctx):
-        self._ProcessExpression(stmt.GetExpression(), ctx[-1])
+        self.type = self._ProcessExpression(stmt.GetExpression(), ctx[-1])
 
     def v_ReturnStatement(self, stmt, ctx):
-        self._ProcessExpression(stmt.GetExpression(), ctx[-1])
+        self.type = self._ProcessExpression(stmt.GetExpression(), ctx[-1])
 
     def v_Function(self, func, ctx):
         '''Computes the function type and processes all statements.'''
