@@ -153,7 +153,8 @@ class NslParser:
         '''unary_expression : constant_integer_expression
         | array_expression
         | member_access_expression
-        | function_call_expression'''
+        | function_call_expression
+        | construct_primitive_expression'''
         p[0] = p[1]
 
     def p_expression_opt_1(self, p):
@@ -420,6 +421,10 @@ class NslParser:
             | MATRIX3X3
             | MATRIX4X4'''
         p[0] = types.BuiltinTypeFactory(p[1])
+
+    def p_construct_primitive_expression(self, p):
+        '''construct_primitive_expression : primitive_type '(' expression_list ')' '''
+        p[0] = ast.ConstructPrimitiveExpression (p[1], p[3])
 
     def p_error(self, t):
         import sys

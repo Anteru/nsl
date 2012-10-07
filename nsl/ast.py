@@ -83,6 +83,21 @@ class CastExpression(UnaryExpression):
     def GetTargetType (self):
         return self.type
 
+class ConstructPrimitiveExpression(UnaryExpression):
+    '''Expression of the type primitive_type (expr, ...).'''
+    def __init__(self, targetType, expressions):
+        Expression.__init__(self, expressions)
+        self.type = targetType
+        self.expressions = expressions
+
+    def __str__(self):
+        r = self.type.GetName () + ' ('
+        r += ', '.join(['{0}'.format(str(expr)) for expr in self.expressions])
+        return r + ')'
+
+    def GetArguments(self):
+        return self.expressions
+
 class CallExpression(UnaryExpression):
     '''Expression of the type ID ([expr], ...). ID references
     an unresolved function type at first.'''
@@ -305,6 +320,9 @@ class StructureDefinition(Node):
     def GetName(self):
         return self.name
 
+    def __str__(self):
+        return 'struct {0} ({1} fields)'.format (self.GetName (), len (self.elements))
+
     def GetElements (self):
         return self.elements
 
@@ -369,6 +387,17 @@ class VariableDeclaration(Node):
 
     def _GetChildFields(self):
         return ['initExpression']
+
+    def __str__(self):
+        result = str(self.type) + ' ' + str(self.GetName ())
+
+        if (self.HasInitializerExpression ()):
+            result += '= ' + str(self.initExpression)
+
+        if (self.HasSemantic()):
+            result += ' : ' + str(self.semantic)
+
+        return result
 
     def GetType(self):
         assert not isinstance (self.type, types.UnresolvedType)

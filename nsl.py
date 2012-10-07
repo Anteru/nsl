@@ -3,10 +3,26 @@ from nsl.Compiler import Compiler
 c = Compiler ()
 
 c.Compile ('''
-struct VertexToFragment
+struct ApplicationToVertex
 {
-    float4 position      : POSITION;
-    float4 color         : COLOR;
+    float2 position : POSITION;
+    float4 color    : UV0;
+}
+
+struct VertexToPixel
+{
+    float4 position : POSITION;
+    float4 color    : UV0;
+}
+
+shader(vertex) (ApplicationToVertex app2vs) -> VertexToPixel
+{
+    VertexToPixel result;
+
+    result.position = float4 (app2vs.position.xy, 0, 1);
+    result.color = app2vs.color;
+
+    return result;
 }
 
 struct FragmentOutput
@@ -14,34 +30,10 @@ struct FragmentOutput
     float4 color : COLOR[0];
 }
 
-function foo (float2 a, float2 b) -> float2
+shader(pixel) (VertexToPixel vs2ps) -> FragmentOutput
 {
-    if (a.x > 1)
-    {
-        return dot (a, b);
-    }
-    else
-    {
-        return b;
-    }
-}
-
-__declaration function foo (float, float) -> float3;
-
-function foo (float2 a, float3) -> float2
-{
-    return a.xx;
-}
-
-function foo (int2 a) -> float2
-{
-    return a;
-}
-
-shader(pixel) (VertexToFragment vtf) -> FragmentOutput
-{
-    FragmentOutput PS_Out;
-    PS_Out.color.xy = foo (vtf.color.xy + (vtf.color.xx + vtf.color.yy));
-    PS_Out.color.zw = foo (vtf.color.zw);
+    FragmentOutput out;
+    out.color = vs2ps.color;
+    return out;
 }
 ''')
