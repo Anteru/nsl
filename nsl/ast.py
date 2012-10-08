@@ -1,4 +1,5 @@
 from nsl import types
+import collections.abc
 
 class Node:
     def _GetChildFields (self):
@@ -10,18 +11,18 @@ class Node:
 
     def Traverse(self, visitor, ctx=None):
         '''Traverse all child members in the tree. A child member can be a
-        dictionary (also OrderedDict), a list, a set or the child node itself.'''
+        dictionary, a list, a set or the child node itself.'''
         fields = self._GetChildFields()
         for field in fields:
             e = getattr (self, field)
             if e is None:
                 continue
             cn = e.__class__.__name__
-            if cn == 'list' or cn == 'set':
+            if isinstance(e, collections.abc.Sequence) or isinstance(e, collections.abc.Set):
                 for c in e:
                     assert isinstance (c, Node), 'Node child must be of type Node but was of type {}'.format (c.__class__.__name__)
                     visitor.v_Generic (c, ctx)
-            elif cn == 'dict' or cn == 'OrderedDict':
+            elif isinstance(e, collections.abc.Mapping):
                 for c in e.values ():
                     assert isinstance (c, Node), 'Node child must be of type Node but was of type {}'.format (c.__class__.__name__)
                     visitor.v_Generic (c, ctx)
