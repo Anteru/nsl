@@ -517,8 +517,4 @@ def BuiltinTypeFactory(typeName):
         'void'          : Void ()
     }
 
-    if typeName in typeDict:
-        return typeDict [typeName]
-    else:
-        assert False, 'Unknown built-in type requested'
-        return None
+    return typeDict [typeName]
