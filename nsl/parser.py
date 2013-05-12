@@ -141,9 +141,15 @@ class NslParser:
         # First two characters are 0x or 0X, so we have to skip them
         p[0] = ast.LiteralExpression(int(p[1][2:], 16), types.Integer())
 
+    def _ParseFloat (self, value):
+        if value.endswith ('f'):
+            return float(value[:-1])
+        else:
+            return float(value)
+
     def p_constant_float_expression(self, p):
         '''constant_float_expression : FLOAT_CONST'''
-        p[0] = ast.LiteralExpression(float(p[1]), types.Float ())
+        p[0] = ast.LiteralExpression(self._ParseFloat(p[1]), types.Float ())
 
     def p_unary_expression_1(self, p):
         '''unary_expression : ID'''
@@ -151,6 +157,7 @@ class NslParser:
 
     def p_unary_expression_2(self, p):
         '''unary_expression : constant_integer_expression
+        | constant_float_expression
         | array_expression
         | member_access_expression
         | function_call_expression
