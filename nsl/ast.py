@@ -511,30 +511,13 @@ class ShaderType:
     DOMAIN      = 2
     GEOMETRY    = 3
     PIXEL       = 4
+    COMPUTE     = 5
 
 def ShaderTypeToString(st):
-    if st == ShaderType.VERTEX:
-        return 'vertex'
-    elif st == ShaderType.PIXEL:
-        return 'pixel'
-    elif st == ShaderType.HULL:
-        return 'hull'
-    elif st == ShaderType.GEOMETRY:
-        return 'geometry'
-    elif st == ShaderType.DOMAIN:
-        return 'domain'
+    return ['vertex', 'hull', 'domain', 'geometry', 'pixel', 'compute'][st]
 
 def StringToShaderType(s):
-    if s == 'vertex':
-        return ShaderType.VERTEX
-    elif s == 'pixel':
-        return ShaderType.PIXEL
-    elif s == 'geometry':
-        return ShaderType.GEOMETRY
-    elif s == 'hull':
-        return ShaderType.HULL
-    elif s == 'domain':
-        return ShaderType.DOMAIN
+    return getattr(ShaderType, s.upper())
 
 class Shader(Function):
     '''Shaders are a subclass of functions. The function name is
@@ -542,16 +525,18 @@ class Shader(Function):
     def __init__(self, type, returnType, arguments = list (),
                  body = None):
         self.shaderType = StringToShaderType (type)
-        if self.shaderType == ShaderType.PIXEL:
-            self.name = 'PS_main'
-        elif self.shaderType == ShaderType.VERTEX:
+        if self.shaderType == ShaderType.VERTEX:
             self.name = 'VS_main'
-        elif self.shaderType == ShaderType.DOMAIN:
-            self.name = 'DS_main'
         elif self.shaderType == ShaderType.HULL:
             self.name = 'HS_main'
+        elif self.shaderType == ShaderType.DOMAIN:
+            self.name = 'DS_main'
         elif self.shaderType == ShaderType.GEOMETRY:
             self.name = 'GS_main'
+        elif self.shaderType == ShaderType.PIXEL:
+            self.name = 'PS_main'
+        elif self.shaderType == ShaderType.COMPUTE:
+            self.name = 'CS_main'
 
         Function.__init__(self, self.name, arguments, returnType, body)
 
