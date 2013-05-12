@@ -25,6 +25,8 @@ class AddImplicitCastVisitor (ast.DefaultVisitor):
             elif node.GetLeft().type.IsScalar () and (node.GetRight().type.IsVector () or node.GetRight().type.IsMatrix ()):
                 # Scalar and vector/matrix can be combined
                 return
+            elif node.GetLeft().type.IsMatrix () and node.GetRight().type.IsVector ():
+                return
             else:
                 if node.GetLeft().type != node.type:
                     node.SetLeft(ast.CastExpression (node.GetLeft (),

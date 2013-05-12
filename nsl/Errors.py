@@ -63,3 +63,5 @@ ERROR_CANNOT_SWIZZLE_PRIMITIVE_TYPE = ErrorMessage (2003, Severity.ERROR,
     '''Cannot swizzle primitive type which is not scalar/vector.''')
 ERROR_CANNOT_SWIZZLE_TYPE = ErrorMessage (2004, Severity.ERROR,
     '''Type '{0}' does not support swizzle.''')
+ERROR_INCOMPATIBLE_TYPES = ErrorMessage (2005, Severity.ERROR,
+    '''Type '{}' is incompatible with type '{}'.''')

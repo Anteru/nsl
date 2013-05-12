@@ -112,9 +112,9 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
             elif isinstance (expr, ast.AssignmentExpression):
                 expr.type = expr.GetLeft ().type
             elif isinstance (expr, ast.BinaryExpression):
-                expr.type = types.GetCombinedType (expr,
-                                             expr.GetLeft ().type,
-                                             expr.GetRight ().type)
+                expr.type = types.GetExpressionType (expr,
+                    expr.GetLeft ().type,
+                    expr.GetRight ().type)
 
         return expr.type
 

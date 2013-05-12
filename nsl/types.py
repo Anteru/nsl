@@ -177,17 +177,7 @@ def IsCompatible(left, right):
         elif left.IsScalar () and right.IsScalar ():
             return True
         else:
-            if (left.IsVector () or left.IsMatrix ()) and right.IsScalar ():
-                # Vector/Matrix and scalars can be combined
-                return True
-            elif (right.IsVector () or right. IsMatrix ()) and left.IsScalar ():
-                # Scalar and vector/matrix can be combined
-                return True
-            elif left.IsMatrix () and right.IsScalar ():
-                # matrix * vector
-                return left.GetColumns () == right.GetSize ()
-            else:
-                return False
+            return False
     elif left.IsPrimitive () and right.IsComplex ():
         return False
     elif left.IsComplex () and right.IsPrimitive ():
@@ -223,14 +213,13 @@ def Promote(t1, t2):
     else:
         return t1
 
-def GetCombinedType(expr, left, right):
+def GetExpressionType (expr, left, right):
     '''Get the type of an expression combining two elements,
     one of type left and one of type right. This performs the standard
     type promotion rules (int->float, int->uint) and expects that both
     types are compatible to start with.
 
     @param expr: A binary expression'''
-    assert IsCompatible (left, right), 'Incompatible types'
     # must be primitive type, we don't support operations on
     # complex types
     assert isinstance (left, PrimitiveType)
@@ -243,13 +232,21 @@ def GetCombinedType(expr, left, right):
         return left
 
     if left.IsMatrix () and right.IsScalar ():
-        return right
+        return left
     elif (left.IsVector () or left.IsMatrix ()) and right.IsScalar ():
         # Vector/Matrix and scalars can be combined
         return left
     elif left.IsScalar () and (right.IsVector () or right.IsMatrix ()):
         # Scalar and vector/matrix can be combined
         return right
+    elif expr.GetOperation () == nsl.ast.Operation.MUL:
+        # Matrix * Vector gives matrix again
+        if left.IsMatrix () and right.IsVector ():
+            if left.GetColumnCount () == right.GetSize ():
+                return MatrixType (Promote (left.GetType (), right.GetType ()),
+                    left.GetRowCount (), left.GetColumnCount (),
+                    left.GetOrder ())
+        nsl.Errors.ERROR_INCOMPATIBLE_TYPES.Raise (left, right)
 
     # otherwise, promote
     return Promote (left, right)
