@@ -1,7 +1,16 @@
 from nsl import types
 import collections.abc
 
+class InvalidChildType(Exception):
+    def __init__(self, actualType):
+        self.actualType = actualType
+
 class Node:
+    '''Base class for all nodes in the AST.
+
+    The generic AST node provides a traversal function, which traverses into
+    all children of the current object. Derived classes can override Traverse()
+    to make the traversal more efficient.'''
     def _GetChildFields (self):
         return []
 
@@ -10,8 +19,11 @@ class Node:
         return copy.deepcopy(self)
 
     def Traverse(self, visitor, ctx=None):
-        '''Traverse all child members in the tree. A child member can be a
-        dictionary, a list, a set or the child node itself.'''
+        '''Traverse all children of this node.
+
+        By default, this calls `_GetChildFields` to obtain the list of fields
+        that contain child nodes, and then traverses into each item of each
+        field.'''
         fields = self._GetChildFields()
         for field in fields:
             e = getattr (self, field)
@@ -20,14 +32,17 @@ class Node:
             cn = e.__class__.__name__
             if isinstance(e, collections.abc.Sequence) or isinstance(e, collections.abc.Set):
                 for c in e:
-                    assert isinstance (c, Node), 'Node child must be of type Node but was of type {}'.format (c.__class__.__name__)
+                    if not isinstance (c, Node):
+                        raise InvalidChildType (type(c))
                     visitor.v_Generic (c, ctx)
             elif isinstance(e, collections.abc.Mapping):
                 for c in e.values ():
-                    assert isinstance (c, Node), 'Node child must be of type Node but was of type {}'.format (c.__class__.__name__)
+                    if not isinstance (c, Node):
+                        raise InvalidChildType (type(c))
                     visitor.v_Generic (c, ctx)
             else:
-                assert isinstance (e, Node), 'Node child must be of type Node but was of type {}'.format (e.__class__.__name__)
+                if not isinstance (e, Node):
+                    raise InvalidChildType (type(e))
                 visitor.v_Generic (e, ctx)
 
 class Program (Node):
@@ -88,20 +103,25 @@ class CastExpression(UnaryExpression):
     def GetTargetType (self):
         return self.type
 
+    def __str__(self):
+        return '{} ({})'.format (self.type, self.children [0])
+
 class ConstructPrimitiveExpression(UnaryExpression):
     '''Expression of the type primitive_type (expr, ...).'''
     def __init__(self, targetType, expressions):
         Expression.__init__(self, expressions)
         self.type = targetType
-        self.expressions = expressions
 
     def __str__(self):
         r = self.type.GetName () + ' ('
-        r += ', '.join(['{0}'.format(str(expr)) for expr in self.expressions])
+        r += ', '.join(['{0}'.format(str(expr)) for expr in self.children])
         return r + ')'
 
     def GetArguments(self):
-        return self.expressions
+        return self.children
+
+    def SetArguments(self, args):
+        self.children = args
 
 class CallExpression(UnaryExpression):
     '''Expression of the type ID ([expr], ...). ID references
@@ -109,19 +129,18 @@ class CallExpression(UnaryExpression):
     def __init__(self, function, expressions):
         Expression.__init__(self, expressions)
         self.function = function
-        self.expressions = expressions
 
     def __str__(self):
         r = self.function.GetName () + ' ('
-        r += ', '.join(['{0}'.format(str(expr)) for expr in self.expressions])
+        r += ', '.join(['{0}'.format(str(expr)) for expr in self.children])
         return r + ')'
 
     def GetArguments(self):
-        return self.expressions
+        return self.children
 
     def ResolveType(self, scope):
         self.function = types.ResolveFunction(self.function,
-                                              scope, [expr.type for expr in self.expressions])
+            scope, [expr.type for expr in self.children])
 
 class VariableAccessExpression(UnaryExpression):
     pass
@@ -132,13 +151,12 @@ class ArrayExpression(VariableAccessExpression):
     def __init__(self, id, expression):
         Expression.__init__(self, [expression])
         self.id = id
-        self.expression = expression
 
     def GetParent(self):
         return self.id
 
     def __str__(self):
-        return str(self.id) + ' [' + str(self.expression) + ']'
+        return str(self.id) + ' [' + str(self.children[0]) + ']'
 
 class MemberAccessExpression(VariableAccessExpression):
     '''Expression of the form 'id.member', where id can be a
@@ -228,33 +246,38 @@ class BinaryExpression(Expression):
     def __init__(self, op, left, right):
         Expression.__init__(self, [left, right])
         self.op = op
-        self.left = left
-        self.right = right
 
     def GetLeft(self):
-        return self.left
+        return self.children [0]
 
     def GetRight(self):
-        return self.right
+        return self.children [1]
+
+    def SetLeft(self, left):
+        self.children [0] = left
+
+    def SetRight(self, right):
+        self.children [1] = right
 
     def GetOperation(self):
         return self.op
 
     def __str__(self):
         r = ''
-        if (isinstance (self.left, BinaryExpression)):
-            r += '(' + str (self.left) + ')'
+        if (isinstance (self.GetLeft (), BinaryExpression)):
+            r += '(' + str (self.GetLeft ()) + ')'
         else:
-            r += str (self.left)
+            r += str (self.GetLeft ())
 
         r += ' ' + OpToStr(self.op) +  ' '
 
-        if (isinstance (self.right, BinaryExpression)):
-            r += '(' + str (self.right) + ')'
+        if (isinstance (self.GetRight (), BinaryExpression)):
+            r += '(' + str (self.GetRight ()) + ')'
         else:
-            r += str (self.right)
+            r += str (self.GetRight ())
 
         return r
+
 class AssignmentExpression(BinaryExpression):
     def __init__(self, left, right):
         BinaryExpression.__init__(self, Operation.ASSIGN, left, right)
@@ -267,7 +290,6 @@ class AffixExpression(UnaryExpression):
     def __init__(self, op, expr, affix):
         Expression.__init__(self, [expr])
         self.op = op
-        self.expr = expr
         self.affix = affix
 
     def IsPostfix (self):
@@ -705,7 +727,7 @@ class Visitor:
 
     def v_Default(self, obj, ctx):
         print ('Missing visit method: "{}.v_{}"'.format (self.__class__.__name__,
-                                                  obj.__class__.__name__))
+            obj.__class__.__name__))
         return None
 
     def GetContext (self):
