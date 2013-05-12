@@ -1,7 +1,6 @@
 from collections import OrderedDict
 import nsl.ast
 
-
 class UnknownSymbol(Exception):
     def __init__(self, symbol):
         self.symbol = symbol
@@ -162,23 +161,33 @@ def IsCompatible(left, right):
             return isinstance (left, Void) and isinstance (right, Void)
 
         # reduce single-component vector types to scalars
-        if isinstance (left, VectorType):
+        if left.IsVector ():
             if left.GetSize () == 1:
                 left = left.GetType ()
-        if isinstance (right, VectorType):
+        if right.IsVector ():
             if right.GetSize () == 1:
                 right = right.GetType ()
 
         # Our primitive types are all compatible
-        if isinstance(left, VectorType) and isinstance(right, VectorType):
+        if left.IsVector() and right.IsVector ():
             return left.GetSize () == right.GetSize()
-        elif isinstance (left, MatrixType) and isinstance (right, MatrixType):
+        elif left.IsMatrix () and right.IsMatrix ():
             return ((left.GetRows () == right.GetRows ()) and
                     (left.GetColumns () == right.GetColumns ()))
         elif left.IsScalar () and right.IsScalar ():
             return True
         else:
-            return False
+            if (left.IsVector () or left.IsMatrix ()) and right.IsScalar ():
+                # Vector/Matrix and scalars can be combined
+                return True
+            elif (right.IsVector () or right. IsMatrix ()) and left.IsScalar ():
+                # Scalar and vector/matrix can be combined
+                return True
+            elif left.IsMatrix () and right.IsScalar ():
+                # matrix * vector
+                return left.GetColumns () == right.GetSize ()
+            else:
+                return False
     elif left.IsPrimitive () and right.IsComplex ():
         return False
     elif left.IsComplex () and right.IsPrimitive ():
@@ -202,7 +211,7 @@ def Match(leftType, rightType):
 
 def Promote(t1, t2):
     # TODO: scalars can get promoted to 1-element vectors
-    if isinstance (t1, VectorType ) and isinstance (t2, VectorType):
+    if isinstance (t1, VectorType) and isinstance (t2, VectorType):
         assert t1.GetSize () == t2.GetSize (), \
             'Cannot combine {} and {} to unified vector type'.format (t1, t2)
         return VectorType (Promote (t1.GetType (), t2.GetType (),
@@ -232,6 +241,15 @@ def GetCombinedType(expr, left, right):
 
     if left == right:
         return left
+
+    if left.IsMatrix () and right.IsScalar ():
+        return right
+    elif (left.IsVector () or left.IsMatrix ()) and right.IsScalar ():
+        # Vector/Matrix and scalars can be combined
+        return left
+    elif left.IsScalar () and (right.IsVector () or right.IsMatrix ()):
+        # Scalar and vector/matrix can be combined
+        return right
 
     # otherwise, promote
     return Promote (left, right)
@@ -473,6 +491,9 @@ class MatrixType(PrimitiveType):
 
     def IsMatrix (self):
         return True
+
+    def GetOrder (self):
+        return self.order
 
     def GetRowCount (self):
         return self.size [0]
