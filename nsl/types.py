@@ -69,8 +69,8 @@ class Scope:
             else:
                 raise UnknownFunction ()
 
-        def GetFirst(tuple):
-            return tuple[0]
+        def GetFirst(t):
+            return t[0]
 
         def IsValidCandidate(candidate):
             return candidate[0] >= 0
@@ -115,19 +115,19 @@ class Type:
     def NeedsResolve (self):
         return False
 
-def Resolve(type, scope):
-    if type.NeedsResolve ():
-        result = scope.GetVariableType (type.GetName ())
+def Resolve(theType, scope):
+    if theType.NeedsResolve ():
+        result = scope.GetVariableType (theType.GetName ())
         assert not isinstance (result, UnresolvedType)
         return result
     else:
-        return type
+        return theType
 
-def ResolveFunction(type, scope, argumentTypes):
-    if type.NeedsResolve ():
-        return scope.GetFunctionType (type.GetName (), argumentTypes)
+def ResolveFunction(theType, scope, argumentTypes):
+    if theType.NeedsResolve ():
+        return scope.GetFunctionType (theType.GetName (), argumentTypes)
     else:
-        return type
+        return theType
 
 class UnresolvedType:
     def __init__(self, name):
@@ -317,8 +317,8 @@ class StructType(ComplexType):
     def __init__(self, name, declarations):
         self.members = Scope ()
         self.name = name
-        for (name, type) in declarations.items ():
-            self.members.RegisterVariable(name, type)
+        for (name, elementType) in declarations.items ():
+            self.members.RegisterVariable(name, elementType)
         self.declarations = declarations
 
     def __str__(self):
