@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from nsl.Compiler import Compiler
 
 c = Compiler ()
