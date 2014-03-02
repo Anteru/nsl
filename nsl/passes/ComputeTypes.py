@@ -5,7 +5,6 @@ def ParseSwizzleMask(mask):
     '''Parse a swizzle mask into a list of element indices, starting
     at 0.
     '''
-    from .. import Utility
 
     mapping = { 'x' : 0,
      'y' : 1,
@@ -26,19 +25,19 @@ def ComputeSwizzleType(inType, mask):
     '''
     outComponentCount = len (mask)
 
-    type = None
+    swizzleType = None
     if isinstance (inType, types.VectorType):
-        type = inType.GetType ()
+        swizzleType = inType.GetType ()
     else:
-        type = inType
+        swizzleType = inType
 
     if outComponentCount == 1:
-        return type
+        return swizzleType
     else:
-        result = types.VectorType (type, outComponentCount)
+        result = types.VectorType (swizzleType, outComponentCount)
         # Copy semantic if needed
         if inType.HasSemantic ():
-            result.SetSemantic(inType.GetSemantic ())
+            result.SetSemantic (inType.GetSemantic ())
         return result
 
 class ComputeTypeVisitor(ast.DefaultVisitor):
@@ -147,8 +146,8 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
             ctx[-1].RegisterFunction (func.GetType ().GetName (), func.GetType ())
         scope = types.Scope (ctx[-1])
         ctx.append (scope)
-        for (name, type) in func.GetType ().GetArguments().items ():
-            scope.RegisterVariable (name, type)
+        for (name, argType) in func.GetType ().GetArguments().items ():
+            scope.RegisterVariable (name, argType)
 
         self.v_Visit (func.GetBody(), ctx)
         ctx.pop ()
@@ -158,8 +157,8 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 
     def v_Program(self, prog, ctx):
         # Must visit types first
-        for type in prog.GetTypes ():
-            self.v_Visit (type, ctx)
+        for programType in prog.GetTypes ():
+            self.v_Visit (programType, ctx)
         for decl in prog.GetDeclarations ():
             self.v_Visit (decl, ctx)
         for func in prog.GetFunctions ():

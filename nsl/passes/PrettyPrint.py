@@ -2,8 +2,8 @@ from nsl import ast
 
 class PrettyPrintVisitor(ast.Visitor):
     def v_Program (self, prog, ctx):
-        for type in prog.GetTypes():
-            self.v_Visit (type, ctx)
+        for programType in prog.GetTypes():
+            self.v_Visit (programType, ctx)
         for func in prog.GetFunctions():
             self.v_Visit (func, ctx)
 

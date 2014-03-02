@@ -34,8 +34,8 @@ class DebugTypeVisitor(ast.DefaultVisitor):
 		'''Computes the function type and processes all statements.'''
 		self._p(ctx, str(func.GetType ()))
 		self._p (ctx, 'Arguments')
-		for (name, type) in func.GetType ().GetArguments().items ():
-			self._p (ctx + 1, name + ':' + str(type))
+		for (name, argType) in func.GetType ().GetArguments().items ():
+			self._p (ctx + 1, name + ':' + str(argType))
 
 		print ()
 		self.v_Visit (func.GetBody(), ctx)
@@ -46,8 +46,8 @@ class DebugTypeVisitor(ast.DefaultVisitor):
 
 	def v_Program(self, prog, ctx):
 		# Must visit types first
-		for type in prog.GetTypes ():
-			self.v_Visit (type, ctx)
+		for programType in prog.GetTypes ():
+			self.v_Visit (programType, ctx)
 		for decl in prog.GetDeclarations ():
 			self.v_Visit (decl, ctx)
 		for func in prog.GetFunctions ():

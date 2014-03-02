@@ -1,5 +1,4 @@
-from collections import OrderedDict
-from nsl import ast, types, Errors
+from nsl import ast, types
 
 class AddImplicitCastVisitor (ast.DefaultVisitor):
     def _GetTargetType (self, sourceType, componentType):

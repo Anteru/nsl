@@ -515,6 +515,29 @@ class MatrixType(PrimitiveType):
         return '{}{}x{}'.format (self.componentType.GetName (),
                               self.GetRowCount (),
                               self.GetColumnCount ())
+class Operator(Type):
+    pass
+
+class BinaryOperator(Operator):
+    def __init__(self, operation, leftType, rightType, resultType):
+        self.operation = operation
+        self.leftType = leftType
+        self.rightType = rightType
+        self.resultType = resultType
+
+class UnaryOperator(Operator):
+    def __init__(self, operation, inputType, resultType):
+        self.operation = operation
+        self.inputType = inputType
+        self.resultType = resultType
+        
+class TernaryOperator(Operator):
+    def __init__(self, operation, conditionType, trueExpressionType, falseExpressionType, resultType):
+        self.operation = operation
+        self.conditionType = conditionType
+        self.trueExpressionType = trueExpressionType
+        self.falseExpressionType = falseExpressionType
+        self.resultType = resultType
 
 def BuiltinTypeFactory(typeName):
     typeDict = {

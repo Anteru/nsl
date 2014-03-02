@@ -11,8 +11,8 @@ class HlslCodeGen(ast.Visitor):
         return 0
     
     def v_Program (self, prog, ctx):
-        for type in prog.GetTypes():
-            type.Accept (self, ctx)
+        for programType in prog.GetTypes():
+            programType.Accept (self, ctx)
         for func in prog.GetFunctions():
             func.Accept (self, ctx)
     
