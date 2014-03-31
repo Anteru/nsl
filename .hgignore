@@ -1,2 +1,5 @@
 syntax: glob
 __pycache__/*
+parsetab.py
+parser.out
+stdlib.cache
