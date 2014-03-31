@@ -1,5 +1,5 @@
 import ply.yacc
-from . import ast, types, lexer
+from nsl import ast, types, lexer
 
 class NslParser:
     def __init__(self):

@@ -1,5 +1,5 @@
-from nsl import types
 import collections.abc
+from nsl import op, types
 
 class InvalidChildType(Exception):
     def __init__(self, actualType):
@@ -174,73 +174,6 @@ class MemberAccessExpression(VariableAccessExpression):
     def __str__(self):
         return str(self.id) + '.' + str(self.member)
 
-class Operation:
-    ASSIGN = 1
-    ADD = 102
-    SUB = 103
-    MUL = 104
-    DIV = 105
-    MOD = 106
-
-    UA_ADD = 120,
-    UA_SUB = 121,
-
-    CMP_GT = 200
-    CMP_LT = 201
-    CMP_LE = 202
-    CMP_GE = 203
-    CMP_NE = 204
-    CMP_EQ = 205
-    LG_OR   = 300
-    LG_AND  = 301
-    LG_NOT  = 302
-    BIT_OR  = 400
-    BIT_AND = 401
-    BIT_XOR = 402
-    BIT_NOT = 403
-
-def IsComparison(op):
-    return op > 200 and op < 210
-
-_op_str_map = {
-    '='   : Operation.ASSIGN,
-
-    '+'   : Operation.ADD,
-    '-'   : Operation.SUB,
-    '/'   : Operation.DIV,
-    '*'   : Operation.MUL,
-    '%'   : Operation.MOD,
-
-    '++'  : Operation.UA_ADD,
-    '--'  : Operation.UA_SUB,
-
-    '&&'  : Operation.LG_AND,
-    '||'  : Operation.LG_OR,
-    '!'   : Operation.LG_NOT,
-
-    '>'   : Operation.CMP_GT,
-    '<'   : Operation.CMP_LT,
-    '>='  : Operation.CMP_GE,
-    '<='  : Operation.CMP_LE,
-    '=='  : Operation.CMP_EQ,
-    '!='  : Operation.CMP_NE,
-
-    '|'   : Operation.BIT_OR,
-    '&'   : Operation.BIT_AND,
-    '~'   : Operation.BIT_NOT,
-    '^'   : Operation.BIT_XOR
-}
-
-_str_op_map = {v : k for (k, v) in _op_str_map.items ()}
-
-def StrToOp(op):
-    assert op in _op_str_map, "Unknown operation: '{}".format (op)
-    return _op_str_map [op]
-
-def OpToStr(s):
-    assert s in _str_op_map, "Unknown operation ID: '{}'".format (s)
-    return _str_op_map [s]
-
 class BinaryExpression(Expression):
     def __init__(self, op, left, right):
         Expression.__init__(self, [left, right])
@@ -268,7 +201,7 @@ class BinaryExpression(Expression):
         else:
             r += str (self.GetLeft ())
 
-        r += ' ' + OpToStr(self.op) +  ' '
+        r += ' ' + op.OpToStr(self.op) +  ' '
 
         if (isinstance (self.GetRight (), BinaryExpression)):
             r += '(' + str (self.GetRight ()) + ')'
@@ -279,7 +212,7 @@ class BinaryExpression(Expression):
 
 class AssignmentExpression(BinaryExpression):
     def __init__(self, left, right):
-        BinaryExpression.__init__(self, Operation.ASSIGN, left, right)
+        BinaryExpression.__init__(self, op.Operation.ASSIGN, left, right)
 
 class Affix:
     PRE = 1

@@ -1,5 +1,5 @@
 from collections import OrderedDict
-import nsl.ast
+from nsl import op
 
 class UnknownSymbol(Exception):
     def __init__(self, symbol):
@@ -225,7 +225,7 @@ def GetExpressionType (expr, left, right):
     assert isinstance (left, PrimitiveType)
     assert isinstance (right, PrimitiveType)
 
-    if nsl.ast.IsComparison (expr.GetOperation ()):
+    if op.IsComparison (expr.GetOperation ()):
         return Integer ()
 
     if left == right:
@@ -530,7 +530,7 @@ class UnaryOperator(Operator):
         self.operation = operation
         self.inputType = inputType
         self.resultType = resultType
-        
+
 class TernaryOperator(Operator):
     def __init__(self, operation, conditionType, trueExpressionType, falseExpressionType, resultType):
         self.operation = operation
