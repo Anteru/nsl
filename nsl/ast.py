@@ -178,6 +178,7 @@ class BinaryExpression(Expression):
     def __init__(self, op, left, right):
         Expression.__init__(self, [left, right])
         self.op = op
+        self.operator = None
 
     def GetLeft(self):
         return self.children [0]
@@ -193,6 +194,9 @@ class BinaryExpression(Expression):
 
     def GetOperation(self):
         return self.op
+
+    def ResolveType (self, left, right):
+        self.operator = types.ResolveExpressionType (self, left, right)
 
     def __str__(self):
         r = ''

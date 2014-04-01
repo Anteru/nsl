@@ -106,14 +106,13 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
             if isinstance(expr, ast.CallExpression):
                 # As we know the parameter types now, we can finally resolve
                 # overloaded functions
-                expr.ResolveType(scope)
+                expr.ResolveType (scope)
                 expr.type = expr.function.GetReturnType()
             elif isinstance (expr, ast.AssignmentExpression):
                 expr.type = expr.GetLeft ().type
             elif isinstance (expr, ast.BinaryExpression):
-                expr.type = types.GetExpressionType (expr,
-                    expr.GetLeft ().type,
-                    expr.GetRight ().type)
+                expr.ResolveType (expr.GetLeft().type, expr.GetRight().type)
+                expr.type = expr.operator.GetReturnType ()
 
         return expr.type
 

@@ -16,23 +16,13 @@ class AddImplicitCastVisitor (ast.DefaultVisitor):
         self.v_Generic (node.GetLeft (), ctx)
         self.v_Generic (node.GetRight (), ctx)
 
-        if node.GetLeft().type != node.GetRight().type:
-            # possibly, we have a mixed vector/scalar expression
-            if (node.GetLeft().type.IsVector () or node.GetLeft().type.IsMatrix ()) and node.GetRight().type.IsScalar ():
-                # Vector/Matrix and scalars can be combined
-                return
-            elif node.GetLeft().type.IsScalar () and (node.GetRight().type.IsVector () or node.GetRight().type.IsMatrix ()):
-                # Scalar and vector/matrix can be combined
-                return
-            elif node.GetLeft().type.IsMatrix () and node.GetRight().type.IsVector ():
-                return
-            else:
-                if node.GetLeft().type != node.type:
-                    node.SetLeft(ast.CastExpression (node.GetLeft (),
-                        node.type, True))
-                if node.GetRight().type != node.type:
-                    node.SetRight(ast.CastExpression (node.GetRight (),
-                        node.type, True))
+        if node.GetLeft ().type != node.operator.GetOperandType (0):
+            node.SetLeft (ast.CastExpression (node.GetLeft (),
+                node.operator.GetOperandType (0), True))
+
+        if node.GetRight ().type != node.operator.GetOperandType (1):
+            node.SetRight (ast.CastExpression (node.GetRight (),
+                node.operator.GetOperandType (1), True))
 
     def v_ConstructPrimitiveExpression(self, node, ctx):
         # The primitive type of each argument must be the same as the result

@@ -1,5 +1,5 @@
 import ply.yacc
-from nsl import ast, types, lexer
+from nsl import ast, types, lexer, op
 
 class NslParser:
     def __init__(self):
@@ -180,9 +180,9 @@ class NslParser:
         '''binary_expression : expression bin_op expression
             | '(' expression bin_op expression ')' '''
         if (len(p) == 4):
-            p[0] = ast.BinaryExpression (ast.StrToOp (p[2]), p[1], p[3])
+            p[0] = ast.BinaryExpression (op.StrToOp (p[2]), p[1], p[3])
         else:
-            p[0] = ast.BinaryExpression (ast.StrToOp (p[3]), p[2], p[4])
+            p[0] = ast.BinaryExpression (op.StrToOp (p[3]), p[2], p[4])
 
     def p_bin_op(self, p):
         '''bin_op : LT

@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from nsl import op
+from nsl import op, Errors
 
 class UnknownSymbol(Exception):
     def __init__(self, symbol):
@@ -67,7 +67,7 @@ class Scope:
                 return self.parent.GetFunctionType(functionName,
                                                    argumentTypes)
             else:
-                raise UnknownFunction ()
+                Errors.ERROR_UNKNOWN_FUNCTION_CALL.Raise (functionName)
 
         def GetFirst(t):
             return t[0]
@@ -82,7 +82,7 @@ class Scope:
                           key=GetFirst)))
 
         if len(ranking) == 0:
-            raise UnknownFunction()
+            Errors.ERROR_NO_MATCHING_OVERLOAD_FUNCTION_CALL.Raise (functionName)
 
         if len(ranking) == 1:
             return ranking[0][1]
@@ -90,7 +90,7 @@ class Scope:
         # if the first two candidates have the same score, the overload is
         # ambiguous
         if ranking[0][0] == ranking[1][0]:
-            raise UnknownFunction()
+            Errors.ERROR_AMBIGUOUS_FUNCTION_CALL.Raise (functionName)
 
         return ranking[0][1]
 
@@ -161,11 +161,9 @@ def IsCompatible(left, right):
             return isinstance (left, Void) and isinstance (right, Void)
 
         # reduce single-component vector types to scalars
-        if left.IsVector ():
-            if left.GetSize () == 1:
+        if left.IsVector () and left.GetSize () == 1:
                 left = left.GetType ()
-        if right.IsVector ():
-            if right.GetSize () == 1:
+        if right.IsVector () and right.GetSize () == 1:
                 right = right.GetType ()
 
         # Our primitive types are all compatible
@@ -213,7 +211,26 @@ def Promote(t1, t2):
     else:
         return t1
 
-def GetExpressionType (expr, left, right):
+class ExpressionType:
+    '''Descripe the type of an expression.
+
+    Result is the result type of the complete expression, once all operands
+    have been taken into account.
+
+    For unary expressions, operands must have length 1.
+    For binary expressions, operands must have length 2.
+    For trinary expressions, operands must have length 3.'''
+    def __init__ (self, result, operands):
+        self._result = result
+        self._operands = operands
+
+    def GetReturnType (self):
+        return self._result
+
+    def GetOperandType (self, index):
+        return self._operands [index]
+
+def ResolveExpressionType (expr, left, right):
     '''Get the type of an expression combining two elements,
     one of type left and one of type right. This performs the standard
     type promotion rules (int->float, int->uint) and expects that both
@@ -226,27 +243,42 @@ def GetExpressionType (expr, left, right):
     assert isinstance (right, PrimitiveType)
 
     if op.IsComparison (expr.GetOperation ()):
-        return Integer ()
+        # Cast may be still necessary if we compare integers with floats
+        commonType = Promote (left, right)
+        return ExpressionType (Integer (), [commonType, commonType])
 
     if left == right:
-        return left
+        return ExpressionType (left, [left, right])
 
-    if left.IsMatrix () and right.IsScalar ():
-        return left
-    elif (left.IsVector () or left.IsMatrix ()) and right.IsScalar ():
+    def PromoteMatrixOrVector (mv, scalar):
+        commonType = Promote (mv.GetType (), scalar)
+        if mv.IsMatrix ():
+            return commonType, MatrixType (commonType, mv.GetRowCount (), mv.GetColumnCount ())
+        elif mv.IsVector ():
+            return commonType, VectorType (commonType, mv.GetRowCount ())
+
+    if (left.IsVector () or left.IsMatrix ()) and right.IsScalar ():
         # Vector/Matrix and scalars can be combined
-        return left
+        commonType, mvType = PromoteMatrixOrVector (left, right)
+        return ExpressionType (mvType, [mvType, commonType])
     elif left.IsScalar () and (right.IsVector () or right.IsMatrix ()):
         # Scalar and vector/matrix can be combined
-        return right
-    elif expr.GetOperation () == nsl.ast.Operation.MUL:
-        # Matrix * Vector gives matrix again
+        commonType, mvType = PromoteMatrixOrVector (right, left)
+        return ExpressionType (mvType, [mvType, commonType])
+    elif expr.GetOperation () == op.Operation.MUL:
+        # Matrix * Vector returns vector again
         if left.IsMatrix () and right.IsVector ():
+            commonType = Promote (left.GetType (), right.GetType ())
             if left.GetColumnCount () == right.GetSize ():
-                return MatrixType (Promote (left.GetType (), right.GetType ()),
-                    left.GetRowCount (), left.GetColumnCount (),
-                    left.GetOrder ())
-        nsl.Errors.ERROR_INCOMPATIBLE_TYPES.Raise (left, right)
+                vectorType = VectorType (commonType, left.GetRowCount ())
+                matrixType = MatrixType (commonType, left.GetRowCount (),
+                    left.GetColumnCount ())
+
+                return ExpressionType (vectorType, [matrixType, vectorType])
+        elif left.IsScalar () and right.IsScalar ():
+            commonType = Promote (left, right)
+            return ExpressionType (commonType, [commonType, commonType])
+        Errors.ERROR_INCOMPATIBLE_TYPES.Raise (left, right)
 
     # otherwise, promote
     return Promote (left, right)
@@ -357,14 +389,12 @@ class Function(Type):
         self.returnType = Resolve(self.returnType, scope)
         tmpArgs = self.arguments
         self.arguments = OrderedDict ()
-        counter = 0
-        for arg in tmpArgs:
+        for counter, arg in enumerate (tmpArgs):
             if arg.HasName ():
                 self.arguments [arg.GetName ()] = Resolve (arg.GetType (), scope)
             else:
                 # generate an invalid name
                 self.arguments ['$unnamed_arg${}'.format (counter)] = Resolve (arg.GetType (), scope)
-            counter += 1
 
     def GetName(self):
         return self.name
