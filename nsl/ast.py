@@ -196,7 +196,7 @@ class BinaryExpression(Expression):
         return self.op
 
     def ResolveType (self, left, right):
-        self.operator = types.ResolveExpressionType (self, left, right)
+        self.operator = types.ResolveBinaryExpressionType (self.op, left, right)
 
     def __str__(self):
         r = ''

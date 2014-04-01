@@ -230,7 +230,7 @@ class ExpressionType:
     def GetOperandType (self, index):
         return self._operands [index]
 
-def ResolveExpressionType (expr, left, right):
+def ResolveBinaryExpressionType (operation, left, right):
     '''Get the type of an expression combining two elements,
     one of type left and one of type right. This performs the standard
     type promotion rules (int->float, int->uint) and expects that both
@@ -242,7 +242,7 @@ def ResolveExpressionType (expr, left, right):
     assert isinstance (left, PrimitiveType)
     assert isinstance (right, PrimitiveType)
 
-    if op.IsComparison (expr.GetOperation ()):
+    if op.IsComparison (operation):
         # Cast may be still necessary if we compare integers with floats
         commonType = Promote (left, right)
         return ExpressionType (Integer (), [commonType, commonType])
@@ -265,7 +265,7 @@ def ResolveExpressionType (expr, left, right):
         # Scalar and vector/matrix can be combined
         commonType, mvType = PromoteMatrixOrVector (right, left)
         return ExpressionType (mvType, [mvType, commonType])
-    elif expr.GetOperation () == op.Operation.MUL:
+    elif operation == op.Operation.MUL:
         # Matrix * Vector returns vector again
         if left.IsMatrix () and right.IsVector ():
             commonType = Promote (left.GetType (), right.GetType ())
