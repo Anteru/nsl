@@ -6,7 +6,7 @@ class NslParser:
         self.lexer = lexer.NslLexer ()
         self.lexer.Build()
         self.tokens = self.lexer.tokens
-        self.parser = ply.yacc.yacc(module=self, start='program')
+        self.parser = ply.yacc.yacc(module=self, start='program',errorlog=ply.yacc.NullLogger())
 
     def Parse(self, text, **kwargs):
         self.lexer.reset_lineno()
@@ -31,13 +31,14 @@ class NslParser:
         p[0].AddFunction (p[1])
 
     def p_program_2(self, p):
-        '''program : var_decl'''
+        '''program : declaration_statement'''
         p[0] = ast.Program ()
-        p[0].AddVariable (p[1])
+        p[0].AddDeclaration (p [1])
 
     def p_program_3(self, p):
-        '''program : program var_decl'''
-        p[0].AddVariable (p[1])
+        '''program : program declaration_statement'''
+        p [0] = p [1]
+        p[0].AddDeclaration (p [2])
 
     def p_program_4(self, p):
         '''program : type_definition'''

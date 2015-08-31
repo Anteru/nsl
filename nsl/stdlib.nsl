@@ -1,4 +1,4 @@
-__declaration function mul(__optional float4,matrix4x4) -> float4;
+__declaration function mul(float4,matrix4x4) -> float4;
 __declaration function mul(float3,matrix3x3) -> float3;
 __declaration function sin(float) -> float;
 __declaration function cos(float) -> float;

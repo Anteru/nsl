@@ -1,6 +1,6 @@
 from nsl import ast
 
-class DebugAstVisitor(ast.Visitor):
+class DebugAstVisitor(ast.DebugPrintVisitor):
     def GetContext (self):
         return 0
 

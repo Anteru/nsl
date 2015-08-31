@@ -4,6 +4,8 @@ class PrettyPrintVisitor(ast.Visitor):
     def v_Program (self, prog, ctx):
         for programType in prog.GetTypes():
             self.v_Visit (programType, ctx)
+        for decl in prog.GetDeclarations():
+            self.v_Visit (decl, ctx)
         for func in prog.GetFunctions():
             self.v_Visit (func, ctx)
 
@@ -69,6 +71,7 @@ class PrettyPrintVisitor(ast.Visitor):
     def v_DeclarationStatement(self, decl, ctx):
         for d in decl.GetDeclarations ():
             self.v_Visit (d, ctx)
+        print ()
 
     def v_CompoundStatement(self, cs, ctx):
         self._p(ctx, '{')

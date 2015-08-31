@@ -1,30 +1,39 @@
-class Operation:
+from enum import Enum
+
+class Operation(Enum):
     ASSIGN = 1
+
+    # Binary
     ADD = 102
     SUB = 103
     MUL = 104
     DIV = 105
     MOD = 106
 
-    UA_ADD = 120,
-    UA_SUB = 121,
+    # Unary
+    UA_ADD = 120
+    UA_SUB = 121
 
+    # comparison
     CMP_GT = 200
     CMP_LT = 201
     CMP_LE = 202
     CMP_GE = 203
     CMP_NE = 204
     CMP_EQ = 205
+
+    # logic
     LG_OR   = 300
     LG_AND  = 301
     LG_NOT  = 302
+
     BIT_OR  = 400
     BIT_AND = 401
     BIT_XOR = 402
     BIT_NOT = 403
 
 def IsComparison(op):
-    return op > 200 and op < 210
+    return op.value > 200 and op.value < 210
 
 _op_str_map = {
     '='   : Operation.ASSIGN,

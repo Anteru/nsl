@@ -665,3 +665,12 @@ class DefaultVisitor(Visitor):
         '''Traverse further if possible.'''
         if hasattr (obj, 'Traverse'):
             obj.Traverse (self, ctx)
+
+class DebugPrintVisitor(DefaultVisitor):
+    def Visit(self, root):
+        print ()
+        print ('{} {} (Start) {}'.format ('=' * 16, self.__class__.__name__, '=' * 16))
+        self.v_Generic (root, self.GetContext ())
+        print ()
+        print ('{} {} (End) {}'.format ('=' * 16, self.__class__.__name__, '=' * 16))
+        print ()

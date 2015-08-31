@@ -1,6 +1,6 @@
 from nsl import ast
 
-class DebugTypeVisitor(ast.DefaultVisitor):
+class DebugTypeVisitor(ast.DebugPrintVisitor):
 	def GetContext (self):
 		return 0
 
@@ -43,6 +43,11 @@ class DebugTypeVisitor(ast.DefaultVisitor):
 
 	def v_Shader(self, shd, ctx=None):
 		self.v_Function(shd, ctx)
+
+	def v_DeclarationStatement (self, stmt, ctx):
+		for decl in stmt.GetDeclarations():
+			self._p (ctx, decl.GetName () + ':' + str(decl.GetType()))
+		print ()
 
 	def v_Program(self, prog, ctx):
 		# Must visit types first

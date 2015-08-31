@@ -13,7 +13,7 @@ All of this is provided under the BSD license. See the `COPYING` file for detail
 Requirements
 ------------
 
-All you need is a working Python 3 installation. `nsl` has been tested with Python 3.3 and 3.4.
+All you need is a working Python 3 installation. `nsl` has been tested with Python 3.4. In a virtualenv, install the dependencies as specified in  `requirements.txt`.
 
 Running
 -------

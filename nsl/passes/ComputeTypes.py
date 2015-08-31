@@ -63,7 +63,7 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
             # Resolve here allows for nested types
             functions.append (types.Resolve (f.GetType (), scope))
         scope.RegisterVariable (decl.GetName (),
-                                types.ClassType(decl.GetName (), dict(), functions))
+                                types.ClassType(decl.GetName (), dict(), functions, isInterface=True))
 
 
     def v_CompoundStatement(self, stmt, ctx):

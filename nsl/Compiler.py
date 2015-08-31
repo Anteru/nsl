@@ -18,4 +18,3 @@ class Compiler:
         for p in self.passes:
             if not p.Process (ast):
                 print ('Error in pass {}'.format (p.GetName ()))
-

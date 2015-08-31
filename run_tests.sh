@@ -1,2 +1,1 @@
-#!/bin/bash
-python3 -m tests.types_test
+PYTHONPATH=. py.test tests

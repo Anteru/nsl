@@ -10,6 +10,9 @@ struct ApplicationToVertex
     float4 color    : UV0;
 }
 
+matrix4x4 worldViewProjection;
+Texture2D tex;
+
 struct VertexToPixel
 {
     float4 position : POSITION;
@@ -20,7 +23,7 @@ shader(vertex) (ApplicationToVertex app2vs) -> VertexToPixel
 {
     VertexToPixel result;
 
-    result.position = float4 (app2vs.position.xy, 0, 1);
+    result.position = worldViewProjection * float4 (app2vs.position.xy, 0, 1);
     result.color = app2vs.color;
 
     return result;
@@ -37,4 +40,4 @@ shader(pixel) (VertexToPixel vs2ps) -> FragmentOutput
     out.color = vs2ps.color;
     return out;
 }
-''')
+''', debugParsing=True)

@@ -198,13 +198,27 @@ def Match(leftType, rightType):
         return 1
 
 def Promote(t1, t2):
-    # TODO: scalars can get promoted to 1-element vectors
-    if isinstance (t1, VectorType) and isinstance (t2, VectorType):
+    if (isinstance(t1, VectorType) and isinstance (t2, ScalarType)) or \
+        (isinstance(t1, ScalarType) and isinstance (t2, VectorType)):
+        vectorType = None
+        scalarType = None
+
+        if (isinstance (t1, VectorType)):
+            vectorType = t1
+            scalarType = t2
+        else:
+            vectorType = t2
+            scalarType = t1
+
+        assert vectorType.GetSize () == 1, \
+            'Cannot promote scalar with type {} to {}'.format (scalarType, vectorType)
+        return VectorType (Promote (vectorType.GetType (), scalarType), 1)
+    elif isinstance (t1, VectorType) and isinstance (t2, VectorType):
         assert t1.GetSize () == t2.GetSize (), \
             'Cannot combine {} and {} to unified vector type'.format (t1, t2)
         return VectorType (Promote (t1.GetType (), t2.GetType (),
                                     t1.GetSize ()))
-    if isinstance (t1, Float) or isinstance (t2, Float):
+    elif isinstance (t1, Float) or isinstance (t2, Float):
         return Float ()
     elif isinstance (t1, Integer) or isinstance (t2, Integer):
         return Integer ()
@@ -236,21 +250,26 @@ def ResolveBinaryExpressionType (operation, left, right):
     type promotion rules (int->float, int->uint) and expects that both
     types are compatible to start with.
 
-    @param expr: A binary expression'''
+    @param operation: The operation, must be a binary operation
+    @param left: The left operand type
+    @param right: The right operand type'''
     # must be primitive type, we don't support operations on
     # complex types
     assert isinstance (left, PrimitiveType)
     assert isinstance (right, PrimitiveType)
+    assert isinstance (operation, op.Operation)
+
+    if left == right:
+        return ExpressionType (left, [left, right])
 
     if op.IsComparison (operation):
         # Cast may be still necessary if we compare integers with floats
         commonType = Promote (left, right)
         return ExpressionType (Integer (), [commonType, commonType])
 
-    if left == right:
-        return ExpressionType (left, [left, right])
-
     def PromoteMatrixOrVector (mv, scalar):
+        '''Promote a matrix/vector to the common type with the scalar. This
+        happens when multiplying an int matrix with a float scalar, for instace.'''
         commonType = Promote (mv.GetType (), scalar)
         if mv.IsMatrix ():
             return commonType, MatrixType (commonType, mv.GetRowCount (), mv.GetColumnCount ())
@@ -371,13 +390,23 @@ class StructType(ComplexType):
 
 class ClassType(StructType):
     '''Struct type with additional support for member functions.'''
-    def __init__(self, name, declarations, functions):
+    def __init__(self, name, declarations, functions, isInterface=False):
         StructType.__init__(self, name, declarations)
         for func in functions:
             self.members.RegisterFunction(func.GetName (), func)
+        self.__isInterface = isInterface
+
+    def __str__(self):
+        if self.__isInterface:
+            return 'interface {}'.format(self.name)
+        else:
+            return 'class {}'.format(self.name)
 
     def GetFunctionType(self, functionName, argumentTypes):
         return self.members.GetFunctionType(functionName, argumentTypes)
+
+    def IsInterface(self):
+        return self.__isInterface
 
 class Function(Type):
     def __init__(self, name, returnType, arguments):
