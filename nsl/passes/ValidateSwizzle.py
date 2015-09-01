@@ -3,15 +3,12 @@ from nsl import ast
 def ValidateSwizzleMask(mask):
     from .. import Utility, Errors
 
-    for m in mask:
-        if m not in 'xyzwrgba':
-            Errors.ERROR_INVALID_SWIZZLE_MASK.Raise ()
+    if any([m not in 'xyzwrgba' for m in mask]):
+        Errors.ERROR_INVALID_SWIZZLE_MASK.Raise ()
 
-    if (Utility.ContainsAnyOf(mask, 'xyzw')):
-        if (Utility.ContainsAnyOf (mask, 'rgba')):
+    if (Utility.ContainsAnyOf(mask, 'xyzw') and Utility.ContainsAnyOf (mask, 'rgba')):
             Errors.ERROR_MIXED_SWIZZLE_MASK.Raise ()
-    elif (Utility.ContainsAnyOf(mask, 'rgba')):
-        if (Utility.ContainsAnyOf (mask, 'xyzw')):
+    elif (Utility.ContainsAnyOf(mask, 'rgba') and Utility.ContainsAnyOf (mask, 'xyzw')):
             Errors.ERROR_MIXED_SWIZZLE_MASK.Raise ()
 
 class ValidateSwizzleMaskVisitor(ast.DefaultVisitor):

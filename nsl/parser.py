@@ -230,7 +230,12 @@ class NslParser:
     def p_shader_type(self, p):
         '''shader_type : PIXEL
         | VERTEX'''
-        p[0] = p[1]
+        p[0] = {'vertex'    : ast.ShaderType.Vertex,
+                'hull'      : ast.ShaderType.Hull,
+                'domain'    : ast.ShaderType.Domain,
+                'geometry'  : ast.ShaderType.Geometry,
+                'pixel'     : ast.ShaderType.Pixel,
+                'compute'   : ast.ShaderType.Pixel}[p[1]]
 
     def p_shader_decl(self, p):
         '''shader_decl : SHADER '(' shader_type ')' '(' arg_list_opt ')' RARROW type'''

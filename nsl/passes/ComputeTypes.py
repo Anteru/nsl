@@ -7,13 +7,13 @@ def ParseSwizzleMask(mask):
     '''
 
     mapping = { 'x' : 0,
-     'y' : 1,
-     'z' : 2,
-     'w' : 3,
-     'r' : 0,
-     'g' : 1,
-     'b' : 2,
-     'a' : 3
+                'y' : 1,
+                'z' : 2,
+                'w' : 3,
+                'r' : 0,
+                'g' : 1,
+                'b' : 2,
+                'a' : 3
     }
 
     return [mapping [e] for e in mask]
@@ -23,13 +23,10 @@ def ComputeSwizzleType(inType, mask):
     @param inType: Must be a PrimitiveType
     @param mask: A valid swizzle mask
     '''
+    assert isinstance(inType, types.Type)
     outComponentCount = len (mask)
 
-    swizzleType = None
-    if isinstance (inType, types.VectorType):
-        swizzleType = inType.GetType ()
-    else:
-        swizzleType = inType
+    swizzleType = inType.GetElementType ()
 
     if outComponentCount == 1:
         return swizzleType

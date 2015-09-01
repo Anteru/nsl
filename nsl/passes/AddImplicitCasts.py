@@ -26,11 +26,14 @@ class AddImplicitCastVisitor (ast.DefaultVisitor):
 
     def v_ConstructPrimitiveExpression(self, node, ctx):
         # The primitive type of each argument must be the same as the result
-        resultType = node.type.GetType ()
+        resultType = node.type.GetElementType ()
 
         arguments = []
         for p in node.GetArguments ():
-            if p.type != resultType:
+            # If this is something like float4 (float2, int, int), we want to
+            # cast int->float but float2 should not be casted
+            argumentType = p.type.GetElementType()
+            if argumentType != resultType:
                 arguments.append (ast.CastExpression (p,
                     self._GetTargetType (p.type, resultType),
                     True))

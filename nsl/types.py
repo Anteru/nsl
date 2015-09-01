@@ -114,6 +114,10 @@ class Type:
 
     def NeedsResolve (self):
         return False
+    
+    def GetElementType(self):
+        '''For vector and matrix types, return the element type.'''
+        return self
 
 def Resolve(theType, scope):
     if theType.NeedsResolve ():
@@ -270,7 +274,7 @@ def ResolveBinaryExpressionType (operation, left, right):
     def PromoteMatrixOrVector (mv, scalar):
         '''Promote a matrix/vector to the common type with the scalar. This
         happens when multiplying an int matrix with a float scalar, for instace.'''
-        commonType = Promote (mv.GetType (), scalar)
+        commonType = Promote (mv.GetElementType (), scalar)
         if mv.IsMatrix ():
             return commonType, MatrixType (commonType, mv.GetRowCount (), mv.GetColumnCount ())
         elif mv.IsVector ():
@@ -287,7 +291,7 @@ def ResolveBinaryExpressionType (operation, left, right):
     elif operation == op.Operation.MUL:
         # Matrix * Vector returns vector again
         if left.IsMatrix () and right.IsVector ():
-            commonType = Promote (left.GetType (), right.GetType ())
+            commonType = Promote (left.GetElementType (), right.GetElementType ())
             if left.GetColumnCount () == right.GetSize ():
                 vectorType = VectorType (commonType, left.GetRowCount ())
                 matrixType = MatrixType (commonType, left.GetRowCount (),
@@ -346,9 +350,10 @@ class ArrayType(Type):
 
     def GetSize(self):
         return self.arraySize
-
-    def GetType(self):
-        return self.elementType
+    
+    def GetElementType(self):
+        # Need to call recursively in case we have a nested array
+        return self.elementType.GetElementType ()
 
     def GetName(self):
         return self.GetType().GetName () + ' [' + str(self.arraySize) + ']'
@@ -361,6 +366,7 @@ class ArrayType(Type):
                                             self.arraySize)
 
 class ComplexType(Type):
+    '''Complex types are nested types with named members.'''
     def IsComplex(self):
         return True
 
@@ -401,6 +407,12 @@ class ClassType(StructType):
             return 'interface {}'.format(self.name)
         else:
             return 'class {}'.format(self.name)
+        
+    def __repr__(self):
+        return 'ClassType ({}, {}, {}, {})'.format (repr(self.name),
+                                                    repr(self.declarations), 
+                                                    repr(self.functions), 
+                                                    repr(self.isInterface))
 
     def GetFunctionType(self, functionName, argumentTypes):
         return self.members.GetFunctionType(functionName, argumentTypes)
@@ -513,8 +525,8 @@ class VectorType(PrimitiveType):
 
     def IsVector(self):
         return True
-
-    def GetType(self):
+    
+    def GetElementType(self):
         return self.componentType
 
     def GetSize(self):
@@ -525,8 +537,8 @@ class VectorType(PrimitiveType):
                               self.componentCount)
 
     def __repr__(self):
-        return 'VectorType (' + repr(self.componentType) + \
-            ', {})'.format(self.componentCount)
+        return 'VectorType ({}, {})'.format (repr(self.componentType), 
+                                             self.componentCount)
 
     def __str__(self):
         return '{}{}'.format(self.componentType, self.componentCount)
@@ -557,7 +569,7 @@ class MatrixType(PrimitiveType):
     def GetColumnCount (self):
         return self.size [1]
 
-    def GetType(self):
+    def GetElementType(self):
         return self.componentType
 
     def GetSize(self):
@@ -567,8 +579,9 @@ class MatrixType(PrimitiveType):
         return str(self)
 
     def __repr__(self):
-        return 'MatrixType (' + repr(self.componentType) + \
-            ', {}, {})'.format(self.GetRowCount (), self.GetColumnCount ())
+        return 'MatrixType ({}, {}, {})'.format (repr(self.componentType),
+                                                 self.GetRowCount (), 
+                                                 self.GetColumnCount ())
 
     def __str__(self):
         return '{}{}x{}'.format (self.componentType.GetName (),
