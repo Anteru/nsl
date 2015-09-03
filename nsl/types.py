@@ -98,12 +98,12 @@ class Type:
     '''Base class for all type calculations.'''
     def GetName(self):
         assert False, 'Base type has no defined name'
-        return 'undef'
+        return None
 
     def IsPrimitive(self):
         return False
 
-    def IsComplex(self):
+    def IsAggregate(self):
         return False
 
     def IsArray(self):
@@ -116,7 +116,9 @@ class Type:
         return False
     
     def GetElementType(self):
-        '''For vector and matrix types, return the element type.'''
+        '''For vector, matrix and array types, return the element type.
+        
+        For multi-dimensional arrays this will return the innermost basic type.'''
         return self
 
 def Resolve(theType, scope):
@@ -135,13 +137,13 @@ def ResolveFunction(theType, scope, argumentTypes):
 
 class UnresolvedType:
     def __init__(self, name):
-        self.name = name
+        self.__name = name
 
     def NeedsResolve(self):
         return True
 
     def GetName (self):
-        return self.name
+        return self.__name
 
 def IsCompatible(left, right):
     '''Check if two types are compatible.
@@ -166,9 +168,9 @@ def IsCompatible(left, right):
 
         # reduce single-component vector types to scalars
         if left.IsVector () and left.GetSize () == 1:
-                left = left.GetType ()
+                left = left.GetElementType ()
         if right.IsVector () and right.GetSize () == 1:
-                right = right.GetType ()
+                right = right.GetElementType ()
 
         # Our primitive types are all compatible
         if left.IsVector() and right.IsVector ():
@@ -180,12 +182,12 @@ def IsCompatible(left, right):
             return True
         else:
             return False
-    elif left.IsPrimitive () and right.IsComplex ():
+    elif left.IsPrimitive () and right.IsAggregate():
         return False
-    elif left.IsComplex () and right.IsPrimitive ():
+    elif left.IsAggregate () and right.IsPrimitive ():
         return False
     else:
-        # both complex
+        # both aggregate
         return left == right
 
 def Match(leftType, rightType):
@@ -202,8 +204,13 @@ def Match(leftType, rightType):
         return 1
 
 def Promote(t1, t2):
+    assert isinstance (t1, PrimitiveType)
+    assert isinstance (t2, PrimitiveType)
+    
     if (isinstance(t1, VectorType) and isinstance (t2, ScalarType)) or \
         (isinstance(t1, ScalarType) and isinstance (t2, VectorType)):
+        # scalar <op> vector will promote the scalar to a vector type
+        # of same size with compatible element type
         vectorType = None
         scalarType = None
 
@@ -216,11 +223,11 @@ def Promote(t1, t2):
 
         assert vectorType.GetSize () == 1, \
             'Cannot promote scalar with type {} to {}'.format (scalarType, vectorType)
-        return VectorType (Promote (vectorType.GetType (), scalarType), 1)
+        return VectorType (Promote (vectorType.GetElementType (), scalarType), 1)
     elif isinstance (t1, VectorType) and isinstance (t2, VectorType):
         assert t1.GetSize () == t2.GetSize (), \
             'Cannot combine {} and {} to unified vector type'.format (t1, t2)
-        return VectorType (Promote (t1.GetType (), t2.GetType (),
+        return VectorType (Promote (t1.GetElementType (), t2.GetElementType (),
                                     t1.GetSize ()))
     elif isinstance (t1, Float) or isinstance (t2, Float):
         return Float ()
@@ -230,14 +237,14 @@ def Promote(t1, t2):
         return t1
 
 class ExpressionType:
-    '''Descripe the type of an expression.
+    '''Describe the type of an expression.
 
     Result is the result type of the complete expression, once all operands
     have been taken into account.
 
     For unary expressions, operands must have length 1.
     For binary expressions, operands must have length 2.
-    For trinary expressions, operands must have length 3.'''
+    For ternary expressions, operands must have length 3.'''
     def __init__ (self, result, operands):
         self._result = result
         self._operands = operands
@@ -273,7 +280,7 @@ def ResolveBinaryExpressionType (operation, left, right):
 
     def PromoteMatrixOrVector (mv, scalar):
         '''Promote a matrix/vector to the common type with the scalar. This
-        happens when multiplying an int matrix with a float scalar, for instace.'''
+        happens when multiplying an int matrix with a float scalar, for instance.'''
         commonType = Promote (mv.GetElementType (), scalar)
         if mv.IsMatrix ():
             return commonType, MatrixType (commonType, mv.GetRowCount (), mv.GetColumnCount ())
@@ -288,20 +295,19 @@ def ResolveBinaryExpressionType (operation, left, right):
         # Scalar and vector/matrix can be combined
         commonType, mvType = PromoteMatrixOrVector (right, left)
         return ExpressionType (mvType, [mvType, commonType])
-    elif operation == op.Operation.MUL:
-        # Matrix * Vector returns vector again
-        if left.IsMatrix () and right.IsVector ():
+    elif left.IsMatrix () and right.IsVector ():
+        if operation == op.Operation.MUL:
+            # Matrix * Vector returns vector again
             commonType = Promote (left.GetElementType (), right.GetElementType ())
             if left.GetColumnCount () == right.GetSize ():
                 vectorType = VectorType (commonType, left.GetRowCount ())
                 matrixType = MatrixType (commonType, left.GetRowCount (),
                     left.GetColumnCount ())
-
                 return ExpressionType (vectorType, [matrixType, vectorType])
-        elif left.IsScalar () and right.IsScalar ():
-            commonType = Promote (left, right)
-            return ExpressionType (commonType, [commonType, commonType])
-        Errors.ERROR_INCOMPATIBLE_TYPES.Raise (left, right)
+            else:
+                Errors.ERROR_INCOMPATIBLE_TYPES.Raise (left, right)
+        else:
+            Errors.ERROR_INCOMPATIBLE_TYPES.Raise (left, right)
 
     # otherwise, promote
     return Promote (left, right)
@@ -319,19 +325,6 @@ class PrimitiveType(Type):
         use that.'''
         return repr(self) == repr(other)
 
-    def __init__(self):
-        self.semantic = None
-
-    def SetSemantic(self, semantic):
-        assert semantic is not None
-        self.semantic = semantic
-
-    def GetSemantic(self):
-        return self.semantic
-
-    def HasSemantic(self):
-        return self.semantic is not None
-
     def IsScalar (self):
         return False
 
@@ -341,36 +334,35 @@ class PrimitiveType(Type):
     def IsMatrix (self):
         return False
 
-class ArrayType(Type):
+class AggregateType(Type):
+    def IsAggregate(self):
+        return True
+
+class ArrayType(AggregateType):
     def __init__(self, elementType, arraySize):
         Type.__init__(self)
         assert arraySize > 0
-        self.elementType = elementType
-        self.arraySize = arraySize
+        self.__elementType = elementType
+        self.__arraySize = arraySize
 
     def GetSize(self):
-        return self.arraySize
+        return self.__arraySize
     
     def GetElementType(self):
         # Need to call recursively in case we have a nested array
-        return self.elementType.GetElementType ()
+        return self.__elementType.GetElementType ()
 
     def GetName(self):
-        return self.GetType().GetName () + ' [' + str(self.arraySize) + ']'
+        return self.GetElementType().GetName () + ' [' + str(self.__arraySize) + ']'
 
     def __str__(self):
-        return '{} [{}]'.format (self.elementType, self.arraySize)
+        return '{} [{}]'.format (self.__elementType, self.__arraySize)
 
     def __repr__(self):
-        return 'ArrayType ({}, {})'.format (repr(self.elementType),
-                                            self.arraySize)
+        return 'ArrayType ({}, {})'.format (repr(self.__elementType),
+                                            self.__arraySize)
 
-class ComplexType(Type):
-    '''Complex types are nested types with named members.'''
-    def IsComplex(self):
-        return True
-
-class StructType(ComplexType):
+class StructType(AggregateType):
     def __init__(self, name, declarations):
         self.members = Scope ()
         self.name = name
