@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from nsl import op, Errors
+from enum import Enum
 
 class UnknownSymbol(Exception):
     def __init__(self, symbol):
@@ -203,39 +204,6 @@ def Match(leftType, rightType):
     else:
         return 1
 
-def Promote(t1, t2):
-    assert isinstance (t1, PrimitiveType)
-    assert isinstance (t2, PrimitiveType)
-    
-    if (isinstance(t1, VectorType) and isinstance (t2, ScalarType)) or \
-        (isinstance(t1, ScalarType) and isinstance (t2, VectorType)):
-        # scalar <op> vector will promote the scalar to a vector type
-        # of same size with compatible element type
-        vectorType = None
-        scalarType = None
-
-        if (isinstance (t1, VectorType)):
-            vectorType = t1
-            scalarType = t2
-        else:
-            vectorType = t2
-            scalarType = t1
-
-        assert vectorType.GetSize () == 1, \
-            'Cannot promote scalar with type {} to {}'.format (scalarType, vectorType)
-        return VectorType (Promote (vectorType.GetElementType (), scalarType), 1)
-    elif isinstance (t1, VectorType) and isinstance (t2, VectorType):
-        assert t1.GetSize () == t2.GetSize (), \
-            'Cannot combine {} and {} to unified vector type'.format (t1, t2)
-        return VectorType (Promote (t1.GetElementType (), t2.GetElementType (),
-                                    t1.GetSize ()))
-    elif isinstance (t1, Float) or isinstance (t2, Float):
-        return Float ()
-    elif isinstance (t1, Integer) or isinstance (t2, Integer):
-        return Integer ()
-    else:
-        return t1
-
 class ExpressionType:
     '''Describe the type of an expression.
 
@@ -254,66 +222,90 @@ class ExpressionType:
 
     def GetOperandType (self, index):
         return self._operands [index]
+    
+def _MergeScalarTypes(left, right):
+    '''Given two scalar types, return the wider type.'''
+    assert isinstance (left, ScalarType)
+    assert isinstance (right, ScalarType)
+    
+    if isinstance (left, Float) or isinstance (right, Float):
+        return Float ()
+    
+    if isinstance (left, Integer) or isinstance (right, Integer):
+        return Integer ()
+    
+    assert isinstance (left, UnsignedInteger)
+    assert isinstance (right, UnsignedInteger)
+    
+    return UnsignedInteger ()
 
+def _MergePrimitiveTypes(left, right):
+    if isinstance(left, ScalarType) and isinstance(right, ScalarType):
+        return _MergeScalarTypes(left, right)
+    elif isinstance (left, VectorType) and isinstance(right, VectorType):
+        assert (left.GetSize () == right.GetSize ())
+        return VectorType (
+            _MergeScalarTypes (
+                left.GetElementType (), 
+                right.GetElementType()),
+            left.GetSize ())
+    elif isinstance (left, MatrixType) and isinstance (right, MatrixType):
+        assert (left.GetSize () == right.GetSize ())        
+        return VectorType (
+            _MergeScalarTypes (
+                left.GetElementType (), 
+                right.GetElementType()),
+            left.GetRowCount (), left.GetColumnCount ())
+        
 def ResolveBinaryExpressionType (operation, left, right):
     '''Get the type of an expression combining two elements,
     one of type left and one of type right. This performs the standard
-    type promotion rules (int->float, int->uint) and expects that both
+    type promotion rules (``int->float``, ``int->uint``) and expects that both
     types are compatible to start with.
 
-    @param operation: The operation, must be a binary operation
-    @param left: The left operand type
-    @param right: The right operand type'''
+    :param operation: The operation, must be a binary operation
+    :param left: The left operand type
+    :param right: The right operand type'''
     # must be primitive type, we don't support operations on
-    # complex types
+    # aggregate types
     assert isinstance (left, PrimitiveType)
     assert isinstance (right, PrimitiveType)
     assert isinstance (operation, op.Operation)
 
-    if left == right:
-        return ExpressionType (left, [left, right])
-
     if op.IsComparison (operation):
         # Cast may be still necessary if we compare integers with floats
-        commonType = Promote (left, right)
-        return ExpressionType (Integer (), [commonType, commonType])
-
-    def PromoteMatrixOrVector (mv, scalar):
-        '''Promote a matrix/vector to the common type with the scalar. This
-        happens when multiplying an int matrix with a float scalar, for instance.'''
-        commonType = Promote (mv.GetElementType (), scalar)
-        if mv.IsMatrix ():
-            return commonType, MatrixType (commonType, mv.GetRowCount (), mv.GetColumnCount ())
-        elif mv.IsVector ():
-            return commonType, VectorType (commonType, mv.GetRowCount ())
-
-    if (left.IsVector () or left.IsMatrix ()) and right.IsScalar ():
-        # Vector/Matrix and scalars can be combined
-        commonType, mvType = PromoteMatrixOrVector (left, right)
-        return ExpressionType (mvType, [mvType, commonType])
-    elif left.IsScalar () and (right.IsVector () or right.IsMatrix ()):
-        # Scalar and vector/matrix can be combined
-        commonType, mvType = PromoteMatrixOrVector (right, left)
-        return ExpressionType (mvType, [mvType, commonType])
-    elif left.IsMatrix () and right.IsVector ():
-        if operation == op.Operation.MUL:
-            # Matrix * Vector returns vector again
-            commonType = Promote (left.GetElementType (), right.GetElementType ())
-            if left.GetColumnCount () == right.GetSize ():
-                vectorType = VectorType (commonType, left.GetRowCount ())
-                matrixType = MatrixType (commonType, left.GetRowCount (),
-                    left.GetColumnCount ())
-                return ExpressionType (vectorType, [matrixType, vectorType])
-            else:
-                Errors.ERROR_INCOMPATIBLE_TYPES.Raise (left, right)
-        else:
+        baseType = _MergePrimitiveTypes (left, right)
+        return ExpressionType (Integer (), [baseType, baseType])
+    
+    if operation == op.Operation.MUL and (left.IsMatrix () and right.IsVector ()):
+        if left.GetColumnCount () != right.GetSize ():
             Errors.ERROR_INCOMPATIBLE_TYPES.Raise (left, right)
+        baseType = _MergeScalarTypes(left.GetElementType (), right.GetElementType ())
+        
+        return ExpressionType (VectorType (baseType, left.GetRowCount ()),
+            [
+                MatrixType (baseType, left.GetRowCount (), left.GetColumnCount ()),
+                VectorType (baseType, right.GetSize ())
+            ])
 
-    # otherwise, promote
-    return Promote (left, right)
+    if left == right:
+        return ExpressionType (left, [left, right])
+    
+    # make sure both are of the same type class (i.e. scalar, matrix or vector)
+    if left.GetKind () != right.GetKind ():
+        Errors.ERROR_INCOMPATIBLE_TYPES.Raise (left, right)
+            
+    baseType = _MergePrimitiveTypes(left, right)
+    return ExpressionType (baseType, [baseType, baseType])
+        
 
 def IsValidInput(outputStructType, inputStructType):
     return False
+
+class PrimitiveTypeKind(Enum):
+    Scalar = 1
+    Vector = 2
+    Matrix = 3
 
 class PrimitiveType(Type):
     '''Primitive, or built-in type base class.'''
@@ -326,13 +318,16 @@ class PrimitiveType(Type):
         return repr(self) == repr(other)
 
     def IsScalar (self):
-        return False
+        return self.GetKind () == PrimitiveTypeKind.Scalar
 
     def IsVector (self):
-        return False
+        return self.GetKind () == PrimitiveTypeKind.Vector
 
     def IsMatrix (self):
-        return False
+        return self.GetKind () == PrimitiveTypeKind.Matrix
+    
+    def GetKind(self):
+        return None
 
 class AggregateType(Type):
     def IsAggregate(self):
@@ -364,50 +359,50 @@ class ArrayType(AggregateType):
 
 class StructType(AggregateType):
     def __init__(self, name, declarations):
-        self.members = Scope ()
-        self.name = name
+        self._members = Scope ()
+        self._name = name
         for (name, elementType) in declarations.items ():
-            self.members.RegisterVariable(name, elementType)
-        self.declarations = declarations
+            self._members.RegisterVariable(name, elementType)
+        self._declarations = declarations
 
     def __str__(self):
-        return 'struct {}'.format(self.name)
+        return 'struct {}'.format(self._name)
 
     def __repr__(self):
-        return 'StructType ({}, {})'.format (repr(self.name),
-                                             repr(self.declarations))
+        return 'StructType ({}, {})'.format (repr(self._name),
+                                             repr(self._declarations))
 
     def GetName(self):
-        return self.name
+        return self._name
 
     def GetMembers(self):
-        return self.members
+        return self._members
 
     def GetVariableType(self, variableName):
-        return self.members.GetVariableType (variableName)
+        return self._members.GetVariableType (variableName)
 
 class ClassType(StructType):
     '''Struct type with additional support for member functions.'''
     def __init__(self, name, declarations, functions, isInterface=False):
-        StructType.__init__(self, name, declarations)
+        super(ClassType, self).__init__(name, declarations)
         for func in functions:
-            self.members.RegisterFunction(func.GetName (), func)
+            self._members.RegisterFunction(func.GetName (), func)
         self.__isInterface = isInterface
 
     def __str__(self):
         if self.__isInterface:
-            return 'interface {}'.format(self.name)
+            return 'interface {}'.format(self._name)
         else:
-            return 'class {}'.format(self.name)
+            return 'class {}'.format(self._name)
         
     def __repr__(self):
-        return 'ClassType ({}, {}, {}, {})'.format (repr(self.name),
-                                                    repr(self.declarations), 
-                                                    repr(self.functions), 
-                                                    repr(self.isInterface))
+        return 'ClassType ({}, {}, {}, {})'.format (repr(self._name),
+                                                    repr(self._declarations), 
+                                                    repr(self._functions), 
+                                                    repr(self.__isInterface))
 
     def GetFunctionType(self, functionName, argumentTypes):
-        return self.members.GetFunctionType(functionName, argumentTypes)
+        return self._members.GetFunctionType(functionName, argumentTypes)
 
     def IsInterface(self):
         return self.__isInterface
@@ -473,9 +468,9 @@ class Void(Type):
     def __str__(self):
         return 'void'
 
-class ScalarType(PrimitiveType):
-    def IsScalar (self):
-        return True
+class ScalarType(PrimitiveType):    
+    def GetKind(self):
+        return PrimitiveTypeKind.Scalar
 
 class Float(ScalarType):
     def GetName(self):
@@ -510,76 +505,76 @@ class UnsignedInteger(ScalarType):
 class VectorType(PrimitiveType):
     def __init__(self, componentType, componentCount):
         assert componentCount > 0
-        assert isinstance(componentType, PrimitiveType)
-        PrimitiveType.__init__(self)
-        self.componentType = componentType
-        self.componentCount = componentCount
-
-    def IsVector(self):
-        return True
+        assert isinstance(componentType, ScalarType)
+        super(VectorType, self).__init__()
+        self.__componentType = componentType
+        self.__componentCount = componentCount
     
     def GetElementType(self):
-        return self.componentType
+        return self.__componentType
 
     def GetSize(self):
-        return self.componentCount
+        return self.__componentCount
 
     def GetName(self):
-        return '{}{}'.format (self.componentType.GetName (),
-                              self.componentCount)
+        return '{}{}'.format (self.__componentType.GetName (),
+                              self.__componentCount)
 
     def __repr__(self):
-        return 'VectorType ({}, {})'.format (repr(self.componentType), 
-                                             self.componentCount)
+        return 'VectorType ({}, {})'.format (repr(self.__componentType), 
+                                             self.__componentCount)
 
     def __str__(self):
-        return '{}{}'.format(self.componentType, self.componentCount)
+        return '{}{}'.format(self.__componentType, self.__componentCount)
+    
+    def GetKind(self):
+        return PrimitiveTypeKind.Vector
 
-class MatrixOrder:
-    ROW_MAJOR       = 1
-    COLUMN_MAJOR    = 2
+class MatrixOrder(Enum):
+    RowMajor       = 1
+    ColumnMajor    = 2
 
 class MatrixType(PrimitiveType):
     def __init__(self, componentType, rows, columns,
-                 order = MatrixOrder.ROW_MAJOR):
+                 order = MatrixOrder.RowMajor):
         assert rows > 0 and columns > 0
-        assert isinstance(componentType, PrimitiveType)
-        PrimitiveType.__init__(self)
-        self.componentType = componentType
-        self.size = (rows, columns,)
-        self.order = order
-
-    def IsMatrix (self):
-        return True
+        assert isinstance(componentType, ScalarType)
+        super(MatrixType, self).__init__()
+        self.__componentType = componentType
+        self.__size = (rows, columns,)
+        self.__order = order
 
     def GetOrder (self):
-        return self.order
+        return self.__order
 
     def GetRowCount (self):
-        return self.size [0]
+        return self.__size [0]
 
     def GetColumnCount (self):
-        return self.size [1]
+        return self.__size [1]
 
     def GetElementType(self):
-        return self.componentType
+        return self.__componentType
 
     def GetSize(self):
-        return self.size
+        return self.__size
 
     def GetName(self):
         return str(self)
+    
+    def GetKind(self):
+        return PrimitiveTypeKind.Matrix
 
     def __repr__(self):
-        return 'MatrixType ({}, {}, {})'.format (repr(self.componentType),
+        return 'MatrixType ({}, {}, {})'.format (repr(self.__componentType),
                                                  self.GetRowCount (), 
                                                  self.GetColumnCount ())
 
     def __str__(self):
-        return '{}{}x{}'.format (self.componentType.GetName (),
+        return '{}{}x{}'.format (self.__componentType.GetName (),
                               self.GetRowCount (),
                               self.GetColumnCount ())
-class Operator(Type):
+class Operator:
     pass
 
 class BinaryOperator(Operator):

@@ -1,3 +1,5 @@
+from enum import Enum
+
 class ErrorMessage:
     def __init__ (self, code, severity, message):
         self.code = code
@@ -46,7 +48,7 @@ class CompileException (Exception):
     def __str__(self):
         return self.messageText
 
-class Severity:
+class Severity(Enum):
     ERROR = 1
     WARNING = 2
     INFO = 3

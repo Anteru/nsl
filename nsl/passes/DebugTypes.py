@@ -33,13 +33,16 @@ class DebugTypeVisitor(ast.DebugPrintVisitor):
 	def v_Function(self, func, ctx):
 		'''Computes the function type and processes all statements.'''
 		self._p(ctx, str(func.GetType ()))
+		ctx += 1
 		self._p (ctx, 'Arguments')
 		for (name, argType) in func.GetType ().GetArguments().items ():
 			self._p (ctx + 1, name + ':' + str(argType))
 
 		print ()
+		self._p (ctx, 'Body')
 		self.v_Visit (func.GetBody(), ctx)
 		print ()
+		ctx -= 1
 
 	def v_Shader(self, shd, ctx=None):
 		self.v_Function(shd, ctx)

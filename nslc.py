@@ -40,4 +40,4 @@ shader(pixel) (VertexToPixel vs2ps) -> FragmentOutput
     out.color = vs2ps.color;
     return out;
 }
-''', debugParsing=True)
+''', debugParsing=False)

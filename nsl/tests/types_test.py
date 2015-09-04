@@ -20,13 +20,6 @@ class TestTypes:
 
 		assert types.IsCompatible(i, i1)
 
-	def testPromoteIntToInt1Vector(self):
-		i = types.Integer ()
-		i1 = types.VectorType (types.Integer (), 1)
-
-		r = types.Promote (i, i1)
-		assert r == i1
-
 	def testResolveBinaryExpressionTypeMV (self):
 		m44 = types.MatrixType (types.Float (), 4, 4)
 		f4 = types.VectorType (types.Float (), 4)
