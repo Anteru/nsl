@@ -268,8 +268,8 @@ def ResolveBinaryExpressionType (operation, left, right):
     :param right: The right operand type'''
     # must be primitive type, we don't support operations on
     # aggregate types
-    assert isinstance (left, PrimitiveType)
-    assert isinstance (right, PrimitiveType)
+    assert isinstance (left, PrimitiveType), '{} is not a primitive type'.format (left)
+    assert isinstance (right, PrimitiveType), '{} is not a primitive type'.format (right)
     assert isinstance (operation, op.Operation)
 
     if op.IsComparison (operation):

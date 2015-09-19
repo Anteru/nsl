@@ -20,7 +20,7 @@ class ValidateSwizzleMaskVisitor(ast.DefaultVisitor):
     
     def v_MemberAccessExpression (self, expr, ctx=None):
         import nsl.Errors
-        t = expr.GetParent ().type
+        t = expr.GetParent ().GetType()
         
         with nsl.Errors.CompileExceptionToErrorHandler (self.errorHandler):
             if t.IsPrimitive () and (t.IsVector () or t.IsScalar ()):

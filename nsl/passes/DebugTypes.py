@@ -15,20 +15,14 @@ class DebugTypeVisitor(ast.DebugPrintVisitor):
 			self._p (ctx + 1, t.GetName () + ':' + str(t.GetType ()))
 		print()
 
-	def _ProcessExpression(self, expr, ctx):
-		self._p (ctx, str(expr) + ':' + str(expr.type))
+	def v_Expression(self, expr, ctx):
+		self._p (ctx, str(expr) + ':' + str(expr.GetType()))
 		for e in expr:
-			self._ProcessExpression (e, ctx + 1)
+			self.v_Visit (e, ctx)
 
 	def v_CompoundStatement(self, stmt, ctx):
 		for s in stmt:
 			self.v_Visit (s, ctx + 1)
-
-	def v_PrimaryExpression(self, expr, ctx):
-		self._p(ctx, str(expr) + ':' + str(expr.type))
-
-	def v_ExpressionStatement(self, stmt, ctx):
-		self._ProcessExpression(stmt.GetExpression(), ctx)
 
 	def v_Function(self, func, ctx):
 		'''Computes the function type and processes all statements.'''

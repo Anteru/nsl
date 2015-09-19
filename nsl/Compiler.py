@@ -1,5 +1,5 @@
 from nsl.parser import NslParser
-from nsl.passes import ComputeTypes, ValidateSwizzle, ValidateFlowStatements, AddImplicitCasts, DebugAst, DebugTypes, PrettyPrint
+from nsl.passes import ComputeTypes, ValidateSwizzle, ValidateFlowStatements, AddImplicitCasts, DebugAst, DebugTypes, PrettyPrint, HlslCodeGen
 
 class Compiler:
     def __init__(self):
@@ -11,7 +11,8 @@ class Compiler:
                   AddImplicitCasts.GetPass (),
                   DebugAst.GetPass (),
                   DebugTypes.GetPass (),
-                  PrettyPrint.GetPass ()]
+                  PrettyPrint.GetPass (),
+                  HlslCodeGen.GetPass()]
 
     def Compile (self, source, debugParsing = False):
         ast = self.parser.Parse (source, debug = debugParsing)

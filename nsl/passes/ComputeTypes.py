@@ -77,21 +77,21 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
             # Figure out the parent type
             self._ProcessExpression(p, scope)
             if isinstance (expr, ast.MemberAccessExpression):
-                if p.type.IsPrimitive ():
-                    if p.type.IsVector () or p.type.IsScalar ():
+                if p.GetType().IsPrimitive ():
+                    if p.GetType().IsVector () or p.GetType().IsScalar ():
                         # We allow both swizzling of vector and scalar types
-                        expr.type = ComputeSwizzleType(p.type, expr.GetMember ())
+                        expr.SetType (ComputeSwizzleType(p.GetType(), expr.GetMember ()))
                     else:
                         Errors.ERROR_CANNOT_SWIZZLE_PRIMITIVE_TYPE.Raise ()
-                elif isinstance (p.type, types.StructType):
-                    expr.type = p.type.GetMembers ().GetVariableType (expr.GetMember ())
+                elif isinstance (p.GetType(), types.StructType):
+                    expr.SetType (p.GetType().GetMembers ().GetVariableType (expr.GetMember ()))
                 else:
-                    Errors.ERROR_CANNOT_SWIZZLE_TYPE.Raise (p.type)
+                    Errors.ERROR_CANNOT_SWIZZLE_TYPE.Raise (p.GetType())
             elif isinstance (expr, ast.ArrayExpression):
-                expr.type = p.type.GetType ()
+                expr.SetType (p.GetType().GetType ())
         elif isinstance(expr, ast.PrimaryExpression):
             # Simply check the name
-            expr.type = scope.GetVariableType (expr.GetName ())
+            expr.SetType (scope.GetVariableType (expr.GetName ()))
         else:
             # Walk through all children
             for c in expr:
@@ -104,20 +104,12 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
                 # As we know the parameter types now, we can finally resolve
                 # overloaded functions
                 expr.ResolveType (scope)
-                expr.type = expr.function.GetReturnType()
-            elif isinstance (expr, ast.AssignmentExpression):
-                expr.type = expr.GetLeft ().type
+                expr.SetType (expr.function.GetReturnType())
             elif isinstance (expr, ast.BinaryExpression):
-                expr.ResolveType (expr.GetLeft().type, expr.GetRight().type)
-                expr.type = expr.operator.GetReturnType ()
+                expr.ResolveType (expr.GetLeft().GetType(), expr.GetRight().GetType())
+                expr.SetType (expr.GetOperator ().GetReturnType ())
 
-        return expr.type
-
-    def v_IfStatement(self, stmt, ctx):
-        self._ProcessExpression(stmt.GetCondition(), ctx[-1])
-        self.v_Visit (stmt.GetTruePath(), ctx)
-        if stmt.HasElsePath():
-            self.v_Visit (stmt.GetElsePath (), ctx)
+        return expr.GetType ()
 
     def v_DeclarationStatement(self, stmt, ctx):
         scope = ctx[-1]
@@ -128,11 +120,8 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
                 self._ProcessExpression(decl.GetInitializerExpression (),
                                         scope)
 
-    def v_ExpressionStatement(self, stmt, ctx):
-        self.type = self._ProcessExpression(stmt.GetExpression(), ctx[-1])
-
-    def v_ReturnStatement(self, stmt, ctx):
-        self.type = self._ProcessExpression(stmt.GetExpression(), ctx[-1])
+    def v_Expression(self, expr, ctx):
+        self._ProcessExpression(expr, ctx[-1])
 
     def v_Function(self, func, ctx):
         '''Computes the function type and processes all statements.'''
@@ -159,9 +148,6 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
             self.v_Visit (decl, ctx)
         for func in prog.GetFunctions ():
             self.v_Visit (func, ctx)
-
-    def v_Generic(self, node, ctx):
-        ast.Visitor.v_Generic (self, node, ctx)
 
 import nsl.Pass
 class ComputeTypesPass(nsl.Pass.Pass):

@@ -42,7 +42,7 @@ class Node:
             else:
                 if not isinstance (e, Node):
                     raise InvalidChildType (type(e))
-                visitor.v_Generic (e, ctx)
+                return visitor.v_Generic (e, ctx)
 
 class Program (Node):
     '''Program container, keeping everything together.'''
@@ -79,6 +79,14 @@ class Program (Node):
 class Expression(Node):
     def __init__(self, children=[]):
         self.children = children
+        self.__type = types.UnresolvedType
+        
+    def GetType(self):
+        return self.__type
+    
+    def SetType(self, nslType):
+        assert not isinstance(nslType, types.UnresolvedType)
+        self.__type = nslType
 
     def _GetChildren(self):
         return [self.children]
@@ -96,24 +104,27 @@ class EmptyExpression(Expression):
 class CastExpression(UnaryExpression):
     def __init__(self, expr, targetType, implicit = False):
         Expression.__init__(self, [expr])
-        self.type = targetType
-        self.implicit = implicit
-
-    def GetTargetType (self):
-        return self.type
+        self.SetType (targetType)
+        self.__implicit = implicit
+    
+    def IsImplicit(self):
+        return self.__implicit
+    
+    def GetArgument(self):
+        return self.children[0]
 
     def __str__(self):
-        return '{} ({})'.format (self.type, self.children [0])
+        return '{} ({})'.format (self.GetType(), self.children [0])
 
 class ConstructPrimitiveExpression(UnaryExpression):
     '''Expression of the type primitive_type (expr, ...).'''
     def __init__(self, targetType, expressions):
         Expression.__init__(self, expressions)
-        self.type = targetType
+        self.SetType (targetType)
 
     def __str__(self):
-        r = self.type.GetName () + ' ('
-        r += ', '.join(['{0}'.format(str(expr)) for expr in self.children])
+        r = self.GetType().GetName () + ' ('
+        r += ', '.join([str(expr) for expr in self.children])
         return r + ')'
 
     def GetArguments(self):
@@ -178,7 +189,7 @@ class BinaryExpression(Expression):
     def __init__(self, op, left, right):
         Expression.__init__(self, [left, right])
         self.op = op
-        self.operator = None
+        self._operator = None
 
     def GetLeft(self):
         return self.children [0]
@@ -194,9 +205,12 @@ class BinaryExpression(Expression):
 
     def GetOperation(self):
         return self.op
+    
+    def GetOperator(self):
+        return self._operator
 
     def ResolveType (self, left, right):
-        self.operator = types.ResolveBinaryExpressionType (self.op, left, right)
+        self._operator = types.ResolveBinaryExpressionType (self.op, left, right)
 
     def __str__(self):
         r = ''
@@ -217,6 +231,11 @@ class BinaryExpression(Expression):
 class AssignmentExpression(BinaryExpression):
     def __init__(self, left, right):
         BinaryExpression.__init__(self, op.Operation.ASSIGN, left, right)
+        
+    def ResolveType(self, left, right):        
+        self._operator = types.ExpressionType (self.GetLeft().GetType (),
+                                              [self.GetLeft ().GetType(),
+                                               self.GetRight ().GetType ()])
 
 class Affix:
     PRE = 1
@@ -241,7 +260,7 @@ class LiteralExpression(UnaryExpression):
     def __init__(self, value, literalType):
         Expression.__init__(self)
         self.value = value
-        self.type = literalType
+        self.SetType (literalType)
 
     def GetValue(self):
         return self.value
@@ -303,28 +322,39 @@ class InterfaceDefinition(Node):
     def GetName (self):
         return self.name
 
+class BuiltinSemantic(Enum):
+    Position = 1
+    ColorOutput = 2
+
 class Semantic:
     def __init__(self, semantic, slot = None):
-        self.semantic = semantic
-        self.slot = slot
+        _semanticTable = {
+            'Position' : BuiltinSemantic.Position,
+            'ColorOutput' : BuiltinSemantic.ColorOutput
+        }
+        self.__semantic = _semanticTable [semantic]
+        self.__slot = slot
 
-    def GetName(self):
-        return self.semantic
+    def Get(self):
+        return self.__semantic
 
     def GetSlot (self, default = None):
-        if self.slot is not None:
-            return self.slot
+        if self.__slot:
+            return self.__slot
         else:
             return default
+        
+    def HasSlot (self):
+        return self.__slot is not None
 
     def __str__ (self):
-        if self.slot is not None:
-            return '{}[{}]'.format (self.semantic, self.slot)
+        if self.__slot:
+            return '{}[{}]'.format (self.__semantic, self.__slot)
         else:
-            return self.semantic
+            return str (self.__semantic)
 
     def __repr__(self):
-        return 'Semantic ({}, {})'.format (repr(self.semantic), repr (self.slot))
+        return 'Semantic ({}, {})'.format (repr(self.__semantic), repr (self.__slot))
 
 class VariableDeclaration(Node):
     def __init__(self, elementType, symbol,
@@ -488,8 +518,7 @@ class FlowStatement(Statement):
     pass
 
 class EmptyStatement(Statement):
-    def Accept(self, visitor, ctx=None):
-        pass
+    pass
 
 class ExpressionStatement(Statement):
     def __init__(self, expr):
@@ -636,13 +665,21 @@ class Visitor:
         self.errorHandler = errorHandler
 
     def v_Generic (self, obj, ctx=None):
-        fname = 'v_{}'.format (obj.__class__.__name__)
-
-        if hasattr(self, fname):
-            func = getattr (self, fname)
-            return func (obj, ctx)
-        else:
-            return self.v_Default (obj, ctx)
+        import inspect
+        
+        baseClasses = list (inspect.getmro (obj.__class__))
+        
+        for baseClass in [obj.__class__] + baseClasses:
+            if baseClass is object:
+                break
+            
+            fname = 'v_{}'.format (baseClass.__name__)
+            
+            if hasattr(self, fname):
+                func = getattr (self, fname)
+                return func (obj, ctx)
+        
+        return self.v_Default (obj, ctx)
 
     def v_Default(self, obj, ctx):
         print ('Missing visit method: "{}.v_{}"'.format (self.__class__.__name__,
@@ -656,13 +693,13 @@ class Visitor:
         return self.v_Generic (obj, ctx)
 
     def Visit(self, root):
-        self.v_Generic (root, self.GetContext ())
+        return self.v_Generic (root, self.GetContext ())
 
 class DefaultVisitor(Visitor):
     def v_Default(self, obj, ctx=None):
         '''Traverse further if possible.'''
         if hasattr (obj, 'Traverse'):
-            obj.Traverse (self, ctx)
+            return obj.Traverse (self, ctx)
 
 class DebugPrintVisitor(DefaultVisitor):
     def Visit(self, root):

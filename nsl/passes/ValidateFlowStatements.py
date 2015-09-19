@@ -9,7 +9,7 @@ class ValidateFlowStatementVisitor(ast.DefaultVisitor):
     
     def v_FlowStatement(self, stmt, ctx):
         ctx += 1
-        ast.DefaultVisitor.v_Visit (stmt, ctx)
+        stmt.Traverse(self, ctx)
         ctx -= 1
 
     def v_ForStatement(self, stmt, ctx):
