@@ -4,10 +4,10 @@ from enum import Enum
 
 class UnknownSymbol(Exception):
     def __init__(self, symbol):
-        self.symbol = symbol
+        self.__symbol = symbol
 
     def __str__(self):
-        return "Unknown symbol: '{}'".format (self.symbol)
+        return "Unknown symbol: '{}'".format (self.__symbol)
 
 class UnknownFunction(Exception):
     pass

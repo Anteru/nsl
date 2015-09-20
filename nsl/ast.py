@@ -134,7 +134,7 @@ class ConstructPrimitiveExpression(UnaryExpression):
         self.children = args
 
 class CallExpression(UnaryExpression):
-    '''Expression of the type ID ([expr], ...). ID references
+    '''A function call of the form ID ([expr], ...). ID references
     an unresolved function type at first.'''
     def __init__(self, function, expressions):
         Expression.__init__(self, expressions)
@@ -150,7 +150,7 @@ class CallExpression(UnaryExpression):
 
     def ResolveType(self, scope):
         self.function = types.ResolveFunction(self.function,
-            scope, [expr.type for expr in self.children])
+            scope, [expr.__type for expr in self.children])
 
 class VariableAccessExpression(UnaryExpression):
     pass
@@ -204,9 +204,11 @@ class BinaryExpression(Expression):
         self.children [1] = right
 
     def GetOperation(self):
+        '''The the operation.'''
         return self.op
     
     def GetOperator(self):
+        '''Get the used operator. This is an instance of ExpressionType.'''
         return self._operator
 
     def ResolveType (self, left, right):
@@ -361,55 +363,54 @@ class VariableDeclaration(Node):
                  semantic = None,
                  initExpression = None,
                  arraySize = None):
-        self.symbol = symbol
-        self.semantic = semantic
-        self.initExpression = initExpression
+        self.__symbol = symbol
+        self.__semantic = semantic
+        self.__initializer = initExpression
 
         if arraySize is not None:
-            self.type = types.ArrayType (elementType, arraySize)
+            self.__type = types.ArrayType (elementType, arraySize)
         else:
-            self.type = elementType
+            self.__type = elementType
 
     def ResolveType(self, scope):
-        self.type = types.Resolve(self.type, scope)
+        self.__type = types.Resolve(self.__type, scope)
 
         if self.HasSemantic():
-            self.type.SetSemantic (self.semantic)
+            self.__type.SetSemantic (self.__semantic)
 
-        return self.type
+        return self.__type
 
     def _GetChildren(self):
-        return [self.initExpression]
+        return [self.__initializer]
 
     def __str__(self):
-        result = str(self.type) + ' ' + str(self.GetName ())
+        result = str(self.__type) + ' ' + str(self.GetName ())
 
         if (self.HasInitializerExpression ()):
-            result += '= ' + str(self.initExpression)
+            result += '= ' + str(self.__initializer)
 
         if (self.HasSemantic()):
-            result += ' : ' + str(self.semantic)
+            result += ' : ' + str(self.__semantic)
 
         return result
 
     def GetType(self):
-        assert not isinstance (self.type, types.UnresolvedType)
-        return self.type
+        return self.__type
 
     def GetName(self):
-        return self.symbol
+        return self.__symbol
 
     def HasSemantic(self):
-        return self.semantic is not None
+        return self.__semantic is not None
 
     def GetSemantic(self):
-        return self.semantic
+        return self.__semantic
 
     def HasInitializerExpression(self):
-        return self.initExpression is not None
+        return self.__initializer is not None
 
     def GetInitializerExpression(self):
-        return self.initExpression
+        return self.__initializer
 
 class ArgumentModifier(Enum):
     NONE = 0
@@ -419,16 +420,16 @@ class Argument(Node):
     '''Function argument. Captures the type (potentially a Type or
     UnresolvedType) and the name of the argument.'''
     def __init__(self, argumentType, name = None, modifiers = []):
-        self.type = argumentType
+        self.__type = argumentType
         self.name = name
         self.modifiers = modifiers
 
     def ResolveType(self, scope):
-        self.type = types.Resolve(self.type, scope)
-        return self.type
+        self.__type = types.Resolve(self.__type, scope)
+        return self.__type
 
     def GetType(self):
-        return self.type
+        return self.__type
 
     def GetName(self):
         return self.name
@@ -438,17 +439,17 @@ class Argument(Node):
 
     def __str__(self):
         if self.name is not None:
-            return '{} {}'.format (self.type.GetName (), self.name)
+            return '{} {}'.format (self.__type.GetName (), self.name)
         else:
-            return '{} <unnamed>'.format (self.type.GetName ())
+            return '{} <unnamed>'.format (self.__type.GetName ())
 
 class Function(Node):
     def __init__(self, name, arguments = list (),
                  returnType = types.Void (), body = None,
                  isForwardDeclaration = False):
         self.name = name
-        self.body = body
-        self.type = types.Function (name, returnType, arguments)
+        self.__body = body
+        self.__type = types.Function (name, returnType, arguments)
         self.arguments = arguments
         self.isForwardDeclaration = isForwardDeclaration
 
@@ -460,19 +461,19 @@ class Function(Node):
         if self.isForwardDeclaration:
             return []
         else:
-            return [self.arguments, self.body]
+            return [self.arguments, self.__body]
 
     def GetName(self):
         return self.name
 
     def GetType(self):
-        return self.type
+        return self.__type
 
     def GetArguments(self):
         return self.arguments
 
     def GetBody(self):
-        return self.body
+        return self.__body
 
 class ShaderType(Enum):
     Vertex      = 0
@@ -522,13 +523,13 @@ class EmptyStatement(Statement):
 
 class ExpressionStatement(Statement):
     def __init__(self, expr):
-        self.expression = expr
+        self.__expression = expr
 
     def _GetChildren(self):
-        return [self.expression]
+        return [self.__expression]
 
     def GetExpression(self):
-        return self.expression
+        return self.__expression
 
     def __str__(self):
         return 'Expression'
@@ -537,36 +538,36 @@ class CompoundStatement(Statement):
     '''Compound statement consisting of zero or more statements.
     Compound statements also create a new visibility block.'''
     def __init__(self, stmts):
-        self.statements = stmts
+        self.__statements = stmts
 
     def GetStatements(self):
-        return self.statements
+        return self.__statements
 
     def _GetChildren(self):
-        return [self.statements]
+        return [self.__statements]
 
     def __len__(self):
-        return len(self.statements)
+        return len(self.__statements)
 
     def __iter__(self):
         '''Iterate over the statements.'''
-        return self.statements.__iter__()
+        return self.__statements.__iter__()
 
     def __str__(self):
         return '{0} statement(s)'.format (len(self))
 
 class ReturnStatement(FlowStatement):
     def __init__(self, expression):
-        self.expression = expression
+        self.__expression = expression
 
     def _GetChildren(self):
-        return [self.expression]
+        return [self.__expression]
 
     def GetExpression(self):
-        return self.expression
+        return self.__expression
 
     def __str__(self):
-        return 'return ' + str(self.expression)
+        return 'return ' + str(self.__expression)
 
 class DeclarationStatement(Statement):
     def __init__(self, variableDeclarations):
@@ -583,24 +584,24 @@ class DeclarationStatement(Statement):
 
 class IfStatement(FlowStatement):
     def __init__(self, cond, true_path, else_path=None):
-        self.condition = cond
-        self.true_path = true_path
-        self.else_path = else_path
+        self.__condition = cond
+        self.__trueBlock = true_path
+        self.__elseBlock = else_path
 
     def _GetChildren(self):
-        return [self.condition, self.true_path, self.else_path]
+        return [self.__condition, self.__trueBlock, self.__elseBlock]
 
     def GetCondition(self):
-        return self.condition
+        return self.__condition
 
     def GetTruePath(self):
-        return self.true_path
+        return self.__trueBlock
 
     def GetElsePath(self):
-        return self.else_path
+        return self.__elseBlock
 
     def HasElsePath(self):
-        return self.else_path is not None
+        return self.__elseBlock is not None
 
 class ContinueStatement(FlowStatement):
     def __init__(self):
@@ -612,59 +613,66 @@ class BreakStatement(FlowStatement):
 
 class ForStatement(FlowStatement):
     def __init__(self, init, cond, increment, body):
-        self.init = init
-        self.condition = cond
-        self.next = increment
-        self.body = body
+        self.__initializer = init
+        self.__condition = cond
+        self.__next = increment
+        self.__body = body
 
     def _GetField(self):
-        return [self.init, self.condition, self.next, self.body]
+        return [self.__initializer, self.__condition, self.__next, self.__body]
 
     def GetBody (self):
-        return self.body
+        return self.__body
 
     def GetInitialization (self):
-        return self.init
+        return self.__initializer
 
     def GetCondition(self):
-        return self.condition
+        return self.__condition
 
     def GetNext (self):
-        return self.next
+        return self.__next
 
 class DoStatement(FlowStatement):
     def __init__(self, cond, body):
-        self.condition = cond
-        self.body = body
+        self.__condition = cond
+        self.__body = body
 
     def _GetChildren(self):
-        return [self.body, self.condition]
+        return [self.__body, self.__condition]
 
     def GetCondition(self):
-        return self.condition
+        return self.__condition
 
     def GetBody (self):
-        return self.body
+        return self.__body
 
 class WhileStatement(FlowStatement):
     def __init__(self, cond, body):
-        self.condition = cond
-        self.body = body
+        self.__condition = cond
+        self.__body = body
 
     def _GetChildren(self):
-        return [self.body, self.condition]
+        return [self.__body, self.__condition]
 
     def GetCondition(self):
-        return self.condition
+        return self.__condition
 
     def GetBody (self):
-        return self.body
+        return self.__body
 
 class Visitor:
     def SetErrorHandler (self, errorHandler):
         self.errorHandler = errorHandler
 
     def v_Generic (self, obj, ctx=None):
+        '''The default visitation function.
+        
+        As Python doesn't support function overloading per type, this simulates
+        the resolve that would happen by obtaining a list of all parent classes
+        of the object. For each class, a function v_ClassName is called. This
+        makes it possible for instance to have a generic handler for all
+        ``Expression`` classes yet keep an overload for ``BinaryExpression``.'''
         import inspect
         
         baseClasses = list (inspect.getmro (obj.__class__))
