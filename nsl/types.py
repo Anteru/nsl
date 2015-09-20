@@ -28,6 +28,15 @@ class Scope:
         self.functions = OrderedDict ()
 
         self.registeredObjects = set ()
+        
+    def GetSymbolNames(self):
+        return self.symbols.keys()
+    
+    def HasParent(self):
+        return self.parent is not None
+    
+    def GetParent(self):
+        return self.parent
 
     def RegisterVariable(self, symbol, typeinfo):
         assert isinstance (typeinfo, Type), 'Expected Type instance but got {}'.format (type(typeinfo))
@@ -398,7 +407,7 @@ class ClassType(StructType):
     def __repr__(self):
         return 'ClassType ({}, {}, {}, {})'.format (repr(self._name),
                                                     repr(self._declarations), 
-                                                    repr(self._functions), 
+                                                    repr(self._members), 
                                                     repr(self.__isInterface))
 
     def GetFunctionType(self, functionName, argumentTypes):
@@ -415,29 +424,28 @@ class Function(Type):
 
     def Resolve(self, scope):
         self.returnType = Resolve(self.returnType, scope)
-        tmpArgs = self.arguments
-        self.arguments = OrderedDict ()
-        for counter, arg in enumerate (tmpArgs):
+        self.__argumentTypes = OrderedDict ()
+        for counter, arg in enumerate (self.arguments):
             if arg.HasName ():
-                self.arguments [arg.GetName ()] = Resolve (arg.GetType (), scope)
+                self.__argumentTypes [arg.GetName ()] = Resolve (arg.GetType (), scope)
             else:
                 # generate an invalid name
-                self.arguments ['$unnamed_arg${}'.format (counter)] = Resolve (arg.GetType (), scope)
+                self.__argumentTypes ['$unnamed_arg${}'.format (counter)] = Resolve (arg.GetType (), scope)
 
     def GetName(self):
         return self.name
 
     def GetMangledName(self):
         return '@{}->{}`{}'.format (self.name, str(self.returnType),
-                                    ','.join ([str(arg) for arg in self.arguments.values ()]))
+                                    ','.join ([str(arg) for arg in self.__argumentTypes.values ()]))
 
     def __str__(self):
         return 'function {0} ({1}) -> {2}'.format (self.name,
-            ', '.join(self.arguments.keys ()), self.returnType)
+            ', '.join(self.__argumentTypes.keys ()), self.returnType)
 
     def __repr__(self):
         return 'Function (\'{}\', {}, [{}])'.format (self.name, repr(self.returnType),
-                                                 ', '.join ([repr(arg) for arg in self.arguments.keys ()]))
+                                                 ', '.join ([repr(arg) for arg in self.__argumentTypes.keys ()]))
 
     def Match(self, parameterList):
         '''Match the function signature against a parameter list.
@@ -446,10 +454,18 @@ class Function(Type):
             negative numbers indicate the function does not match the
             signature at all and positive numbers indicate how many
             (implicit) conversions have to be performed to match.'''
+        matchingArguments = self.arguments
+        
         if (len(parameterList) != len(self.arguments)):
-            return -1
-        else:
-            return sum([Match (e[0], e[1]) for e in zip (parameterList, self.arguments.values ())])
+            # cut off optional arguments until it matches
+            if not all ([arg.IsOptional() for arg in matchingArguments[len(parameterList):]]):
+                return -1
+            else:
+                matchingArguments = matchingArguments[:len(parameterList)]
+        
+        matchingArgumentTypes = list (self.__argumentTypes.values ())[:len(parameterList)]
+        
+        return sum([Match (e[0], e[1]) for e in zip (parameterList, matchingArgumentTypes)])
 
     def GetReturnType (self):
         '''The return type of this function, potentially unresolved.'''
@@ -457,6 +473,9 @@ class Function(Type):
 
     def GetArguments(self):
         return self.arguments
+    
+    def GetArgumentTypes(self):
+        return self.__argumentTypes
 
 class Void(Type):
     def GetName(self):

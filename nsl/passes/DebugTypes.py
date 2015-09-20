@@ -29,7 +29,7 @@ class DebugTypeVisitor(ast.DebugPrintVisitor):
 		self._p(ctx, str(func.GetType ()))
 		ctx += 1
 		self._p (ctx, 'Arguments')
-		for (name, argType) in func.GetType ().GetArguments().items ():
+		for (name, argType) in func.GetType ().GetArgumentTypes().items ():
 			self._p (ctx + 1, name + ':' + str(argType))
 
 		print ()

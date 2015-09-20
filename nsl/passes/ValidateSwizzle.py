@@ -17,6 +17,9 @@ class ValidateSwizzleMaskVisitor(ast.DefaultVisitor):
     
     def __init__(self):
         self.valid = True
+        
+    def v_MemberCallExpression(self, expr,ctx=None):
+        return
     
     def v_MemberAccessExpression (self, expr, ctx=None):
         import nsl.Errors

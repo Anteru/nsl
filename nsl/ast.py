@@ -42,8 +42,9 @@ class Node:
             else:
                 if not isinstance (e, Node):
                     raise InvalidChildType (type(e))
-                return visitor.v_Generic (e, ctx)
-
+                
+                visitor.v_Generic (e, ctx)
+                    
 class Program (Node):
     '''Program container, keeping everything together.'''
     def __init__(self):
@@ -147,10 +148,27 @@ class CallExpression(UnaryExpression):
 
     def GetArguments(self):
         return self.children
+    
+    def SetArguments(self, arguments):
+        self.children = arguments
+    
+    def GetFunction(self):
+        return self.function
 
     def ResolveType(self, scope):
         self.function = types.ResolveFunction(self.function,
-            scope, [expr.__type for expr in self.children])
+            scope, [expr.GetType() for expr in self.children])
+        
+class MemberCallExpression(CallExpression):
+    def __init__(self, memberAccess, expressions):
+        super(MemberCallExpression, self).__init__(types.UnresolvedType (memberAccess.member), expressions)
+        self.__memberAccess = memberAccess
+        
+    def _GetChildren(self):
+        return [self.__memberAccess, self.children]
+        
+    def GetMemberAccess(self):
+        return self.__memberAccess
 
 class VariableAccessExpression(UnaryExpression):
     pass
@@ -419,7 +437,7 @@ class ArgumentModifier(Enum):
 class Argument(Node):
     '''Function argument. Captures the type (potentially a Type or
     UnresolvedType) and the name of the argument.'''
-    def __init__(self, argumentType, name = None, modifiers = []):
+    def __init__(self, argumentType, name = None, modifiers = set()):
         self.__type = argumentType
         self.name = name
         self.modifiers = modifiers
@@ -436,6 +454,12 @@ class Argument(Node):
 
     def HasName (self):
         return self.name is not None
+    
+    def GetModifiers(self):
+        return self.modifiers
+    
+    def IsOptional(self):
+        return ArgumentModifier.OPTIONAL in self.modifiers
 
     def __str__(self):
         if self.name is not None:
@@ -675,9 +699,10 @@ class Visitor:
         ``Expression`` classes yet keep an overload for ``BinaryExpression``.'''
         import inspect
         
+        # This includes the class itself
         baseClasses = list (inspect.getmro (obj.__class__))
         
-        for baseClass in [obj.__class__] + baseClasses:
+        for baseClass in baseClasses:
             if baseClass is object:
                 break
             

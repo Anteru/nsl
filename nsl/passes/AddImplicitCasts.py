@@ -42,6 +42,24 @@ class AddImplicitCastVisitor (ast.DefaultVisitor):
 
         node.SetArguments (arguments)
 
+    def v_CallExpression(self, node, ctx):
+        # The primitive type of each argument must be the same as the argument type
+        argumentTypes = node.function.GetArgumentTypes().values ()
+
+        arguments = []
+        for arg, expectedType in zip (node.GetArguments (), argumentTypes):
+            # If this is something like float4 (float2, int, int), we want to
+            # cast int->float but float2 should not be casted
+            argumentType = arg.GetType().GetElementType()
+            if argumentType != expectedType.GetElementType ():
+                arguments.append (ast.CastExpression (arg,
+                    self._GetTargetType (arg.GetType(), expectedType.GetElementType()),
+                    True))
+            else:
+                arguments.append (arg)
+
+        node.SetArguments (arguments)
+
 def GetPass():
     from nsl import Pass
     def IsValid (visitor):

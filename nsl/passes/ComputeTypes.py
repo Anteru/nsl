@@ -58,7 +58,9 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
         functions = []
         for f in decl.GetFunctions ():
             # Resolve here allows for nested types
-            functions.append (types.Resolve (f.GetType (), scope))
+            functionType = f.GetType ()
+            functionType.Resolve (scope)
+            functions.append (functionType)
         scope.RegisterVariable (decl.GetName (),
                                 types.ClassType(decl.GetName (), dict(), functions, isInterface=True))
 
@@ -68,6 +70,9 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
         for s in stmt:
             self.v_Visit (s, ctx)
         ctx.pop()
+        
+    def _GetClassScopeForMemberAccess(self, expr, scope):
+        return scope.GetVariableType(expr.GetMemberAccess().GetParent ().GetName())
 
     def _ProcessExpression(self, expr, scope):
         assert isinstance(expr, ast.Expression), 'Expression {1} has type {0} which is not an expression type'.format(type(expr), expr)
@@ -100,7 +105,10 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
             # during the walking up, we can compute the expression
             # type as well
 
-            if isinstance(expr, ast.CallExpression):
+            if isinstance(expr, ast.MemberCallExpression):
+                expr.ResolveType(self._GetClassScopeForMemberAccess(expr, scope))
+                expr.SetType(expr.function.GetReturnType ())
+            elif isinstance(expr, ast.CallExpression):
                 # As we know the parameter types now, we can finally resolve
                 # overloaded functions
                 expr.ResolveType (scope)
@@ -131,7 +139,7 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
             ctx[-1].RegisterFunction (func.GetType ().GetName (), func.GetType ())
         scope = types.Scope (ctx[-1])
         ctx.append (scope)
-        for (name, argType) in func.GetType ().GetArguments().items ():
+        for (name, argType) in func.GetType ().GetArgumentTypes().items ():
             scope.RegisterVariable (name, argType)
 
         self.v_Visit (func.GetBody(), ctx)

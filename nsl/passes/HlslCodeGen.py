@@ -67,8 +67,9 @@ class HlslVisitor(ast.DefaultVisitor):
                                              decl.GetName (), 
                                              self.__ConvertSemantic (decl.GetSemantic ())))
         else:
-            ctx.Print ('{} {};'.format (self.__ConvertType(decl.GetType ()),
-                                        decl.GetName ()))
+            ctx.Print ('{} {} : {};'.format (self.__ConvertType(decl.GetType ()),
+                                        decl.GetName (),
+                                        decl.GetName ().upper()))
 
     def v_CompoundStatement(self, cs, ctx):
         ctx.Print ('{')

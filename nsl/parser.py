@@ -75,11 +75,11 @@ class NslParser:
 
     def p_argument_3 (self, p):
         '''argument : arg_mod type ID'''
-        p [0] = ast.Argument (p[2], p[3], p[1])
+        p [0] = ast.Argument (p[2], p[3], modifiers = set ([p[1]]))
 
     def p_argument_4 (self, p):
         '''argument : arg_mod type'''
-        p [0] = ast.Argument (p[2], modifiers = p[1])
+        p [0] = ast.Argument (p[2], modifiers = set ([p[1]]))
 
     def p_arg_mod (self, p):
         '''arg_mod : __OPTIONAL'''
@@ -173,9 +173,13 @@ class NslParser:
         '''expression_opt : empty'''
         p[0] = ast.EmptyExpression ()
 
-    def p_function_call_expression(self, p):
+    def p_function_call_expression_1(self, p):
         '''function_call_expression : ID '(' expression_list_opt ')' '''
         p[0] = ast.CallExpression (types.UnresolvedType (p[1]), p[3])
+
+    def p_function_call_expression_2(self, p):
+        '''function_call_expression : member_access_expression '(' expression_list_opt ')' '''
+        p[0] = ast.MemberCallExpression (p[1], p[3])
 
     def p_binary_expression(self, p):
         '''binary_expression : expression bin_op expression
