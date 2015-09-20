@@ -1,4 +1,4 @@
-from nsl import ast
+﻿from nsl import ast
 
 def ValidateSwizzleMask(mask):
     from .. import Utility, Errors
@@ -18,7 +18,7 @@ class ValidateSwizzleMaskVisitor(ast.DefaultVisitor):
     def __init__(self):
         self.valid = True
         
-    def v_MemberCallExpression(self, expr,ctx=None):
+    def v_MethodCallExpression(self, expr,ctx=None):
         return
     
     def v_MemberAccessExpression (self, expr, ctx=None):

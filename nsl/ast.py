@@ -1,4 +1,4 @@
-import collections.abc
+﻿import collections.abc
 from nsl import op, types
 from enum import Enum
 
@@ -157,11 +157,11 @@ class CallExpression(UnaryExpression):
 
     def ResolveType(self, scope):
         self.function = types.ResolveFunction(self.function,
-            scope, [expr.GetType() for expr in self.children])
+            scope, [expr.GetType() for expr in self.GetArguments ()])
         
-class MemberCallExpression(CallExpression):
+class MethodCallExpression(CallExpression):
     def __init__(self, memberAccess, expressions):
-        super(MemberCallExpression, self).__init__(types.UnresolvedType (memberAccess.member), expressions)
+        super(MethodCallExpression, self).__init__(types.UnresolvedType (memberAccess.member), expressions)
         self.__memberAccess = memberAccess
         
     def _GetChildren(self):
@@ -316,8 +316,17 @@ class StructureDefinition(Node):
                 raise InvalidStructureDefinition()
             elementNames.add (e.GetName ())
 
+        self.__annotations = []
+
     def _GetChildren(self):
         return [self.elements]
+
+    def AddAnnotation (self, annotation):
+        assert isinstance(annotation, Annotation)
+        self.__annotations.append (annotation)
+
+    def GetAnnotations(self):
+        return self.__annotations
 
     def GetName(self):
         return self.name
@@ -431,16 +440,15 @@ class VariableDeclaration(Node):
         return self.__initializer
 
 class ArgumentModifier(Enum):
-    NONE = 0
-    OPTIONAL = 1
+    Optional = 1
 
 class Argument(Node):
     '''Function argument. Captures the type (potentially a Type or
     UnresolvedType) and the name of the argument.'''
     def __init__(self, argumentType, name = None, modifiers = set()):
         self.__type = argumentType
-        self.name = name
-        self.modifiers = modifiers
+        self.__name = name
+        self.__modifiers = modifiers
 
     def ResolveType(self, scope):
         self.__type = types.Resolve(self.__type, scope)
@@ -450,20 +458,20 @@ class Argument(Node):
         return self.__type
 
     def GetName(self):
-        return self.name
+        return self.__name
 
     def HasName (self):
-        return self.name is not None
+        return self.__name is not None
     
     def GetModifiers(self):
-        return self.modifiers
+        return self.__modifiers
     
     def IsOptional(self):
-        return ArgumentModifier.OPTIONAL in self.modifiers
+        return ArgumentModifier.Optional in self.__modifiers
 
     def __str__(self):
-        if self.name is not None:
-            return '{} {}'.format (self.__type.GetName (), self.name)
+        if self.__name is not None:
+            return '{} {}'.format (self.__type.GetName (), self.__name)
         else:
             return '{} <unnamed>'.format (self.__type.GetName ())
 
@@ -684,6 +692,13 @@ class WhileStatement(FlowStatement):
 
     def GetBody (self):
         return self.__body
+
+class Annotation(Node):
+    def __init__(self, value):
+        self.__value = value
+
+    def GetValue(self):
+        return self.__value
 
 class Visitor:
     def SetErrorHandler (self, errorHandler):

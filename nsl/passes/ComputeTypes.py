@@ -1,4 +1,4 @@
-from collections import OrderedDict
+﻿from collections import OrderedDict
 from nsl import ast, types, Errors
 
 def ParseSwizzleMask(mask):
@@ -105,7 +105,9 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
             # during the walking up, we can compute the expression
             # type as well
 
-            if isinstance(expr, ast.MemberCallExpression):
+            if isinstance(expr, ast.MethodCallExpression):
+                # We resolve the method call with the scope of the class/interface
+                # The arguments have been already resolved above
                 expr.ResolveType(self._GetClassScopeForMemberAccess(expr, scope))
                 expr.SetType(expr.function.GetReturnType ())
             elif isinstance(expr, ast.CallExpression):

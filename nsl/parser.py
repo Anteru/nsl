@@ -1,4 +1,4 @@
-import ply.yacc
+﻿import ply.yacc
 from nsl import ast, types, lexer, op
 
 class NslParser:
@@ -83,7 +83,7 @@ class NslParser:
 
     def p_arg_mod (self, p):
         '''arg_mod : __OPTIONAL'''
-        p [0] = ast.ArgumentModifier.OPTIONAL
+        p [0] = ast.ArgumentModifier.Optional
 
     def p_arg_list_1(self, p):
         '''arg_list : arg_list ',' argument'''
@@ -179,7 +179,7 @@ class NslParser:
 
     def p_function_call_expression_2(self, p):
         '''function_call_expression : member_access_expression '(' expression_list_opt ')' '''
-        p[0] = ast.MemberCallExpression (p[1], p[3])
+        p[0] = ast.MethodCallExpression (p[1], p[3])
 
     def p_binary_expression(self, p):
         '''binary_expression : expression bin_op expression
@@ -262,10 +262,19 @@ class NslParser:
         p[0] = ast.Function (p[2]['name'], p[2]['args'], p[2]['return-type'],
                              isForwardDeclaration = True)
 
-    def p_structure_definition(self, p):
+    def p_annotation(self, p):
+        '''annotation : '[' ID ']' '''
+        p[0] = ast.Annotation (p[2])
+
+    def p_structure_definition_1(self, p):
         '''structure_definition : STRUCT ID '{' var_decl_list_opt '}' '''
         p[0] = ast.StructureDefinition(p[2], p[4])
-
+    
+    def p_structure_definition_2(self, p):
+        '''structure_definition : annotation structure_definition'''
+        p[2].AddAnnotation (p[1])
+        p[0] = p[2]
+    
     def p_interface_definition (self, p):
         '''interface_definition : INTERFACE ID '{' function_list '}' '''
         p[0] = ast.InterfaceDefinition(p[2], p[4])

@@ -1,4 +1,4 @@
-from nsl import ast
+﻿from nsl import ast, Errors
 
 class ValidateFlowStatementVisitor(ast.DefaultVisitor):
     def GetContext (self):
@@ -22,12 +22,10 @@ class ValidateFlowStatementVisitor(ast.DefaultVisitor):
         self.FlowStatement (stmt, ctx)
         
     def v_ContinueStatement(self, stmt, ctx):
-        from .. import Errors
         Errors.ERROR_CONTINUE_OUTSIDE_FLOW.Raise ()
         self.valid = False
         
     def v_BreakStatement(self, stmt, ctx):
-        from .. import Errors
         Errors.ERROR_BREAK_OUTSIDE_FLOW_SWITCH.Raise ()
         self.valid = False
         

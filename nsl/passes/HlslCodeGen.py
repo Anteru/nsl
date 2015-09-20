@@ -1,18 +1,26 @@
-from nsl import ast, op
+﻿from nsl import ast, op
 
 class HlslVisitor(ast.DefaultVisitor):
     class Context:
         def __init__(self):
             self.__level = 0
+            self.__semanticType = [False]
             
         def Print (self, v=''):
             print ('\t'*self.__level + v)
             
-        def In (self):
+        def In (self,semanticType=False):
             self.__level += 1
+            self.__semanticType.append (semanticType)
             
         def Out (self):
             self.__level -= 1
+            self.__semanticType.pop ()
+
+        def IsSemanticType(self):
+            '''True if this is a type that uses semantics. Typically a
+            In/Out structure.'''
+            return self.__semanticType[-1]
             
     def __ConvertSemantic (self, semantic):
         if semantic.Get () == ast.BuiltinSemantic.ColorOutput:
@@ -55,21 +63,29 @@ class HlslVisitor(ast.DefaultVisitor):
     def v_StructureDefinition(self, decl, ctx):
         ctx.Print ('struct {0}'.format (decl.GetName ()))
         ctx.Print ('{')
-        ctx.In ()
+        containsSemantics = False
+        if decl.GetAnnotations ():
+            containsSemantics = True
+        ctx.In (containsSemantics)
         decl.Traverse(self, ctx)
         ctx.Out ()
         ctx.Print ('}')
         ctx.Print ()
         
     def v_VariableDeclaration(self, decl, ctx):
-        if decl.HasSemantic ():
+        if decl.HasSemantic () or ctx.IsSemanticType ():
+            semantic = None
+            if decl.HasSemantic ():
+                semantic = self.__ConvertSemantic (decl.GetSemantic ())
+            else:
+                semantic = decl.GetName ().upper ()
+
             ctx.Print ('{} {} : {};'.format (self.__ConvertType(decl.GetType ()), 
                                              decl.GetName (), 
-                                             self.__ConvertSemantic (decl.GetSemantic ())))
+                                             semantic))
         else:
-            ctx.Print ('{} {} : {};'.format (self.__ConvertType(decl.GetType ()),
-                                        decl.GetName (),
-                                        decl.GetName ().upper()))
+            ctx.Print ('{} {};'.format (self.__ConvertType(decl.GetType ()),
+                                        decl.GetName ()))
 
     def v_CompoundStatement(self, cs, ctx):
         ctx.Print ('{')

@@ -10,7 +10,12 @@ __declaration function dot(float4, float4) -> float;
 
 interface Texture2D
 {
-    __declaration function Load (int3 position, __optional int2 offset) -> float4;
+	__declaration function Load (int3 position, __optional int2 offset) -> float4;
+	__declaration function Sample (Sampler2D sampler, float3 position) -> float4;
+}
+
+interface Sampler2D
+{
 }
 
 __declaration function Load(Texture2D, float3 position, __optional float2 offset) -> float4;

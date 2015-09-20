@@ -1,36 +1,40 @@
+[InOut]
 struct ApplicationToVertex
 {
-    float2 position : Position;
-    float2 uv;
+	float2 position : Position;
+	float2 uv;
 }
 
 matrix4x4 worldViewProjection;
 Texture2D tex;
+Sampler2D sampler;
 
+[InOut]
 struct VertexToPixel
 {
-    float4 position : Position;
-    float2 uv;
+	float4 position : Position;
+	float2 uv;
 }
 
 shader(vertex) (ApplicationToVertex app2vs) -> VertexToPixel
 {
-    VertexToPixel result;
+	VertexToPixel result;
 
-    result.position = worldViewProjection * float4 (app2vs.position.xy, 0, 1);
-    result.uv = app2vs.uv;
+	result.position = worldViewProjection * float4 (app2vs.position.xy, 0, 1);
+	result.uv = app2vs.uv;
 
-    return result;
+	return result;
 }
 
+[InOut]
 struct FragmentOutput
 {
-    float4 color : ColorOutput[0];
+	float4 color : ColorOutput[0];
 }
 
 shader(pixel) (VertexToPixel vs2ps) -> FragmentOutput
 {
-    FragmentOutput out;
-	out.color = tex.Load (float3(vs2ps.uv, 0));
-    return out;
+	FragmentOutput out;
+	out.color = tex.Sample (sampler, float3(vs2ps.uv, 0));
+	return out;
 }
