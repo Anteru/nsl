@@ -50,7 +50,9 @@ class Program (Node):
     def __init__(self):
         self.variables = list ()
         self.functions = list ()
-        self.types = dict ()
+        # Types may depend on types which are previously defined
+        # Ensure ordering by using an ordered dict
+        self.types = collections.OrderedDict ()
 
     def _GetChildren (self):
         return [self.variables, self.functions, self.types]
@@ -86,6 +88,9 @@ class Expression(Node):
         return self.__type
     
     def SetType(self, nslType):
+        '''The type of this expression. This depends on the specific expression type,
+        for instance, for a call expression this will be a function type, while for
+        an unary expression it will be a primitive or structure type.'''
         assert not isinstance(nslType, types.UnresolvedType)
         self.__type = nslType
 
@@ -160,6 +165,8 @@ class CallExpression(UnaryExpression):
             scope, [expr.GetType() for expr in self.GetArguments ()])
         
 class MethodCallExpression(CallExpression):
+    '''A function call of the form ID.ID ([expr], ...). ID.ID references
+    a member function of a class/interface type.'''
     def __init__(self, memberAccess, expressions):
         super(MethodCallExpression, self).__init__(types.UnresolvedType (memberAccess.member), expressions)
         self.__memberAccess = memberAccess
@@ -169,6 +176,11 @@ class MethodCallExpression(CallExpression):
         
     def GetMemberAccess(self):
         return self.__memberAccess
+
+    def __str__(self):
+        r = str (self.__memberAccess) + ' ('
+        r += ', '.join(['{0}'.format(str(expr)) for expr in self.children])
+        return r + ')'
 
 class VariableAccessExpression(UnaryExpression):
     pass

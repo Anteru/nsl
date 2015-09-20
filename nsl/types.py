@@ -20,6 +20,7 @@ class InvalidDeclaration(Exception):
         self.message = message
 
 class Scope:
+    '''Handles generic symbols and functions, which allow overloading.'''
     def __init__(self, parent = None):
         # We store everything in ordered dicts so we can use
         # this for structures/classes without further modification

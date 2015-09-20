@@ -152,6 +152,8 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 
     def v_Program(self, prog, ctx):
         # Must visit types first
+        # @TODO: Make this two passes to gather all interfaces/structure types first
+        #        and resolve in a second step
         for programType in prog.GetTypes ():
             self.v_Visit (programType, ctx)
         for decl in prog.GetDeclarations ():
