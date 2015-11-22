@@ -3,3 +3,4 @@ __pycache__/*
 parsetab.py
 parser.out
 stdlib.cache
+env/**
