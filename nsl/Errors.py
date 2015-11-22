@@ -1,4 +1,4 @@
-from enum import Enum
+﻿from enum import Enum
 
 class ErrorMessage:
     def __init__ (self, code, severity, message):
@@ -65,6 +65,8 @@ ERROR_INCOMPATIBLE_TYPES = ErrorMessage (2005, Severity.ERROR,
     '''Type '{}' is incompatible with type '{}'.''')
 ERROR_OPERATORS_ONLY_ALLOWED_FOR_BUILTIN_TYPES = ErrorMessage (2006, Severity.ERROR,
     '''Binary operators require two built-in types, got '{}', '{}'.''')
+ERROR_INVALID_BINARY_EXPRESSION_OPERATION = ErrorMessage (2007, Severity.ERROR,
+	'''Binary expression using {} cannot be applied on types: '{}', '{}'.''')
 
 ERROR_CONTINUE_OUTSIDE_FLOW = ErrorMessage (2201, Severity.ERROR,
     'continue statements must be inside a do/while/for statement.')
