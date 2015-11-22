@@ -1,4 +1,4 @@
-from nsl import ast
+﻿from nsl import ast
 
 class DebugTypeVisitor(ast.DebugPrintVisitor):
 	def GetContext (self):
@@ -18,14 +18,13 @@ class DebugTypeVisitor(ast.DebugPrintVisitor):
 	def v_Expression(self, expr, ctx):
 		self._p (ctx, str(expr) + ':' + str(expr.GetType()))
 		for e in expr:
-			self.v_Visit (e, ctx)
+			self.v_Visit (e, ctx + 1)
 
 	def v_CompoundStatement(self, stmt, ctx):
 		for s in stmt:
 			self.v_Visit (s, ctx + 1)
 
 	def v_Function(self, func, ctx):
-		'''Computes the function type and processes all statements.'''
 		self._p(ctx, str(func.GetType ()))
 		ctx += 1
 		self._p (ctx, 'Arguments')
@@ -45,15 +44,6 @@ class DebugTypeVisitor(ast.DebugPrintVisitor):
 		for decl in stmt.GetDeclarations():
 			self._p (ctx, decl.GetName () + ':' + str(decl.GetType()))
 		print ()
-
-	def v_Program(self, prog, ctx):
-		# Must visit types first
-		for programType in prog.GetTypes ():
-			self.v_Visit (programType, ctx)
-		for decl in prog.GetDeclarations ():
-			self.v_Visit (decl, ctx)
-		for func in prog.GetFunctions ():
-			self.v_Visit (func, ctx)
 
 	def v_Generic(self, node, ctx):
 		ast.Visitor.v_Generic (self, node, ctx)
