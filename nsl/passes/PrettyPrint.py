@@ -15,7 +15,7 @@ class PrettyPrintVisitor(ast.Visitor):
     def GetContext(self):
         return 0
 
-    def _FormatArgumentList(self, args):
+    def __FormatArgumentList(self, args):
         def FormatArg(arg):
             if arg.HasName ():
                 return str(arg)
@@ -27,18 +27,18 @@ class PrettyPrintVisitor(ast.Visitor):
     def v_Function(self, func, ctx=None):
         if func.isForwardDeclaration:
             print ('__declaration function {0} ({1}) -> {2};'.format(func.GetName (),
-                                                  self._FormatArgumentList(func.GetArguments()),
+                                                  self.__FormatArgumentList(func.GetArguments()),
                                                   func.GetType ().GetReturnType().GetName ()))
         else:
             print ('function {0} ({1}) -> {2}'.format(func.GetName (),
-                                                  self._FormatArgumentList(func.GetArguments()),
+                                                  self.__FormatArgumentList(func.GetArguments()),
                                                   func.GetType ().GetReturnType().GetName ()))
             self.v_Visit (func.GetBody (), ctx)
         print()
 
     def v_Shader(self, shd, ctx=None):
         print ('shader({0}) ({1}) -> {2}'.format(shd.GetShaderType().name.lower(),
-                                          self._FormatArgumentList(shd.GetArguments()),
+                                          self.__FormatArgumentList(shd.GetArguments()),
                                           shd.GetType().GetReturnType().GetName ()))
         self.v_Visit (shd.GetBody (), ctx)
         print()

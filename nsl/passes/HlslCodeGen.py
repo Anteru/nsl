@@ -37,12 +37,12 @@ class HlslVisitor(ast.DefaultVisitor):
     def GetContext(self):
         return self.Context ()
         
-    def _FormatArgumentList(self, args):
+    def __FormatArgumentList(self, args):
         return ', '.join(['{0} {1}'.format(arg.GetType().GetName(), arg.GetName()) for arg in args])
     
     def v_Function(self, func, ctx):
         ctx.Print ('{2} {0} ({1})'.format(func.GetName (),
-                                      self._FormatArgumentList(func.GetArguments()),
+                                      self.__FormatArgumentList(func.GetArguments()),
                                       func.GetType().GetReturnType().GetName ()))
         ctx.Print ('{')
         ctx.In ()
@@ -52,7 +52,7 @@ class HlslVisitor(ast.DefaultVisitor):
        
     def v_Shader(self, shd, ctx=None):
         ctx.Print ('{2} {0} ({1})'.format(shd.GetName(),
-                                      self._FormatArgumentList(shd.GetArguments()),
+                                      self.__FormatArgumentList(shd.GetArguments()),
                                       shd.GetType().GetReturnType ().GetName()))
         ctx.Print ('{')
         ctx.In ()
