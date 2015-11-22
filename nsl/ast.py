@@ -390,9 +390,9 @@ class Semantic:
 
     def __str__ (self):
         if self.__slot:
-            return '{}[{}]'.format (self.__semantic, self.__slot)
+            return '{}[{}]'.format (self.__semantic.name, self.__slot)
         else:
-            return str (self.__semantic)
+            return str (self.__semantic.name)
 
     def __repr__(self):
         return 'Semantic ({}, {})'.format (repr(self.__semantic), repr (self.__slot))
