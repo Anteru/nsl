@@ -1,3 +1,4 @@
 click==5.1
-ply==3.6
-pytest==2.7.2
+ply==3.8
+pytest==2.8.3
+sphinx
