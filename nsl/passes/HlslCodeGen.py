@@ -64,8 +64,10 @@ class HlslVisitor(ast.DefaultVisitor):
         ctx.Print ('struct {0}'.format (decl.GetName ()))
         ctx.Print ('{')
         containsSemantics = False
-        if decl.GetAnnotations ():
-            containsSemantics = True
+        for annotation in decl.GetAnnotations ():
+            if annotation.GetValue () == 'InOut':
+                containsSemantics = True
+                break
         ctx.In (containsSemantics)
         decl.Traverse(self, ctx)
         ctx.Out ()

@@ -1,4 +1,4 @@
-from nsl import ast
+﻿from nsl import ast
 
 class PrettyPrintVisitor(ast.Visitor):
     def v_Program (self, prog, ctx):
@@ -54,6 +54,8 @@ class PrettyPrintVisitor(ast.Visitor):
         self._p (c, 'continue;')
 
     def v_StructureDefinition(self, decl, ctx):
+        for annotation in decl.GetAnnotations():
+            self._p (ctx, annotation)
         self._p (ctx, 'struct {0}'.format (decl.GetName ()))
         self._p (ctx, '{')
         for e in decl.GetElements ():

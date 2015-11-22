@@ -712,6 +712,12 @@ class Annotation(Node):
     def GetValue(self):
         return self.__value
 
+    def __str__(self):
+        return '[{}]'.format (self.__value)
+
+    def __repr__(self):
+        return 'Annotation({})'.format (repr(self.__value))
+
 class Visitor:
     def SetErrorHandler (self, errorHandler):
         self.errorHandler = errorHandler

@@ -265,19 +265,29 @@ class NslParser:
     def p_annotation(self, p):
         '''annotation : '[' ID ']' '''
         p[0] = ast.Annotation (p[2])
+        
+    def p_annotation_list_1(self, p):
+        '''annotation_list : annotation_list annotation'''
+        p[1].append (p[2])
+        p[0] = p[1]
 
-    def p_structure_definition_1(self, p):
-        '''structure_definition : STRUCT ID '{' var_decl_list_opt '}' '''
-        p[0] = ast.StructureDefinition(p[2], p[4])
-    
-    def p_structure_definition_2(self, p):
-        '''structure_definition : annotation structure_definition'''
-        p[2].AddAnnotation (p[1])
-        p[0] = p[2]
+    def p_annotation_list_2(self, p):
+        '''annotation_list : empty'''
+        p[0] = []
+
+    def p_structure_definition(self, p):
+        '''structure_definition : annotation_list STRUCT ID '{' var_decl_list_opt '}' '''
+        p[0] = ast.StructureDefinition(p[3], p[5])
+
+        for annotation in p[1]:
+            p[0].AddAnnotation (annotation)
     
     def p_interface_definition (self, p):
-        '''interface_definition : INTERFACE ID '{' function_list '}' '''
-        p[0] = ast.InterfaceDefinition(p[2], p[4])
+        '''interface_definition : annotation_list INTERFACE ID '{' function_list '}' '''
+        p[0] = ast.InterfaceDefinition(p[3], p[5])
+
+        for annotation in p[1]:
+            p[0].AddAnnotation (annotation)
 
     def p_function_list_1 (self, p):
         '''function_list : empty'''
