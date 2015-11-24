@@ -290,9 +290,9 @@ def ResolveBinaryExpressionType (operation, left, right):
 	if operation == op.Operation.MUL and left.IsMatrix ():
 		if right.IsScalar ():
 			baseType = _MergeScalarTypes (left.GetElementType (), right)
-			return ExpressionType (MatrixType (baseType, left.GetRowCount (), left.GetColumnCount ()),
+			return ExpressionType (left.WithComponentType (baseType),
 				[
-					MatrixType(baseType, left.GetRowCount (), left.GetColumnCount ()),
+                    left.WithComponentType (baseType),
 					right
 				])
 
@@ -318,14 +318,14 @@ def ResolveBinaryExpressionType (operation, left, right):
 		if right.IsVector ():
 			return ExpressionType (VectorType (baseType, left.GetRowCount ()),
 				[
-					MatrixType (baseType, left.GetRowCount (), left.GetColumnCount ()),
-					VectorType (baseType, right.GetSize () [0])
+                    left.WithComponentType (baseType),
+                    right.WithComponentType (baseType)
 				])
 		else:
 			return ExpressionType (MatrixType (baseType, leftSize [1], rightSize [0]),
 				[
-					MatrixType (baseType, left.GetRowCount (), left.GetColumnCount ()),
-					MatrixType (baseType, right.GetRowCount (), right.GetColumnCount ())
+                    left.WithComponentType (baseType),
+                    right.WithComponentType (baseType)
 				])
 
 	if left == right:
@@ -585,6 +585,10 @@ class VectorType(PrimitiveType):
 	def GetKind(self):
 		return PrimitiveTypeKind.Vector
 
+	def WithComponentType(self, componentType):
+		'''Return a copy of this type with a new component type.'''
+		return VectorType(componentType, self.__componentCount)
+
 class MatrixOrder(Enum):
 	RowMajor       = 1
 	ColumnMajor    = 2
@@ -629,6 +633,11 @@ class MatrixType(PrimitiveType):
 		return '{}{}x{}'.format (self.__componentType.GetName (),
 							  self.GetRowCount (),
 							  self.GetColumnCount ())
+
+	def WithComponentType(self, componentType):
+		'''Return a copy of this type with a new component type.'''
+		return MatrixType(componentType, self.__size [0], self.__size [1], self.__order)
+
 class Operator:
 	pass
 

@@ -1,13 +1,9 @@
-from nsl import ast, types
+﻿from nsl import ast, types
 
 class AddImplicitCastVisitor (ast.DefaultVisitor):
     def _GetTargetType (self, sourceType, componentType):
-        if isinstance (sourceType, types.VectorType):
-            return types.VectorType (componentType, sourceType.GetSize ())
-        elif isinstance (sourceType, types.MatrixType):
-            return types.MatrixType (componentType,
-                sourceType.GetRowCount (), sourceType.GetColumnCount (),
-                sourceType.GetOrder ())
+        if sourceType.IsVector() or sourceType.IsMatrix ():
+            return sourceType.WithComponentType (componentType)
         else:
             # Must be a scalar
             return componentType
