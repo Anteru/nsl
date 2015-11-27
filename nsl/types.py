@@ -1,6 +1,7 @@
 ﻿from collections import OrderedDict
 from nsl import op, Errors
 from enum import Enum
+import collections
 
 class UnknownSymbol(Exception):
 	def __init__(self, symbol):
@@ -287,14 +288,17 @@ def ResolveBinaryExpressionType (operation, left, right):
 		baseType = _MergePrimitiveTypes (left, right)
 		return ExpressionType (Integer (), [baseType, baseType])
 
-	if operation == op.Operation.MUL and left.IsMatrix ():
+	if operation in {op.Operation.MUL, op.Operation.DIV} and (left.IsMatrix () or left.IsVector ()):
 		if right.IsScalar ():
 			baseType = _MergeScalarTypes (left.GetElementType (), right)
 			return ExpressionType (left.WithComponentType (baseType),
 				[
-                    left.WithComponentType (baseType),
+					left.WithComponentType (baseType),
 					right
 				])
+			
+		if operation == op.Operation.DIV and (right.IsMatrix () or right.IsScalar ()):
+			Errors.ERROR_INVALID_BINARY_EXPRESSION_OPERATION.Raise (operation, left, right)
 
 		leftSize = left.GetSize ()
 		rightSize = right.GetSize ()
@@ -318,22 +322,17 @@ def ResolveBinaryExpressionType (operation, left, right):
 		if right.IsVector ():
 			return ExpressionType (VectorType (baseType, left.GetRowCount ()),
 				[
-                    left.WithComponentType (baseType),
-                    right.WithComponentType (baseType)
+					left.WithComponentType (baseType),
+					right.WithComponentType (baseType)
 				])
 		else:
 			return ExpressionType (MatrixType (baseType, leftSize [1], rightSize [0]),
 				[
-                    left.WithComponentType (baseType),
-                    right.WithComponentType (baseType)
+					left.WithComponentType (baseType),
+					right.WithComponentType (baseType)
 				])
 
 	if left == right:
-		# division is forbidden on certain types
-		if operation == op.Operation.DIV:
-			if right.IsMatrix () or right.IsVector ():
-				Errors.ERROR_INVALID_BINARY_EXPRESSION_OPERATION.Raise (operation, left, right)
-
 		return ExpressionType (left, [left, right])
 
 	# make sure both are of the same type class (i.e. scalar, matrix or vector)
@@ -342,10 +341,6 @@ def ResolveBinaryExpressionType (operation, left, right):
 
 	baseType = _MergePrimitiveTypes(left, right)
 	return ExpressionType (baseType, [baseType, baseType])
-
-
-def IsValidInput(outputStructType, inputStructType):
-	return False
 
 class PrimitiveTypeKind(Enum):
 	Scalar = 1
@@ -381,22 +376,27 @@ class AggregateType(Type):
 class ArrayType(AggregateType):
 	def __init__(self, elementType, arraySize):
 		Type.__init__(self)
-		assert arraySize > 0
+		assert isinstance(arraySize, collections.abc.Sequence)
+		assert len(arraySize) > 0
+		for l in arraySize:
+			assert l > 0
 		self.__elementType = elementType
-		self.__arraySize = arraySize
+		self.__arraySize = tuple (arraySize)
+
+	def IsArray(self):
+		return True
 
 	def GetSize(self):
-		return (self.__arraySize,)
+		return self.__arraySize
 
 	def GetElementType(self):
-		# Need to call recursively in case we have a nested array
-		return self.__elementType.GetElementType ()
+		return self.__elementType
 
 	def GetName(self):
-		return self.GetElementType().GetName () + ' [' + str(self.__arraySize) + ']'
+		return self.GetElementType().GetName () + ' ' + ''.join(['[{}]'.format(s) for s in self.__arraySize])
 
 	def __str__(self):
-		return '{} [{}]'.format (self.__elementType, self.__arraySize)
+		return '{}{}'.format (self.__elementType, ''.join(['[{}]'.format(s) for s in self.__arraySize]))
 
 	def __repr__(self):
 		return 'ArrayType ({}, {})'.format (repr(self.__elementType),

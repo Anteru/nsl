@@ -67,6 +67,10 @@ ERROR_OPERATORS_ONLY_ALLOWED_FOR_BUILTIN_TYPES = ErrorMessage (2006, Severity.ER
     '''Binary operators require two built-in types, got '{}', '{}'.''')
 ERROR_INVALID_BINARY_EXPRESSION_OPERATION = ErrorMessage (2007, Severity.ERROR,
 	'''Binary expression using {} cannot be applied on types: '{}', '{}'.''')
+ERROR_ARRAY_ACCESS_OUT_OF_BOUNDS = ErrorMessage (2008, Severity.ERROR,
+    '''Array access to array of size {} with literal {} is out-of-bounds.''')
+ERROR_ARRAY_ACCESS_WITH_NONSCALAR = ErrorMessage (2009, Severity.ERROR,
+    '''Array access requires scalar, got '{}'.''')
 
 ERROR_CONTINUE_OUTSIDE_FLOW = ErrorMessage (2201, Severity.ERROR,
     'continue statements must be inside a do/while/for statement.')

@@ -99,5 +99,7 @@ class TestTypes:
 		right = types.MatrixType(types.Float (), 3, 4)
 
 		with pytest.raises(Exception):
-			resultType = types.ResolveBinaryExpressionType (op.Operation.MUL,
+			types.ResolveBinaryExpressionType (op.Operation.MUL,
 				left, right)
+
+

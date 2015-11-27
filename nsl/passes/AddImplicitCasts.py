@@ -7,6 +7,11 @@ class AddImplicitCastVisitor (ast.DefaultVisitor):
         else:
             # Must be a scalar
             return componentType
+        
+    def v_ArrayExpression(self, node, ctx):
+        if node.GetExpression ().GetType () != types.Integer ():
+            node.SetExpression (ast.CastExpression (node.GetExpression (),
+                types.Integer (), True))
 
     def v_BinaryExpression (self, node, ctx):
         self.v_Generic (node.GetLeft (), ctx)

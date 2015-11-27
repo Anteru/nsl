@@ -218,11 +218,11 @@ class NslParser:
 
     def p_member_access_expression_1(self, p):
         '''member_access_expression : ID '.' ID '''
-        p [0] = ast.MemberAccessExpression (ast.PrimaryExpression (p[1]), p[3])
+        p [0] = ast.MemberAccessExpression (ast.PrimaryExpression (p[1]), ast.PrimaryExpression (p[3]))
 
     def p_member_access_expression_2(self, p):
         '''member_access_expression : access_expression '.' ID '''
-        p [0] = ast.MemberAccessExpression (p[1], p[3])
+        p [0] = ast.MemberAccessExpression (p[1], ast.PrimaryExpression (p[3]))
 
     def p_assignment_expression(self, p):
         '''assignment_expression : unary_expression EQUALS expression'''
@@ -401,13 +401,26 @@ class NslParser:
         '''return_statement : RETURN expression ';' '''
         p[0] = ast.ReturnStatement(p[2])
 
-    def p_var_decl_1(self, p):
-        '''var_decl : type ID semantic_decl_opt'''
-        p[0] = ast.VariableDeclaration (p[1], p[2], p[3])
+    def p_var_decl(self, p):
+        '''var_decl : type ID array_size_declaration_list semantic_decl_opt'''
 
-    def p_var_decl_2(self, p):
-        '''var_decl : type '[' constant_integer_expression ']' ID semantic_decl_opt'''
-        p[0] = ast.VariableDeclaration (p[1], p[5], p[6], arraySize=p[3].GetValue())
+        if p[3]:
+            p[0] = ast.VariableDeclaration (p[1], p[2], p[4], arraySize=p[3])
+        else:
+            p[0] = ast.VariableDeclaration (p[1], p[2], p[4])
+
+    def p_array_size_declaration (self, p):
+        '''array_size_declaration : '[' constant_integer_expression ']' '''
+        p[0] = p[2].GetValue ()
+        
+    def p_array_size_declaration_list_1(self, p):
+        '''array_size_declaration_list : array_size_declaration_list array_size_declaration'''
+        p[1].append (p[2])
+        p[0] = p[1]
+
+    def p_array_size_declaration_list_2(self, p):
+        '''array_size_declaration_list : empty'''
+        p[0] = []
 
     def p_var_decl_opt_1(self, p):
         '''var_decl_opt : var_decl'''
@@ -422,8 +435,8 @@ class NslParser:
         p[0] = ast.Semantic (p[2])
 
     def p_semantic_decl_2(self, p):
-        '''semantic_decl : ':' ID '[' constant_integer_expression ']' '''
-        p[0] = ast.Semantic (p[2], p[4])
+        '''semantic_decl : ':' ID array_size_declaration '''
+        p[0] = ast.Semantic (p[2], p[3])
 
     def p_semantic_decl_opt_1(self, p):
         ''' semantic_decl_opt : semantic_decl'''

@@ -14,6 +14,7 @@ struct VertexToPixel
 {
 	float4 position : Position;
 	float2 uv;
+	float2 nestedArray[2][4];
 }
 
 shader(vertex) (ApplicationToVertex app2vs) -> VertexToPixel
@@ -35,6 +36,6 @@ struct FragmentOutput
 shader(pixel) (VertexToPixel vs2ps) -> FragmentOutput
 {
 	FragmentOutput out;
-	out.color = tex.Sample (sampler, float3(vs2ps.uv, 0));
+	out.color = tex.Sample (sampler, float3(vs2ps.uv, 0)) * vs2ps.nestedArray[1][vs2ps.uv.x].x;
 	return out;
 }
