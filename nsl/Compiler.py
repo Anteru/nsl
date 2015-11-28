@@ -1,12 +1,13 @@
 ﻿from nsl.parser import NslParser
 from nsl.passes import ComputeTypes, ValidateSwizzle, ValidateFlowStatements, \
 	AddImplicitCasts, DebugAst, DebugTypes, PrettyPrint, HlslCodeGen, ValidateArrayOutOfBoundsAccess
+from io import StringIO
 
 class Compiler:
-    def __init__(self):
-        self.parser = NslParser ()
+	def __init__(self):
+		self.parser = NslParser ()
 
-        self.passes = [ComputeTypes.GetPass(),
+		self.passes = [ComputeTypes.GetPass(),
 			ValidateArrayOutOfBoundsAccess.GetPass (),
 			ValidateFlowStatements.GetPass (),
 			ValidateSwizzle.GetPass (),
@@ -16,10 +17,16 @@ class Compiler:
 			PrettyPrint.GetPass (),
 			HlslCodeGen.GetPass()]
 
-    def Compile (self, source, debugParsing = False):
-        ast = self.parser.Parse (source, debug = debugParsing)
-        for p in self.passes:
-            if not p.Process (ast):
-                print ('Error in pass {}'.format (p.GetName ()))
-                return False
-        return True
+	def Compile (self, source, options):
+		ast = self.parser.Parse (source, debug = options ['debug-parsing'])
+		for i,p in enumerate (self.passes):
+			buffer = StringIO()
+			if not p.Process (ast, output=buffer):
+				print ('Error in pass {}'.format (p.GetName ()))
+				return False
+			
+			if options ['debug-passes']:
+				if buffer.getvalue ():
+					with open('pass-{}-{}.txt'.format (i, p.GetName ()), 'w') as outputFile:
+						outputFile.write (buffer.getvalue ())
+		return True

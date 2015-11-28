@@ -26,26 +26,26 @@ class PrettyPrintVisitor(ast.Visitor):
 
 	def v_Function(self, func, ctx=None):
 		if func.isForwardDeclaration:
-			print ('__declaration function {0} ({1}) -> {2};'.format(func.GetName (),
+			self.Print ('__declaration function {0} ({1}) -> {2};'.format(func.GetName (),
 												  self.__FormatArgumentList(func.GetArguments()),
 												  func.GetType ().GetReturnType().GetName ()))
 		else:
-			print ('function {0} ({1}) -> {2}'.format(func.GetName (),
+			self.Print ('function {0} ({1}) -> {2}'.format(func.GetName (),
 												  self.__FormatArgumentList(func.GetArguments()),
 												  func.GetType ().GetReturnType().GetName ()))
 			self.v_Visit (func.GetBody (), ctx)
-		print()
+		self.Print()
 
 	def v_Shader(self, shd, ctx=None):
-		print ('shader({0}) ({1}) -> {2}'.format(shd.GetShaderType().name.lower(),
+		self.Print ('shader({0}) ({1}) -> {2}'.format(shd.GetShaderType().name.lower(),
 										  self.__FormatArgumentList(shd.GetArguments()),
 										  shd.GetType().GetReturnType().GetName ()))
 		self.v_Visit (shd.GetBody (), ctx)
-		print()
+		self.Print()
 
 	def _p(self, ctx, s, **args):
-		print (' ' * (ctx * 4), end = '')
-		print (s, **args)
+		self.Print (' ' * (ctx * 4), end = '')
+		self.Print (s, **args)
 
 	def v_BreakStatement(self, s, c):
 		self._p (c, 'break;')
@@ -61,7 +61,7 @@ class PrettyPrintVisitor(ast.Visitor):
 		for e in decl.GetElements ():
 			self.v_Visit (e, ctx + 1)
 		self._p (ctx, '}')
-		print()
+		self.Print()
 
 	def v_VariableDeclaration(self, decl, ctx):
 		if decl.GetType().IsArray():
@@ -71,14 +71,14 @@ class PrettyPrintVisitor(ast.Visitor):
 			self._p (ctx, '{0} {1}'.format(decl.GetType().GetName (), decl.GetName()), end = '')
 
 		if decl.HasSemantic ():
-			print (': {0};'.format(str(decl.GetSemantic ())))
+			self.Print (': {0};'.format(str(decl.GetSemantic ())))
 		else:
-			print (';')
+			self.Print (';')
 
 	def v_DeclarationStatement(self, decl, ctx):
 		for d in decl.GetDeclarations ():
 			self.v_Visit (d, ctx)
-		print ()
+		self.Print ()
 
 	def v_CompoundStatement(self, cs, ctx):
 		self._p(ctx, '{')
@@ -88,7 +88,7 @@ class PrettyPrintVisitor(ast.Visitor):
 
 	def v_ExpressionStatement(self, es, ctx):
 		self._p(ctx, '', end = '')
-		print(str(es.GetExpression()), end=';\n')
+		self.Print(str(es.GetExpression()), end=';\n')
 
 	def v_IfStatement(self, stmt, ctx):
 		self._p(ctx, 'if ({0})'.format(str(stmt.GetCondition ())))

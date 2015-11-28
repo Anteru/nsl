@@ -1,7 +1,6 @@
 ﻿import collections.abc
 from nsl import op, types
 from enum import Enum
-from nsl.types import UnresolvedType
 
 class InvalidChildType(Exception):
 	def __init__(self, actualType):
@@ -798,8 +797,17 @@ class Annotation(Node):
 		return 'Annotation({})'.format (repr(self.__value))
 
 class Visitor:
+	def __init__(self):
+		pass
+	
 	def SetErrorHandler (self, errorHandler):
 		self.errorHandler = errorHandler
+		
+	def SetOutput(self, output):
+		self.output = output
+		
+	def Print(self, *args, end='\n'):
+		print (*args, end=end, file=self.output)
 
 	def v_Generic (self, obj, ctx=None):
 		'''The default visitation function.
@@ -841,6 +849,9 @@ class Visitor:
 		return self.v_Generic (root, self.GetContext ())
 
 class DefaultVisitor(Visitor):
+	def __init__(self):
+		super().__init__()
+	
 	def v_Default(self, obj, ctx=None):
 		'''Traverse further if possible.'''
 		super().__init__()
@@ -848,10 +859,5 @@ class DefaultVisitor(Visitor):
 			return obj.Traverse (self, ctx)
 
 class DebugPrintVisitor(DefaultVisitor):
-	def Visit(self, root):
-		print ()
-		print ('{} {} (Start) {}'.format ('=' * 16, self.__class__.__name__, '=' * 16))
-		self.v_Generic (root, self.GetContext ())
-		print ()
-		print ('{} {} (End) {}'.format ('=' * 16, self.__class__.__name__, '=' * 16))
-		print ()
+	def __init__(self):
+		super().__init__()

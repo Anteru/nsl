@@ -208,7 +208,7 @@ class ComputeTypesPass(nsl.Pass.Pass):
 	def GetName (self):
 		return 'compute-types'
 
-	def Process (self, ast, ctx=None):
+	def Process (self, ast, ctx=None,output=None):
 		self.visitor.Visit (ast)
 
 		return self.visitor.ok

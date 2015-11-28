@@ -11,10 +11,10 @@ class DebugAstVisitor(ast.DebugPrintVisitor):
 
     def v_Default(self, obj, ctx):
         if obj.GetLocation ():
-            print (' '*ctx*2, obj.__class__.__name__, obj.GetLocation ())
+            self.Print (' '*ctx*2, obj.__class__.__name__, obj.GetLocation ())
         else:
-            print (' '*ctx*2, obj.__class__.__name__)
-        print (' '*(ctx*2 + 4), str (obj))
+            self.Print (' '*ctx*2, obj.__class__.__name__)
+        self.Print (' '*(ctx*2 + 4), str (obj))
 
 def GetPass():
     import nsl.Pass

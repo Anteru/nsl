@@ -2,12 +2,13 @@
 
 class HlslVisitor(ast.DefaultVisitor):
 	class Context:
-		def __init__(self):
+		def __init__(self, printFunc):
 			self.__level = 0
 			self.__semanticType = [False]
+			self.__printFunc = printFunc
 			
 		def Print (self, v=''):
-			print ('\t'*self.__level + v)
+			self.__printFunc ('\t'*self.__level + v)
 			
 		def In (self,semanticType=False):
 			self.__level += 1
@@ -35,7 +36,7 @@ class HlslVisitor(ast.DefaultVisitor):
 			return str(nslType.GetName())
 	
 	def GetContext(self):
-		return self.Context ()
+		return self.Context (self.Print)
 		
 	def __FormatArgumentList(self, args):
 		return ', '.join(['{0} {1}'.format(arg.GetType().GetName(), arg.GetName()) for arg in args])

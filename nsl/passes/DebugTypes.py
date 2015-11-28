@@ -5,15 +5,15 @@ class DebugTypeVisitor(ast.DebugPrintVisitor):
 		return 0
 
 	def _p(self, ctx, s, **args):
-		print (' ' * (ctx * 4), end = '')
-		print (s, **args)
+		self.Print (' ' * (ctx * 4), end = '')
+		self.Print (s, **args)
 
 	def v_StructureDefinition(self, decl, ctx):
 		self._p (ctx, 'struct ' + decl.GetName ())
 		for t in decl.GetElements ():
 			# Resolve here allows for nested types
 			self._p (ctx + 1, t.GetName () + ':' + str(t.GetType ()))
-		print()
+		self.Print()
 
 	def v_Expression(self, expr, ctx):
 		self._p (ctx, str(expr) + ':' + str(expr.GetType()))
@@ -31,10 +31,10 @@ class DebugTypeVisitor(ast.DebugPrintVisitor):
 		for (name, argType) in func.GetType ().GetArgumentTypes().items ():
 			self._p (ctx + 1, name + ':' + str(argType))
 
-		print ()
+		self.Print ()
 		self._p (ctx, 'Body')
 		self.v_Visit (func.GetBody(), ctx)
-		print ()
+		self.Print ()
 		ctx -= 1
 
 	def v_Shader(self, shd, ctx=None):
@@ -43,7 +43,7 @@ class DebugTypeVisitor(ast.DebugPrintVisitor):
 	def v_DeclarationStatement (self, stmt, ctx):
 		for decl in stmt.GetDeclarations():
 			self._p (ctx, decl.GetName () + ':' + str(decl.GetType()))
-		print ()
+		self.Print ()
 
 	def v_Generic(self, node, ctx):
 		ast.Visitor.v_Generic (self, node, ctx)
