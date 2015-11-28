@@ -10,7 +10,10 @@ class DebugAstVisitor(ast.DebugPrintVisitor):
             obj.Traverse (self, ctx + 1)
 
     def v_Default(self, obj, ctx):
-        print (' '*ctx*2, obj.__class__.__name__)
+        if obj.GetLocation ():
+            print (' '*ctx*2, obj.__class__.__name__, obj.GetLocation ())
+        else:
+            print (' '*ctx*2, obj.__class__.__name__)
         print (' '*(ctx*2 + 4), str (obj))
 
 def GetPass():

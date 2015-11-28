@@ -2,6 +2,12 @@ import ply.lex as lex
 from ply.lex import TOKEN
 
 class NslLexer:
+    def __init__(self):
+        self.__currentLineStart = 0
+        
+    def GetCurrentLineStart(self):
+        return self.__currentLineStart
+    
     t_ignore = ' \t'
 
     # valid C identifiers (K&R2: A.2.3)
@@ -69,7 +75,8 @@ class NslLexer:
 
     def t_newline(self, t):
         r'\n+'
-        t.lexer.lineno += t.value.count("\n")
+        t.lexer.lineno += t.value.count('\n')
+        self.__currentLineStart = t.lexpos
 
     def t_error(self, t):
         print("Illegal character '%s'" % t.value[0])

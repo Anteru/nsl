@@ -15,9 +15,10 @@ class NslParser:
         self.parser = ply.yacc.yacc(module=self, start=parseEntryPoint.value,errorlog=ply.yacc.NullLogger())
 
     def __GetLocation(self, p, which):
+        currentLineStart = self.lexer.GetCurrentLineStart ()
         return ast.Location(
             p.lineno (which),
-            (p.lexpos (which), len (p[which]),))
+            (p.lexpos (which) - currentLineStart, len (p[which]),))
 
     def Parse(self, text, **kwargs):
         self.lexer.reset_lineno()
@@ -234,15 +235,24 @@ class NslParser:
 
     def p_member_access_expression_1(self, p):
         '''member_access_expression : ID '.' ID '''
-        p [0] = ast.MemberAccessExpression (ast.PrimaryExpression (p[1]), ast.PrimaryExpression (p[3]))
+        parent = ast.PrimaryExpression (p[1])
+        parent.SetLocation(self.__GetLocation(p, 1))
+        member = ast.PrimaryExpression (p[3])
+        member.SetLocation(self.__GetLocation(p, 3))
+        
+        p [0] = ast.MemberAccessExpression (parent, member)
 
     def p_member_access_expression_2(self, p):
         '''member_access_expression : access_expression '.' ID '''
-        p [0] = ast.MemberAccessExpression (p[1], ast.PrimaryExpression (p[3]))
+        member = ast.PrimaryExpression (p[3])
+        member.SetLocation(self.__GetLocation(p, 3))
+        
+        p [0] = ast.MemberAccessExpression (p[1], member)
 
     def p_assignment_expression(self, p):
         '''assignment_expression : unary_expression EQUALS expression'''
         p [0] = ast.AssignmentExpression (p[1], p[3])
+        p [0].SetLocation (self.__GetLocation(p, 2))
 
     def p_argument(self, p):
         '''argument : var_decl'''

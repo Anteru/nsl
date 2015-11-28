@@ -1,6 +1,7 @@
 ﻿import collections.abc
 from nsl import op, types
 from enum import Enum
+from nsl.types import UnresolvedType
 
 class InvalidChildType(Exception):
 	def __init__(self, actualType):
@@ -11,20 +12,41 @@ class Location:
 		self.__line = line
 		self.__colspan = colspan
 		
+	@classmethod
+	def Merge (*args):
+		assert len(args) > 1
+		
+		result = args[1]
+		for arg in args [1:]:
+			assert isinstance (arg, Location)
+			end = max (result.GetLastColumn (), arg.GetLastColumn ())
+			start = min (result.GetFirstColumn (), arg.GetFirstColumn ())
+			result.__colspan = (start, end-start)
+		return result
+		
 	def GetLine (self):
 		return self.__line
 	
 	def GetColumnSpan(self):
 		return self.__colspan
 	
+	def GetFirstColumn(self):
+		return self.__colspan[0]
+	
+	def GetLastColumn(self):
+		return self.__colspan[0] + self.__colspan[1]
+	
 	def __str__(self):
-		return '{}:{}'.format (self.__line, self.__colspan[0])
+		return '{}:{}-{}'.format (self.__line, self.GetFirstColumn(), self.GetLastColumn())
 	
 	def __repr__(self):
 		return 'Location({}, {})'.format (self.__line,
 			repr(self.__colspan))
 
 class Node:
+	def __init__(self):
+		self.__location = None
+	
 	'''Base class for all nodes in the AST.
 
 	The generic AST node provides a traversal function, which traverses into
@@ -38,9 +60,10 @@ class Node:
 		return copy.deepcopy(self)
 	
 	def SetLocation(self, location):
+		assert isinstance(location, Location)
 		self.__location = location
 	
-	def GetLocation(self, location):
+	def GetLocation(self):
 		return self.__location
 
 	def Traverse(self, visitor, ctx=None):
@@ -136,6 +159,7 @@ class EmptyExpression(Expression):
 class CastExpression(UnaryExpression):
 	def __init__(self, expr, targetType, implicit = False):
 		super().__init__([expr])
+		assert isinstance (targetType, types.PrimitiveType)
 		self.SetType (targetType)
 		self.__implicit = implicit
 	
@@ -146,23 +170,28 @@ class CastExpression(UnaryExpression):
 		return self.children[0]
 
 	def __str__(self):
-		return '{} ({})'.format (self.GetType(), self.children [0])
+		return '{} ({})'.format (self.GetType(), self.GetArgument())
+		
+	def __repr__(self):
+		return 'CastExpression ({}, {}, {})'.format (
+			repr(self.GetArgument()), 
+			repr (self.GetType ()), self.IsImplicit ())
 
 class ConstructPrimitiveExpression(UnaryExpression):
 	'''Expression of the type primitive_type (expr, ...).'''
 	def __init__(self, targetType, expressions):
 		super().__init__(expressions)
+		assert isinstance (targetType, types.PrimitiveType)
 		self.SetType (targetType)
 
 	def __str__(self):
-		r = self.GetType().GetName () + ' ('
-		r += ', '.join([str(expr) for expr in self.children])
-		return r + ')'
+		return '{} ({})'.format (self.GetType ().GetName (),
+			', '.join ([str(expr) for expr in self.children]))
 
 	def GetArguments(self):
 		return self.children
 
-	def SetArguments(self, args):
+	def SetArguments(self, args):			
 		self.children = args
 
 class CallExpression(UnaryExpression):
