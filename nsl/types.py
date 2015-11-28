@@ -13,70 +13,67 @@ class UnknownSymbol(Exception):
 class UnknownFunction(Exception):
 	pass
 
-class NotMatchingFunctionOverload(Exception):
-	pass
-
 class InvalidDeclaration(Exception):
 	def __init__(self, message):
 		self.message = message
 
 class Scope:
-	'''Handles generic symbols and functions, which allow overloading.'''
+	'''Handles generic __symbols and __functions, which allow overloading.'''
 	def __init__(self, parent = None):
 		# We store everything in ordered dicts so we can use
 		# this for structures/classes without further modification
-		self.symbols = OrderedDict ()
-		self.parent = parent
-		self.functions = OrderedDict ()
+		self.__symbols = OrderedDict ()
+		self.__parent = parent
+		self.__functions = OrderedDict ()
 
-		self.registeredObjects = set ()
+		self.__registeredObjects = set ()
 
 	def GetSymbolNames(self):
-		return self.symbols.keys()
+		return self.__symbols.keys()
 
 	def HasParent(self):
-		return self.parent is not None
+		return self.__parent is not None
 
 	def GetParent(self):
-		return self.parent
+		return self.__parent
 
 	def RegisterVariable(self, symbol, typeinfo):
 		assert isinstance (typeinfo, Type), 'Expected Type instance but got {}'.format (type(typeinfo))
-		assert symbol not in self.symbols
+		assert symbol not in self.__symbols
 
-		if symbol in self.registeredObjects:
+		if symbol in self.__registeredObjects:
 			raise InvalidDeclaration ("Cannot define variable '{}': A function with that name already exists in the current scope.".format (symbol))
 
-		self.symbols [symbol] = typeinfo
-		self.registeredObjects.add (symbol)
+		self.__symbols [symbol] = typeinfo
+		self.__registeredObjects.add (symbol)
 
 	def GetVariableType (self, symbol):
-		if symbol in self.symbols:
-			return self.symbols [symbol]
+		if symbol in self.__symbols:
+			return self.__symbols [symbol]
 		else:
-			if self.parent is not None:
-				return self.parent.GetVariableType (symbol)
+			if self.__parent is not None:
+				return self.__parent.GetVariableType (symbol)
 			else:
 				raise UnknownSymbol(symbol)
 
 	def RegisterFunction(self, functionName, typeinfo):
-		if functionName in self.registeredObjects and functionName in self.symbols:
+		if functionName in self.__registeredObjects and functionName in self.__symbols:
 			raise InvalidDeclaration ("Cannot define function '{}': A variable with that name already exists in the current scope.".format (functionName))
 
-		if not functionName in self.functions:
-			self.functions [functionName] = []
-		self.functions [functionName].append (typeinfo)
-		self.registeredObjects.add (functionName)
+		if not functionName in self.__functions:
+			self.__functions [functionName] = []
+		self.__functions [functionName].append (typeinfo)
+		self.__registeredObjects.add (functionName)
 
 	def GetFunctionType(self, functionName, argumentTypes):
 		'''Get a matching function.
 
 		@param argumentTypes: The type of each function parameter.'''
 
-		# Resolve overloaded functions
-		if not functionName in self.functions:
-			if not self.parent is None:
-				return self.parent.GetFunctionType(functionName,
+		# Resolve overloaded __functions
+		if not functionName in self.__functions:
+			if not self.__parent is None:
+				return self.__parent.GetFunctionType(functionName,
 												   argumentTypes)
 			else:
 				Errors.ERROR_UNKNOWN_FUNCTION_CALL.Raise (functionName)
@@ -87,7 +84,7 @@ class Scope:
 		def IsValidCandidate(candidate):
 			return candidate[0] >= 0
 
-		candidates = self.functions [functionName]
+		candidates = self.__functions [functionName]
 		ranking = list (filter (IsValidCandidate,
 						  sorted ([(candidate.Match (argumentTypes), candidate)
 								   for candidate in candidates],
@@ -109,8 +106,7 @@ class Scope:
 class Type:
 	'''Base class for all type calculations.'''
 	def GetName(self):
-		assert False, 'Base type has no defined name'
-		return None
+		raise Exception()
 
 	def IsPrimitive(self):
 		return False
@@ -128,9 +124,7 @@ class Type:
 		return False
 
 	def GetElementType(self):
-		'''For vector, matrix and array types, return the element type.
-
-		For multi-dimensional arrays this will return the innermost basic type.'''
+		'''For vector, matrix and array types, return the element type.'''
 		return self
 
 def Resolve(theType, scope):
@@ -208,6 +202,9 @@ def Match(leftType, rightType):
 		equal, 1 indicates that the right type has to be implicitly
 		converted to the left and -1 means the types are not
 		convertible.'''
+	assert isinstance(leftType, Type)
+	assert isinstance(rightType, Type)
+	
 	if not IsCompatible(leftType, rightType):
 		return -1
 	elif (leftType == rightType):
@@ -234,8 +231,8 @@ class ExpressionType:
 	def GetOperandType (self, index):
 		return self._operands [index]
 
-def _MergeScalarTypes(left, right):
-	'''Given two scalar types, return the wider type.'''
+def _GetCommonScalarType(left, right):
+	'''Given two scalar types, get a common scalar type.'''
 	assert isinstance (left, ScalarType)
 	assert isinstance (right, ScalarType)
 
@@ -250,20 +247,20 @@ def _MergeScalarTypes(left, right):
 
 	return UnsignedInteger ()
 
-def _MergePrimitiveTypes(left, right):
+def _GetCommonPrimitiveType(left, right):
 	if isinstance(left, ScalarType) and isinstance(right, ScalarType):
-		return _MergeScalarTypes(left, right)
+		return _GetCommonScalarType(left, right)
 	elif isinstance (left, VectorType) and isinstance(right, VectorType):
 		assert (left.GetSize () == right.GetSize ())
 		return VectorType (
-			_MergeScalarTypes (
+			_GetCommonScalarType (
 				left.GetElementType (),
 				right.GetElementType()),
 			left.GetSize ())
 	elif isinstance (left, MatrixType) and isinstance (right, MatrixType):
 		assert (left.GetSize () == right.GetSize ())
-		return VectorType (
-			_MergeScalarTypes (
+		return MatrixType (
+			_GetCommonScalarType (
 				left.GetElementType (),
 				right.GetElementType()),
 			left.GetRowCount (), left.GetColumnCount ())
@@ -285,12 +282,12 @@ def ResolveBinaryExpressionType (operation, left, right):
 
 	if op.IsComparison (operation):
 		# Cast may be still necessary if we compare integers with floats
-		baseType = _MergePrimitiveTypes (left, right)
+		baseType = _GetCommonPrimitiveType (left, right)
 		return ExpressionType (Integer (), [baseType, baseType])
 
 	if operation in {op.Operation.MUL, op.Operation.DIV} and (left.IsMatrix () or left.IsVector ()):
 		if right.IsScalar ():
-			baseType = _MergeScalarTypes (left.GetElementType (), right)
+			baseType = _GetCommonScalarType (left.GetElementType (), right)
 			return ExpressionType (left.WithComponentType (baseType),
 				[
 					left.WithComponentType (baseType),
@@ -317,7 +314,7 @@ def ResolveBinaryExpressionType (operation, left, right):
 		if leftSize[1] != rightSize [0]:
 			Errors.ERROR_INCOMPATIBLE_TYPES.Raise (left, right)
 
-		baseType = _MergeScalarTypes(left.GetElementType (), right.GetElementType ())
+		baseType = _GetCommonScalarType(left.GetElementType (), right.GetElementType ())
 
 		if right.IsVector ():
 			return ExpressionType (VectorType (baseType, left.GetRowCount ()),
@@ -339,7 +336,7 @@ def ResolveBinaryExpressionType (operation, left, right):
 	if left.GetKind () != right.GetKind ():
 		Errors.ERROR_INCOMPATIBLE_TYPES.Raise (left, right)
 
-	baseType = _MergePrimitiveTypes(left, right)
+	baseType = _GetCommonPrimitiveType(left, right)
 	return ExpressionType (baseType, [baseType, baseType])
 
 class PrimitiveTypeKind(Enum):
@@ -427,7 +424,7 @@ class StructType(AggregateType):
 		return self._members.GetVariableType (variableName)
 
 class ClassType(StructType):
-	'''Struct type with additional support for member functions.'''
+	'''Struct type with additional support for member __functions.'''
 	def __init__(self, name, declarations, functions, isInterface=False):
 		super(ClassType, self).__init__(name, declarations)
 		for func in functions:

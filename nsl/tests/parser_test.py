@@ -27,3 +27,14 @@ class TestExpressionParsing:
         assert l1.GetType () == types.Integer ()
         assert r1.GetValue () == 18
         assert r1.GetType () == types.Integer ()
+        
+    def testMemberAccessExpression (self, ExprParser):
+        expr = 'foo.bar'
+        exprNode = ExprParser.Parse (expr)
+        
+        assert isinstance(exprNode, ast.MemberAccessExpression)
+        p, m = exprNode.GetParent (), exprNode.GetMember ()
+        assert isinstance (p, ast.PrimaryExpression)
+        assert isinstance (m, ast.PrimaryExpression)
+        assert p.GetName () == 'foo'
+        assert m.GetName () == 'bar'
