@@ -1,12 +1,18 @@
 ﻿import ply.yacc
 from nsl import ast, types, lexer, op
+from enum import Enum
+
+class ParseEntryPoint(Enum):
+    Program = 'program'
+    Expression = 'expression'
 
 class NslParser:
-    def __init__(self):
+    def __init__(self, parseEntryPoint = ParseEntryPoint.Program):
         self.lexer = lexer.NslLexer ()
         self.lexer.Build()
         self.tokens = self.lexer.tokens
-        self.parser = ply.yacc.yacc(module=self, start='program',errorlog=ply.yacc.NullLogger())
+        
+        self.parser = ply.yacc.yacc(module=self, start=parseEntryPoint.value,errorlog=ply.yacc.NullLogger())
 
     def __GetLocation(self, p, which):
         return ast.Location(

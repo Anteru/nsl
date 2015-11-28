@@ -2,6 +2,9 @@
 
 class AddImplicitCastVisitor (ast.DefaultVisitor):
     def _GetTargetType (self, sourceType, componentType):
+        assert isinstance(sourceType, types.Type)
+        assert isinstance(componentType, types.Type)
+
         if sourceType.IsVector() or sourceType.IsMatrix ():
             return sourceType.WithComponentType (componentType)
         else:
@@ -9,23 +12,28 @@ class AddImplicitCastVisitor (ast.DefaultVisitor):
             return componentType
         
     def v_ArrayExpression(self, node, ctx):
+        assert isinstance(node, ast.ArrayExpression)
         if node.GetExpression ().GetType () != types.Integer ():
             node.SetExpression (ast.CastExpression (node.GetExpression (),
                 types.Integer (), True))
 
     def v_BinaryExpression (self, node, ctx):
+        assert isinstance(node, ast.BinaryExpression)
+        
         self.v_Generic (node.GetLeft (), ctx)
         self.v_Generic (node.GetRight (), ctx)
 
         if node.GetLeft ().GetType () != node.GetOperator().GetOperandType (0):
             node.SetLeft (ast.CastExpression (node.GetLeft (),
-                node._operator.GetOperandType (0), True))
+                node.GetOperator ().GetOperandType (0), True))
 
         if node.GetRight ().GetType () != node.GetOperator().GetOperandType (1):
             node.SetRight (ast.CastExpression (node.GetRight (),
-                node._operator.GetOperandType (1), True))
+                node.GetOperator ().GetOperandType (1), True))
 
     def v_ConstructPrimitiveExpression(self, node, ctx):
+        assert isinstance(node, ast.ConstructPrimitiveExpression)
+        
         # The primitive type of each argument must be the same as the result
         resultType = node.GetType().GetElementType ()
 
@@ -44,6 +52,8 @@ class AddImplicitCastVisitor (ast.DefaultVisitor):
         node.SetArguments (arguments)
 
     def v_CallExpression(self, node, ctx):
+        assert isinstance(node, ast.CallExpression)
+
         # The primitive type of each argument must be the same as the argument type
         argumentTypes = node.function.GetArgumentTypes().values ()
 

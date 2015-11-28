@@ -46,6 +46,8 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 		self.scope = types.Scope ()
 
 	def v_StructureDefinition(self, decl, ctx):
+		assert isinstance(decl, ast.StructureDefinition)
+		
 		scope = ctx[-1]
 		elements = OrderedDict ()
 		for t in decl.GetElements ():
@@ -54,6 +56,8 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 		scope.RegisterVariable (decl.GetName (), types.StructType(decl.GetName (), elements))
 
 	def v_InterfaceDefinition (self, decl, ctx):
+		assert isinstance(decl, ast.InterfaceDefinition)
+		
 		scope = ctx[-1]
 		functions = []
 		for f in decl.GetFunctions ():
@@ -66,6 +70,8 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 
 
 	def v_CompoundStatement(self, stmt, ctx):
+		assert isinstance(stmt, ast.CompoundStatement)
+		
 		ctx.append (types.Scope (ctx[-1]))
 		for s in stmt:
 			self.v_Visit (s, ctx)
@@ -137,6 +143,8 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 		return expr.GetType ()
 
 	def v_DeclarationStatement(self, stmt, ctx):
+		assert isinstance(stmt, ast.DeclarationStatement)
+		
 		scope = ctx[-1]
 		for decl in stmt.GetDeclarations():
 			scope.RegisterVariable (decl.GetName (),
@@ -150,6 +158,8 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 
 	def v_Function(self, func, ctx):
 		'''Computes the function type and processes all statements.'''
+		assert isinstance(func, ast.Function)
+		
 		func.ResolveType (ctx [-1])
 		func.GetType ().Resolve (ctx[-1])
 		if not isinstance (func, ast.Shader):
