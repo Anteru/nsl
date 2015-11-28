@@ -2,7 +2,6 @@
 from nsl.passes import ComputeTypes, ValidateSwizzle, ValidateFlowStatements, \
 	AddImplicitCasts, DebugAst, DebugTypes, PrettyPrint, HlslCodeGen, ValidateArrayOutOfBoundsAccess
 
-
 class Compiler:
     def __init__(self):
         self.parser = NslParser ()

@@ -8,6 +8,11 @@ class NslParser:
         self.tokens = self.lexer.tokens
         self.parser = ply.yacc.yacc(module=self, start='program',errorlog=ply.yacc.NullLogger())
 
+    def __GetLocation(self, p, which):
+        return ast.Location(
+            p.lineno (which),
+            (p.lexpos (which), len (p[which]),))
+
     def Parse(self, text, **kwargs):
         self.lexer.reset_lineno()
         return self.parser.parse(text, lexer=self.lexer, **kwargs)
@@ -132,15 +137,18 @@ class NslParser:
     def p_constant_integer_expression_1(self, p):
         '''constant_integer_expression : INT_CONST_DEC'''
         p[0] = ast.LiteralExpression(int(p[1]), types.Integer())
+        p[0].SetLocation (self.__GetLocation (p, 1))
 
     def p_constant_integer_expression_2(self, p):
         '''constant_integer_expression : INT_CONST_OCT'''
         p[0] = ast.LiteralExpression(int(p[1], 8), types.Integer())
+        p[0].SetLocation (self.__GetLocation (p, 1))
 
     def p_constant_integer_expression_3(self, p):
         '''constant_integer_expression : INT_CONST_HEX'''
         # First two characters are 0x or 0X, so we have to skip them
         p[0] = ast.LiteralExpression(int(p[1][2:], 16), types.Integer())
+        p[0].SetLocation (self.__GetLocation (p, 1))
 
     def _ParseFloat (self, value):
         if value.endswith ('f'):
@@ -151,10 +159,12 @@ class NslParser:
     def p_constant_float_expression(self, p):
         '''constant_float_expression : FLOAT_CONST'''
         p[0] = ast.LiteralExpression(self._ParseFloat(p[1]), types.Float ())
+        p[0].SetLocation (self.__GetLocation (p, 1))
 
     def p_unary_expression_1(self, p):
         '''unary_expression : ID'''
         p[0] = ast.PrimaryExpression (p[1])
+        p[0].SetLocation (self.__GetLocation (p, 1))
 
     def p_unary_expression_2(self, p):
         '''unary_expression : constant_integer_expression
