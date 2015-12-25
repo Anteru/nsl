@@ -102,7 +102,7 @@ class Program (Node):
 		self.__types = collections.OrderedDict ()
 
 	def _GetChildren (self):
-		return [self.__variables, self.__functions]
+		return [self.__types, self.__variables, self.__functions]
 
 	def AddDeclaration (self, variable):
 		self.__variables.append (variable)
@@ -487,11 +487,14 @@ class VariableDeclaration(Node):
 		return [self.__initializer]
 
 	def __str__(self):
-		if self.__type.IsArray ():
-			result = str(self.__type.GetElementType ()) + ' ' + str(self.GetName ()) + '[' + ', '.join(map(str, self.__type.GetSize())) + ']'
+		if not self.__type.NeedsResolve ():
+			if self.__type.IsArray ():
+				result = str(self.__type.GetElementType ()) + ' ' + str(self.GetName ()) + '[' + ', '.join(map(str, self.__type.GetSize())) + ']'
+			else:
+				result = str(self.__type) + ' ' + str(self.GetName ())
 		else:
-			result = str(self.__type) + ' ' + str(self.GetName ())
-
+			result = self.GetName ()
+			
 		if (self.HasInitializerExpression ()):
 			result += '= ' + str(self.__initializer)
 
@@ -587,6 +590,9 @@ class Function(Node):
 
 	def GetBody(self):
 		return self.__body
+	
+	def __str__(self):
+		return '{} ({} argument(s))'.format (self.GetName (), len (self.GetArguments()))
 
 class ShaderType(Enum):
 	Vertex      = 0
