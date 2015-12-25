@@ -1,5 +1,6 @@
 ﻿from collections import OrderedDict
 from nsl import ast, types, Errors
+from enum import Enum
 
 def ParseSwizzleMask(mask):
 	'''Parse a swizzle mask into a list of element indices, starting
@@ -36,6 +37,10 @@ def ComputeSwizzleType(inType, mask):
 		if inType.HasSemantic ():
 			result.SetSemantic (inType.GetSemantic ())
 		return result
+	
+class FunctionVisitationPass(Enum):
+	Register = 0
+	Visit = 1
 
 class ComputeTypeVisitor(ast.DefaultVisitor):
 	def GetContext(self):
@@ -156,14 +161,18 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 	def v_Expression(self, expr, ctx):
 		self._ProcessExpression(expr, ctx[-1])
 
-	def v_Function(self, func, ctx):
-		'''Computes the function type and processes all statements.'''
+	def __RegisterFunction(self, func, ctx):
 		assert isinstance(func, ast.Function)
-		
+				
 		func.ResolveType (ctx [-1])
 		func.GetType ().Resolve (ctx[-1])
 		if not isinstance (func, ast.Shader):
 			ctx[-1].RegisterFunction (func.GetType ().GetName (), func.GetType ())
+			
+	def v_Function(self, func, ctx):
+		'''Computes the function type and processes all statements.'''
+		assert isinstance(func, ast.Function)
+				
 		scope = types.Scope (ctx[-1])
 		ctx.append (scope)
 		for (name, argType) in func.GetType ().GetArgumentTypes().items ():
@@ -177,13 +186,15 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 
 	def v_Program(self, prog, ctx):
 		# Must visit types first
-		# @TODO: Make this two passes to gather all interfaces/structure types first
-		#        and resolve in a second step
 		for programType in prog.GetTypes ():
 			self.v_Visit (programType, ctx)
 		for decl in prog.GetDeclarations ():
 			self.v_Visit (decl, ctx)
+		
 		for func in prog.GetFunctions ():
+			self.__RegisterFunction(func, ctx)
+
+		for func in prog.GetFunctions():
 			self.v_Visit (func, ctx)
 
 import nsl.Pass

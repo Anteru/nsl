@@ -9,6 +9,16 @@ matrix4x4 worldViewProjection;
 Texture2D tex;
 Sampler2D sampler;
 
+function FBar (float4 input) -> float4
+{
+	return FFoo (input);
+}
+
+function FFoo (float4 input) -> float4
+{
+	return input * 2;
+}
+
 [InOut]
 struct VertexToPixel
 {
