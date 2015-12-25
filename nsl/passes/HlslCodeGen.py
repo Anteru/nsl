@@ -41,25 +41,25 @@ class HlslVisitor(ast.DefaultVisitor):
 	def __FormatArgumentList(self, args):
 		return ', '.join(['{0} {1}'.format(arg.GetType().GetName(), arg.GetName()) for arg in args])
 	
+	def __v_FunctionOrShaderBody(self, funcOrShader, ctx):
+		ctx.Print ('{')
+		ctx.In ()
+		funcOrShader.GetBody().Traverse(self, ctx)
+		ctx.Out ()
+		ctx.Print ('}')
+		ctx.Print ()
+		
 	def v_Function(self, func, ctx):
 		ctx.Print ('{2} {0} ({1})'.format(func.GetName (),
 									  self.__FormatArgumentList(func.GetArguments()),
 									  func.GetType().GetReturnType().GetName ()))
-		ctx.Print ('{')
-		ctx.In ()
-		func.GetBody().Traverse(self, ctx)
-		ctx.Out ()
-		ctx.Print ('}')
+		self.__v_FunctionOrShaderBody(func, ctx)
 
 	def v_Shader(self, shd, ctx=None):
 		ctx.Print ('{2} {0} ({1})'.format(shd.GetName(),
 									  self.__FormatArgumentList(shd.GetArguments()),
 									  shd.GetType().GetReturnType ().GetName()))
-		ctx.Print ('{')
-		ctx.In ()
-		shd.GetBody().Traverse(self, ctx)
-		ctx.Out ()
-		ctx.Print ('}')
+		self.__v_FunctionOrShaderBody(shd, ctx)
 	
 	def v_StructureDefinition(self, decl, ctx):
 		ctx.Print ('struct {0}'.format (decl.GetName ()))
