@@ -8,7 +8,9 @@ class Compiler:
 	def __init__(self):
 		self.parser = NslParser ()
 
-		self.passes = [ComputeTypes.GetPass(),
+		self.passes = [
+			DebugAst.GetPass (),
+			ComputeTypes.GetPass(),
 			ValidateArrayAccessType.GetPass (),
 			ValidateArrayOutOfBoundsAccess.GetPass (),
 			ValidateFlowStatements.GetPass (),
