@@ -36,6 +36,6 @@ struct FragmentOutput
 shader(pixel) (VertexToPixel vs2ps) -> FragmentOutput
 {
 	FragmentOutput out;
-	out.color = tex.Sample (sampler, float3(vs2ps.uv, 0)) * vs2ps.nestedArray[1][vs2ps.uv.x].x;
+	out.color = tex.Sample (sampler, float3(vs2ps.uv, 0)) * vs2ps.nestedArray[1][int(vs2ps.uv.x)].x;
 	return out;
 }

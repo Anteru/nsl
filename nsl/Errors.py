@@ -71,6 +71,8 @@ ERROR_ARRAY_ACCESS_OUT_OF_BOUNDS = ErrorMessage (2008, Severity.ERROR,
     '''Array access to array of size {} with literal {} is out-of-bounds.''')
 ERROR_ARRAY_ACCESS_WITH_NONSCALAR = ErrorMessage (2009, Severity.ERROR,
     '''Array access requires scalar, got '{}'.''')
+ERROR_ARRAY_ACCESS_WITH_NONINTEGER = ErrorMessage (2010, Severity.ERROR,
+    '''Array access requires an integer, got '{}'.''')
 
 ERROR_CONTINUE_OUTSIDE_FLOW = ErrorMessage (2201, Severity.ERROR,
     'continue statements must be inside a do/while/for statement.')

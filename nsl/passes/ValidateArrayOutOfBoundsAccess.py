@@ -1,4 +1,4 @@
-from nsl import ast, Errors
+from nsl import ast, Errors, types
 
 class ValidateArrayOutOfBoundsAccess(ast.DefaultVisitor):
 	def __init__(self):
