@@ -378,22 +378,22 @@ class InvalidStructureDefinition(Exception):
 		self.memberName = memberName
 
 class StructureDefinition(Node):
-	def __init__(self, name, elements = list()):
+	def __init__(self, name, fields = list()):
 		super().__init__()
-		self.name = name
-		self.elements = elements
+		self.__name = name
+		self.__fields = fields
 
 		# Check that all element names are unique
-		elementNames = set()
-		for e in elements:
-			if e.GetName () in elementNames:
+		fieldNames = set()
+		for field in fields:
+			if field.GetName () in fieldNames:
 				raise InvalidStructureDefinition()
-			elementNames.add (e.GetName ())
+			fieldNames.add (field.GetName ())
 
 		self.__annotations = []
 
 	def _GetChildren(self):
-		return [self.elements]
+		return [self.__fields]
 
 	def AddAnnotation (self, annotation):
 		assert isinstance(annotation, Annotation)
@@ -403,28 +403,28 @@ class StructureDefinition(Node):
 		return self.__annotations
 
 	def GetName(self):
-		return self.name
+		return self.__name
 
 	def __str__(self):
-		return 'struct {0} ({1} field(s))'.format (self.GetName (), len (self.elements))
+		return 'struct {0} ({1} field(s))'.format (self.GetName (), len (self.GetFields()))
 
-	def GetElements (self):
-		return self.elements
+	def GetFields (self):
+		return self.__fields
 
 class InterfaceDefinition(Node):
-	def __init__(self, name, functions = list ()):
+	def __init__(self, name, methods = list ()):
 		super().__init__()
-		self.name = name
-		self.__functions = functions
+		self.__name = name
+		self.__methods = methods
 
 	def _GetChildren (self):
-		return [self.__functions]
+		return [self.__methods]
 	
-	def GetFunctions (self):
-		return self.__functions
+	def GetMethods (self):
+		return self.__methods
 	
 	def GetName (self):
-		return self.name
+		return self.__name
 
 class BuiltinSemantic(Enum):
 	Position = 1

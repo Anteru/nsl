@@ -47,12 +47,12 @@ class Scope:
 		self.__symbols [symbol] = typeinfo
 		self.__registeredObjects.add (symbol)
 
-	def GetVariableType (self, symbol):
+	def GetFieldType (self, symbol):
 		if symbol in self.__symbols:
 			return self.__symbols [symbol]
 		else:
 			if self.__parent is not None:
-				return self.__parent.GetVariableType (symbol)
+				return self.__parent.GetFieldType (symbol)
 			else:
 				raise UnknownSymbol(symbol)
 
@@ -65,7 +65,7 @@ class Scope:
 		self.__functions [functionName].append (typeinfo)
 		self.__registeredObjects.add (functionName)
 
-	def GetFunctionType(self, functionName, argumentTypes):
+	def GetMethodType(self, functionName, argumentTypes):
 		'''Get a matching function.
 
 		@param argumentTypes: The type of each function parameter.'''
@@ -73,7 +73,7 @@ class Scope:
 		# Resolve overloaded __functions
 		if not functionName in self.__functions:
 			if not self.__parent is None:
-				return self.__parent.GetFunctionType(functionName,
+				return self.__parent.GetMethodType(functionName,
 												   argumentTypes)
 			else:
 				Errors.ERROR_UNKNOWN_FUNCTION_CALL.Raise (functionName)
@@ -129,7 +129,7 @@ class Type:
 
 def Resolve(theType, scope):
 	if theType.NeedsResolve ():
-		result = scope.GetVariableType (theType.GetName ())
+		result = scope.GetFieldType (theType.GetName ())
 		assert not isinstance (result, UnresolvedType)
 		return result
 	else:
@@ -137,7 +137,7 @@ def Resolve(theType, scope):
 
 def ResolveFunction(theType, scope, argumentTypes):
 	if theType.NeedsResolve ():
-		return scope.GetFunctionType (theType.GetName (), argumentTypes)
+		return scope.GetMethodType (theType.GetName (), argumentTypes)
 	else:
 		return theType
 
@@ -420,8 +420,8 @@ class StructType(AggregateType):
 	def GetMembers(self):
 		return self._members
 
-	def GetVariableType(self, variableName):
-		return self._members.GetVariableType (variableName)
+	def GetFieldType(self, variableName):
+		return self._members.GetFieldType (variableName)
 
 class ClassType(StructType):
 	'''Struct type with additional support for member __functions.'''
@@ -443,8 +443,8 @@ class ClassType(StructType):
 													repr(self._members),
 													repr(self.__isInterface))
 
-	def GetFunctionType(self, functionName, argumentTypes):
-		return self._members.GetFunctionType(functionName, argumentTypes)
+	def GetMethodType(self, functionName, argumentTypes):
+		return self._members.GetMethodType(functionName, argumentTypes)
 
 	def IsInterface(self):
 		return self.__isInterface

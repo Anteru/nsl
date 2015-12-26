@@ -10,9 +10,9 @@ class DebugTypeVisitor(ast.DebugPrintVisitor):
 
 	def v_StructureDefinition(self, decl, ctx):
 		self._p (ctx, 'struct ' + decl.GetName ())
-		for t in decl.GetElements ():
+		for field in decl.GetFields ():
 			# Resolve here allows for nested types
-			self._p (ctx + 1, t.GetName () + ':' + str(t.GetType ()))
+			self._p (ctx + 1, field.GetName () + ':' + str(field.GetType ()))
 		self.Print()
 
 	def v_Expression(self, expr, ctx):

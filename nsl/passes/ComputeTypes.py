@@ -54,24 +54,24 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 		assert isinstance(decl, ast.StructureDefinition)
 		
 		scope = ctx[-1]
-		elements = OrderedDict ()
-		for t in decl.GetElements ():
+		fields = OrderedDict ()
+		for field in decl.GetFields ():
 			# Resolve here allows for nested types
-			elements [t.GetName ()] = types.Resolve (t.GetType (), scope)
-		scope.RegisterVariable (decl.GetName (), types.StructType(decl.GetName (), elements))
+			fields [field.GetName ()] = types.Resolve (field.GetType (), scope)
+		scope.RegisterVariable (decl.GetName (), types.StructType(decl.GetName (), fields))
 
 	def v_InterfaceDefinition (self, decl, ctx):
 		assert isinstance(decl, ast.InterfaceDefinition)
 		
 		scope = ctx[-1]
-		functions = []
-		for f in decl.GetFunctions ():
+		methods = []
+		for method in decl.GetMethods ():
 			# Resolve here allows for nested types
-			functionType = f.GetType ()
-			functionType.Resolve (scope)
-			functions.append (functionType)
+			methodType = method.GetType ()
+			methodType.Resolve (scope)
+			methods.append (methodType)
 		scope.RegisterVariable (decl.GetName (),
-								types.ClassType(decl.GetName (), dict(), functions, isInterface=True))
+			types.ClassType(decl.GetName (), dict(), methods, isInterface=True))
 
 
 	def v_CompoundStatement(self, stmt, ctx):
@@ -83,7 +83,7 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 		ctx.pop()
 		
 	def _GetClassScopeForMemberAccess(self, expr, scope):
-		return scope.GetVariableType(expr.GetMemberAccess().GetParent ().GetName())
+		return scope.GetFieldType(expr.GetMemberAccess().GetParent ().GetName())
 
 	def _ProcessExpression(self, expr, scope):
 		assert isinstance(expr, ast.Expression), 'Expression {1} has type {0} which is not an expression type'.format(type(expr), expr)
@@ -100,7 +100,7 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 					else:
 						Errors.ERROR_CANNOT_SWIZZLE_PRIMITIVE_TYPE.Raise ()
 				elif isinstance (p.GetType(), types.StructType):
-					expr.SetType (p.GetType().GetMembers ().GetVariableType (expr.GetMember ().GetName ()))
+					expr.SetType (p.GetType().GetMembers ().GetFieldType (expr.GetMember ().GetName ()))
 				else:
 					Errors.ERROR_CANNOT_SWIZZLE_TYPE.Raise (p.GetType())
 				
@@ -122,7 +122,7 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 					expr.SetType (p.GetType ().GetElementType ())
 		elif isinstance(expr, ast.PrimaryExpression):
 			# Simply check the name
-			expr.SetType (scope.GetVariableType (expr.GetName ()))
+			expr.SetType (scope.GetFieldType (expr.GetName ()))
 		else:
 			# Walk through all children
 			for c in expr:

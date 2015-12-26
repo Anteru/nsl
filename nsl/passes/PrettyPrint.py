@@ -58,8 +58,8 @@ class PrettyPrintVisitor(ast.Visitor):
 			self._p (ctx, annotation)
 		self._p (ctx, 'struct {0}'.format (decl.GetName ()))
 		self._p (ctx, '{')
-		for e in decl.GetElements ():
-			self.v_Visit (e, ctx + 1)
+		for field in decl.GetFields ():
+			self.v_Visit (field, ctx + 1)
 		self._p (ctx, '}')
 		self.Print()
 
