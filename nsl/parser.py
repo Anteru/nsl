@@ -12,16 +12,19 @@ class NslParser:
         self.lexer.Build()
         self.tokens = self.lexer.tokens
         
-        self.parser = ply.yacc.yacc(module=self, start=parseEntryPoint.value,errorlog=ply.yacc.NullLogger())
+        self.parser = ply.yacc.yacc(module=self, 
+            start=parseEntryPoint.value,
+            errorlog=ply.yacc.NullLogger())
 
     def __GetLocation(self, p, which):
-        currentLineStart = self.lexer.GetCurrentLineStart ()
         return ast.Location(
-            p.lineno (which),
-            (p.lexpos (which) - currentLineStart, len (p[which]),))
+            (p.lexpos (which),
+            p.lexpos (which) + len (p[which]),),
+            self.__sourceMapping)
 
     def Parse(self, text, **kwargs):
         self.lexer.reset_lineno()
+        self.__sourceMapping = ast.SourceMapping (text)
         return self.parser.parse(text, lexer=self.lexer, **kwargs)
 
     precedence = (
