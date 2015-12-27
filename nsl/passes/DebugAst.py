@@ -6,8 +6,7 @@ class DebugAstVisitor(ast.DebugPrintVisitor):
 
     def v_Generic(self, obj, ctx=None):
         ast.Visitor.v_Generic (self, obj, ctx)
-        if hasattr (obj, 'Traverse'):
-            obj.Traverse (self, ctx + 1)
+        obj.AcceptVisitor(self, ctx + 1)
 
     def v_Default(self, obj, ctx):
         if obj.GetLocation ():

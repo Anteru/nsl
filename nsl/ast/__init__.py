@@ -37,7 +37,7 @@ class Location:
         assert len(args) > 1
         
         result = args[1]
-        for arg in args [1:]:
+        for arg in args [2:]:
             assert isinstance (arg, Location)
             end = max (result.GetEnd (), arg.GetEnd ())
             start = min (result.GetBegin (), arg.GetBegin ())
@@ -100,7 +100,7 @@ class Node:
     def GetLocation(self):
         return self.__location
 
-    def Traverse(self, visitor, ctx=None):
+    def AcceptVisitor(self, visitor, ctx=None):
         '''Traverse all children of this node.
 
         By default, this calls `_GetChildren` to obtain the list of fields
@@ -876,7 +876,8 @@ class Visitor:
         return self.v_Default (obj, ctx)
 
     def v_Default(self, obj, ctx):
-        print ('Missing visit method: "{}.v_{}"'.format (self.__class__.__name__,
+        print ('Missing visit method: "{}.v_{}"'.format (
+            self.__class__.__name__,
             obj.__class__.__name__))
         return None
 
@@ -896,8 +897,8 @@ class DefaultVisitor(Visitor):
     def v_Default(self, obj, ctx=None):
         '''Traverse further if possible.'''
         super().__init__()
-        if hasattr (obj, 'Traverse'):
-            return obj.Traverse (self, ctx)
+        if hasattr (obj, 'AcceptVisitor'):
+            return obj.AcceptVisitor (self, ctx)
 
 class DebugPrintVisitor(DefaultVisitor):
     def __init__(self):

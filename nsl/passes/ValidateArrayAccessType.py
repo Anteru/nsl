@@ -15,7 +15,7 @@ class ValidateArrayAccessType(ast.DefaultVisitor):
             with Errors.CompileExceptionToErrorHandler (self.errorHandler):
                 self._ValidateArrayExpression(expr)
 
-        expr.Traverse(self)
+        expr.AcceptVisitor(self)
             
 def GetPass():
     from nsl import Pass

@@ -44,7 +44,7 @@ class HlslVisitor(ast.DefaultVisitor):
 	def __v_FunctionOrShaderBody(self, funcOrShader, ctx):
 		ctx.Print ('{')
 		ctx.In ()
-		funcOrShader.GetBody().Traverse(self, ctx)
+		funcOrShader.GetBody().AcceptVisitor(self, ctx)
 		ctx.Out ()
 		ctx.Print ('}')
 		ctx.Print ()
@@ -70,7 +70,7 @@ class HlslVisitor(ast.DefaultVisitor):
 				containsSemantics = True
 				break
 		ctx.In (containsSemantics)
-		decl.Traverse(self, ctx)
+		decl.AcceptVisitor(self, ctx)
 		ctx.Out ()
 		ctx.Print ('}')
 		ctx.Print ()
@@ -102,7 +102,7 @@ class HlslVisitor(ast.DefaultVisitor):
 		ctx.Print ('{')
 		ctx.In ()
 		for s in cs.GetStatements():
-			s.Traverse(self, ctx+1)
+			s.AcceptVisitor(self, ctx+1)
 		ctx.Out ()
 		ctx.Print ('}')
 		
@@ -117,7 +117,7 @@ class HlslVisitor(ast.DefaultVisitor):
 			return self.v_Visit (ce.GetArgument ())
 		else:
 			return ('({})({})'.format (self.__ConvertType(ce.GetType ()),
-									   ce.Traverse(self, ctx)))
+									   ce.AcceptVisitor(self, ctx)))
 			
 	def v_BinaryExpression(self, be, ctx):
 		return '{} {} {}'.format (self.v_Visit (be.GetLeft ()),

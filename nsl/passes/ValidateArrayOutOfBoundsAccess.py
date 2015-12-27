@@ -1,4 +1,4 @@
-from nsl import ast, Errors, types
+from nsl import ast, Errors
 
 class ValidateArrayOutOfBoundsAccess(ast.DefaultVisitor):
 	def __init__(self):
@@ -21,7 +21,7 @@ class ValidateArrayOutOfBoundsAccess(ast.DefaultVisitor):
 			with Errors.CompileExceptionToErrorHandler (self.errorHandler):
 				self._ValidateArrayExpression(expr)
 
-		expr.Traverse(self)
+		expr.AcceptVisitor(self)
 			
 def GetPass():
 	from nsl import Pass
