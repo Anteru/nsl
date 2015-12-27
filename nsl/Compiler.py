@@ -1,7 +1,7 @@
 ﻿from nsl.parser import NslParser
 from nsl.passes import ComputeTypes, ValidateSwizzle, ValidateFlowStatements, \
 	AddImplicitCasts, DebugAst, DebugTypes, PrettyPrint, HlslCodeGen, ValidateArrayOutOfBoundsAccess,\
-	ValidateArrayAccessType
+	ValidateArrayAccessType, UpdateLocations
 from io import StringIO
 
 class Compiler:
@@ -9,6 +9,8 @@ class Compiler:
 		self.parser = NslParser ()
 
 		self.passes = [
+			DebugAst.GetPass (),
+			UpdateLocations.GetPass (),
 			DebugAst.GetPass (),
 			ComputeTypes.GetPass(),
 			ValidateArrayAccessType.GetPass (),

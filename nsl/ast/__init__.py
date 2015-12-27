@@ -33,16 +33,17 @@ class Location:
         self.__sourceMapping = sourceMapping
         
     @classmethod
-    def Merge (*args):
-        assert len(args) > 1
+    def Merge (cls, *args):
+        assert len(args) > 0
         
-        result = args[1]
-        for arg in args [2:]:
+        result = args[0].__span
+        mapping = args[0].__sourceMapping
+        for arg in args [1:]:
             assert isinstance (arg, Location)
-            end = max (result.GetEnd (), arg.GetEnd ())
-            start = min (result.GetBegin (), arg.GetBegin ())
-            result.__span = (start, end)
-        return result
+            end = max (result [1], arg.GetEnd ())
+            start = min (result [0], arg.GetBegin ())
+            result = (start, end, )
+        return cls(result, mapping)
 
     def GetBegin(self):
         return self.__span [0]
@@ -99,13 +100,8 @@ class Node:
     
     def GetLocation(self):
         return self.__location
-
-    def AcceptVisitor(self, visitor, ctx=None):
-        '''Traverse all children of this node.
-
-        By default, this calls `_GetChildren` to obtain the list of fields
-        that contain child nodes, and then traverses into each item of each
-        field.'''
+    
+    def ForEachChild(self, function, ctx=None):
         fields = self._GetChildren()
         for e in fields:
             if e is None:
@@ -114,17 +110,27 @@ class Node:
                 for c in e:
                     if not isinstance (c, Node):
                         raise InvalidChildType (type(c))
-                    visitor.v_Generic (c, ctx)
+                    function (c, ctx)
             elif isinstance(e, collections.abc.Mapping):
                 for c in e.values ():
                     if not isinstance (c, Node):
                         raise InvalidChildType (type(c))
-                    visitor.v_Generic (c, ctx)
+                    function (c, ctx)
             else:
                 if not isinstance (e, Node):
                     raise InvalidChildType (type(e))
                 
-                visitor.v_Generic (e, ctx)
+                function (e, ctx)
+
+    def AcceptVisitor(self, visitor, ctx=None):
+        '''Traverse all children of this node.
+
+        By default, this calls `_GetChildren` to obtain the list of fields
+        that contain child nodes, and then traverses into each item of each
+        field.'''
+        def Visit(c, ctx):
+            visitor.v_Generic (c, ctx)
+        self.ForEachChild (Visit, ctx)
                     
 class Program (Node):
     '''Program container, keeping everything together.'''
