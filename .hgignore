@@ -4,3 +4,4 @@ parsetab.py
 parser.out
 stdlib.cache
 env/**
+docs/_build/**
