@@ -5,7 +5,7 @@ class DebugAstVisitor(ast.DebugPrintVisitor):
         return 0
 
     def v_Generic(self, obj, ctx=None):
-        ast.Visitor.v_Generic (self, obj, ctx)
+        self.v_Default(obj, ctx)
         obj.AcceptVisitor(self, ctx + 1)
 
     def v_Default(self, obj, ctx):
