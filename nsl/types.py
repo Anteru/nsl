@@ -9,6 +9,13 @@ class UnknownSymbol(Exception):
 
 	def __str__(self):
 		return "Unknown symbol: '{}'".format (self.__symbol)
+	
+class UnknownType(Exception):
+	def __init__(self, name):
+		self.__typename = name
+		
+	def __str__(self):
+		return "Unknown type: '{}'".format (self.__typename)
 
 class UnknownFunction(Exception):
 	pass
@@ -23,6 +30,7 @@ class Scope:
 		# We store everything in ordered dicts so we can use
 		# this for structures/classes without further modification
 		self.__symbols = OrderedDict ()
+		self.__types = OrderedDict ()
 		self.__parent = parent
 		self.__functions = OrderedDict ()
 
@@ -36,13 +44,24 @@ class Scope:
 
 	def GetParent(self):
 		return self.__parent
+	
+	def RegisterType(self, typename, typeinfo):
+		assert isinstance (typeinfo, Type)
+		assert typename not in self.__types
+		
+		if typename in self.__registeredObjects:
+			raise InvalidDeclaration ("Cannot define type '{}': A function or variable with that name already exists in the current scope.".format (typename))
+		
+		self.__types [typename] = typeinfo
+		self.__registeredObjects.add (typename)
+
 
 	def RegisterVariable(self, symbol, typeinfo):
 		assert isinstance (typeinfo, Type), 'Expected Type instance but got {}'.format (type(typeinfo))
 		assert symbol not in self.__symbols
 
 		if symbol in self.__registeredObjects:
-			raise InvalidDeclaration ("Cannot define variable '{}': A function with that name already exists in the current scope.".format (symbol))
+			raise InvalidDeclaration ("Cannot define variable '{}': A function or type with that name already exists in the current scope.".format (symbol))
 
 		self.__symbols [symbol] = typeinfo
 		self.__registeredObjects.add (symbol)
@@ -56,9 +75,18 @@ class Scope:
 			else:
 				raise UnknownSymbol(symbol)
 
+	def GetType (self, typename):
+		if typename in self.__types:
+			return self.__types [typename]
+		else:
+			if self.__parent is not None:
+				return self.__parent.GetType (typename)
+			else:
+				raise UnknownType(typename)
+
 	def RegisterFunction(self, functionName, typeinfo):
 		if functionName in self.__registeredObjects and functionName in self.__symbols:
-			raise InvalidDeclaration ("Cannot define function '{}': A variable with that name already exists in the current scope.".format (functionName))
+			raise InvalidDeclaration ("Cannot define function '{}': A variable or type with that name already exists in the current scope.".format (functionName))
 
 		if not functionName in self.__functions:
 			self.__functions [functionName] = []
@@ -127,9 +155,9 @@ class Type:
 		'''For vector, matrix and array types, return the element type.'''
 		return self
 
-def Resolve(theType, scope):
+def ResolveType(theType, scope):
 	if theType.NeedsResolve ():
-		result = scope.GetFieldType (theType.GetName ())
+		result = scope.GetType (theType.GetName ())
 		assert not isinstance (result, UnresolvedType)
 		return result
 	else:
@@ -456,14 +484,14 @@ class Function(Type):
 		self.name = name
 
 	def Resolve(self, scope):
-		self.returnType = Resolve(self.returnType, scope)
+		self.returnType = ResolveType(self.returnType, scope)
 		self.__argumentTypes = OrderedDict ()
 		for counter, arg in enumerate (self.arguments):
 			if arg.HasName ():
-				self.__argumentTypes [arg.GetName ()] = Resolve (arg.GetType (), scope)
+				self.__argumentTypes [arg.GetName ()] = ResolveType (arg.GetType (), scope)
 			else:
 				# generate an invalid name
-				self.__argumentTypes ['$unnamed_arg${}'.format (counter)] = Resolve (arg.GetType (), scope)
+				self.__argumentTypes ['$unnamed_arg${}'.format (counter)] = ResolveType (arg.GetType (), scope)
 
 	def GetName(self):
 		return self.name

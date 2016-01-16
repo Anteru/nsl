@@ -517,7 +517,7 @@ class VariableDeclaration(Node):
             self.__type = elementType
 
     def ResolveType(self, scope):
-        self.__type = types.Resolve(self.__type, scope)
+        self.__type = types.ResolveType(self.__type, scope)
 
         if self.HasSemantic():
             self.__type.SetSemantic (self.__semantic)
@@ -575,7 +575,7 @@ class Argument(Node):
         self.__modifiers = modifiers
 
     def ResolveType(self, scope):
-        self.__type = types.Resolve(self.__type, scope)
+        self.__type = types.ResolveType(self.__type, scope)
         return self.__type
 
     def GetType(self):

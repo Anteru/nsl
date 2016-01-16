@@ -57,8 +57,8 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 		fields = OrderedDict ()
 		for field in decl.GetFields ():
 			# Resolve here allows for nested types
-			fields [field.GetName ()] = types.Resolve (field.GetType (), scope)
-		scope.RegisterVariable (decl.GetName (), types.StructType(decl.GetName (), fields))
+			fields [field.GetName ()] = types.ResolveType (field.GetType (), scope)
+		scope.RegisterType (decl.GetName (), types.StructType(decl.GetName (), fields))
 
 	def v_InterfaceDefinition (self, decl, ctx):
 		assert isinstance(decl, ast.InterfaceDefinition)
@@ -70,7 +70,7 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 			methodType = method.GetType ()
 			methodType.Resolve (scope)
 			methods.append (methodType)
-		scope.RegisterVariable (decl.GetName (),
+		scope.RegisterType (decl.GetName (),
 			types.ClassType(decl.GetName (), dict(), methods, isInterface=True))
 
 
