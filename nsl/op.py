@@ -33,7 +33,7 @@ class Operation(Enum):
     BIT_NOT = 403
 
 def IsComparison(op):
-    return op.value > 200 and op.value < 210
+    return 200 < op.value < 210
 
 _op_str_map = {
     '='   : Operation.ASSIGN,
