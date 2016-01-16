@@ -1,27 +1,37 @@
 ﻿from nsl import ast, op
 
+class HlslIdentifySemanticTypes(ast.DefaultVisitor):
+	def __init__(self, ctx):
+		self.__ctx = ctx
+	
+	def v_Shader(self, shd, ctx=None):
+		for argType in shd.GetType().GetArgumentTypes():
+			self.__ctx.SemanticTypes.add (argType)
+		self.__ctx.SemanticTypes.add (shd.GetType ().GetReturnType())
+
 class HlslVisitor(ast.DefaultVisitor):
+	def __init__(self, ctx):
+		self.__ctx = ctx
+	
 	class Context:
 		def __init__(self, printFunc):
 			self.__level = 0
-			self.__semanticType = [False]
 			self.__printFunc = printFunc
+			self.__semanticType = [False]
 			
 		def Print (self, v=''):
 			self.__printFunc ('\t'*self.__level + v)
 			
-		def In (self,semanticType=False):
+		def In (self, printSemantics=False):
 			self.__level += 1
-			self.__semanticType.append (semanticType)
+			self.__semanticType.append (printSemantics)
 			
 		def Out (self):
 			self.__level -= 1
 			self.__semanticType.pop ()
-
+			
 		def IsSemanticType(self):
-			'''True if this is a type that uses semantics. Typically a
-			In/Out structure.'''
-			return self.__semanticType[-1]
+			return self.__semanticType [-1]
 			
 	def __ConvertSemantic (self, semantic):
 		if semantic.Get () == ast.BuiltinSemantic.ColorOutput:
@@ -64,12 +74,8 @@ class HlslVisitor(ast.DefaultVisitor):
 	def v_StructureDefinition(self, decl, ctx):
 		ctx.Print ('struct {0}'.format (decl.GetName ()))
 		ctx.Print ('{')
-		containsSemantics = False
-		for annotation in decl.GetAnnotations ():
-			if annotation.GetValue () == 'InOut':
-				containsSemantics = True
-				break
-		ctx.In (containsSemantics)
+		
+		ctx.In (decl.GetType () in self.__ctx.SemanticTypes)
 		decl.AcceptVisitor(self, ctx)
 		ctx.Out ()
 		ctx.Print ('}')
@@ -130,6 +136,19 @@ class HlslVisitor(ast.DefaultVisitor):
 	def v_ReturnStatement (self, stmt, ctx):
 		ctx.Print ('return {0};'.format(str(stmt.GetExpression())))
 		
-def GetPass():
+def GetPasses():
 	import nsl.Pass
-	return nsl.Pass.MakePassFromVisitor(HlslVisitor (), 'hlsl-code-gen')
+	
+	class HlslContext:
+		def __init__(self):
+			self.__semanticTypes = set ()
+			
+		@property
+		def SemanticTypes(self):
+			return self.__semanticTypes
+		
+	ctx = HlslContext ()
+	
+	return [
+		nsl.Pass.MakePassFromVisitor(HlslIdentifySemanticTypes (ctx), 'hsls-identify-semantics'),
+		nsl.Pass.MakePassFromVisitor(HlslVisitor (ctx), 'hlsl-code-gen')]

@@ -20,8 +20,7 @@ class Compiler:
 			AddImplicitCasts.GetPass (),
 			DebugAst.GetPass (),
 			DebugTypes.GetPass (),
-			PrettyPrint.GetPass (),
-			HlslCodeGen.GetPass()]
+			PrettyPrint.GetPass ()] + 	HlslCodeGen.GetPasses()
 
 	def Compile (self, source, options):
 		ast = self.parser.Parse (source, debug = options ['debug-parsing'])

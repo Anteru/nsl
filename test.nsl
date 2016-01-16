@@ -1,4 +1,3 @@
-[InOut]
 struct ApplicationToVertex
 {
 	float2 position : Position;
@@ -19,7 +18,11 @@ function FFoo (float4 input) -> float4
 	return input * 2;
 }
 
-[InOut]
+struct UtilityStruct
+{
+	float4 member;
+}
+
 struct VertexToPixel
 {
 	float4 position : Position;
@@ -30,14 +33,16 @@ struct VertexToPixel
 shader(vertex) (ApplicationToVertex app2vs) -> VertexToPixel
 {
 	VertexToPixel result;
+	UtilityStruct s;
+	
+	s.member = worldViewProjection * float4 (app2vs.position.xy, 0, 1);
 
-	result.position = worldViewProjection * float4 (app2vs.position.xy, 0, 1);
+	result.position = s.member;
 	result.uv = app2vs.uv;
 
 	return result;
 }
 
-[InOut]
 struct FragmentOutput
 {
 	float4 color : ColorOutput[0];

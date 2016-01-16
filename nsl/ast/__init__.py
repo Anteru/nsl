@@ -423,6 +423,7 @@ class StructureDefinition(Node):
         super().__init__()
         self.__name = name
         self.__fields = fields
+        self.__type = types.UnresolvedType (name)
 
         # Check that all element names are unique
         fieldNames = set()
@@ -451,12 +452,21 @@ class StructureDefinition(Node):
 
     def GetFields (self):
         return self.__fields
+    
+    def SetType(self, structType):
+        assert isinstance (structType, types.StructType)
+        self.__type = structType
+        
+    def GetType(self):
+        return self.__type
 
 class InterfaceDefinition(Node):
     def __init__(self, name, methods = list ()):
         super().__init__()
         self.__name = name
         self.__methods = methods
+        
+        self.__type = types.UnresolvedType (name)
 
     def _GetChildren (self):
         return [self.__methods]
@@ -466,6 +476,13 @@ class InterfaceDefinition(Node):
     
     def GetName (self):
         return self.__name
+    
+    def SetType(self, interfaceType):
+        assert isinstance (interfaceType, types.ClassType)
+        self.__type = interfaceType
+        
+    def GetType(self):
+        return self.__type
 
 class BuiltinSemantic(Enum):
     Position = 1

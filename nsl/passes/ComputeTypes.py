@@ -58,7 +58,9 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 		for field in decl.GetFields ():
 			# Resolve here allows for nested types
 			fields [field.GetName ()] = types.ResolveType (field.GetType (), scope)
-		scope.RegisterType (decl.GetName (), types.StructType(decl.GetName (), fields))
+		structType = types.StructType(decl.GetName (), fields)
+		scope.RegisterType (decl.GetName (), structType)
+		decl.SetType (structType)
 
 	def v_InterfaceDefinition (self, decl, ctx):
 		assert isinstance(decl, ast.InterfaceDefinition)
@@ -70,9 +72,9 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 			methodType = method.GetType ()
 			methodType.Resolve (scope)
 			methods.append (methodType)
-		scope.RegisterType (decl.GetName (),
-			types.ClassType(decl.GetName (), dict(), methods, isInterface=True))
-
+		classType = types.ClassType(decl.GetName (), dict(), methods, isInterface=True)
+		scope.RegisterType (decl.GetName (), classType)
+		decl.SetType (classType)
 
 	def v_CompoundStatement(self, stmt, ctx):
 		assert isinstance(stmt, ast.CompoundStatement)
