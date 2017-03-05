@@ -501,7 +501,7 @@ class Semantic:
         return self.__semantic
 
     def GetSlot (self, default = None):
-        if self.__slot:
+        if self.__slot is not None:
             return self.__slot
         else:
             return default
