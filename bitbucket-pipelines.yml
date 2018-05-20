@@ -1,0 +1,10 @@
+image: python:latest
+
+pipelines:
+  default:
+    - step:
+        caches:
+          - pip
+        script:
+          - pip install -r requirements.txt
+          - ./run_tests.sh
