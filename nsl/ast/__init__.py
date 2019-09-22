@@ -363,8 +363,8 @@ class BinaryExpression(Expression):
         return r
 
 class AssignmentExpression(BinaryExpression):
-    def __init__(self, left, right):
-        super().__init__(op.Operation.ASSIGN, left, right)
+    def __init__(self, left, right, *, operation=op.Operation.ASSIGN):
+        super().__init__(operation, left, right)
         
     def ResolveType(self, left, right):        
         self._operator = types.ExpressionType (self.GetLeft().GetType (),
@@ -722,6 +722,9 @@ class CompoundStatement(Statement):
     def GetStatements(self):
         return self.__statements
 
+    def SetStatements(self, statements):
+        self.__statements = statements
+
     def _GetChildren(self):
         return [self.__statements]
 
@@ -800,9 +803,6 @@ class ForStatement(FlowStatement):
         self.__condition = cond
         self.__next = increment
         self.__body = body
-
-    def _GetField(self):
-        return [self.__initializer, self.__condition, self.__next, self.__body]
 
     def GetBody (self):
         return self.__body

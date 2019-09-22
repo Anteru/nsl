@@ -1,7 +1,17 @@
 ﻿from nsl.parser import NslParser
-from nsl.passes import ComputeTypes, ValidateSwizzle, ValidateFlowStatements, \
-	AddImplicitCasts, DebugAst, DebugTypes, PrettyPrint, HlslCodeGen, ValidateArrayOutOfBoundsAccess,\
-	ValidateArrayAccessType, UpdateLocations
+from nsl.passes import (
+	ComputeTypes, 
+	ValidateSwizzle, 
+	ValidateFlowStatements,
+	AddImplicitCasts, 
+	DebugAst, 
+	DebugTypes,
+	PrettyPrint, 
+	HlslCodeGen, 
+	ValidateArrayOutOfBoundsAccess,
+	ValidateArrayAccessType,
+	UpdateLocations,
+	RewriteAssignEqualOperations)
 from io import StringIO
 
 class Compiler:
@@ -9,6 +19,8 @@ class Compiler:
 		self.parser = NslParser ()
 
 		self.passes = [
+			DebugAst.GetPass (),
+			RewriteAssignEqualOperations.GetPass (),
 			DebugAst.GetPass (),
 			UpdateLocations.GetPass (),
 			DebugAst.GetPass (),
@@ -20,7 +32,7 @@ class Compiler:
 			AddImplicitCasts.GetPass (),
 			DebugAst.GetPass (),
 			DebugTypes.GetPass (),
-			PrettyPrint.GetPass ()] + 	HlslCodeGen.GetPasses()
+			PrettyPrint.GetPass ()] + HlslCodeGen.GetPasses()
 
 	def Compile (self, source, options):
 		ast = self.parser.Parse (source, debug = options ['debug-parsing'])

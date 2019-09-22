@@ -3,6 +3,11 @@ from enum import Enum
 class Operation(Enum):
     ASSIGN = 1
 
+    ASSIGN_ADD_EQUAL = 51
+    ASSIGN_SUB_EQUAL = 52
+    ASSIGN_MUL_EQUAL = 53
+    ASSIGN_DIV_EQUAL = 54
+
     # Binary
     ADD = 102
     SUB = 103
@@ -37,6 +42,11 @@ def IsComparison(op):
 
 _op_str_map = {
     '='   : Operation.ASSIGN,
+
+    '+='  : Operation.ASSIGN_ADD_EQUAL,
+    '-='  : Operation.ASSIGN_SUB_EQUAL,
+    '*='  : Operation.ASSIGN_MUL_EQUAL,
+    '/='  : Operation.ASSIGN_DIV_EQUAL,
 
     '+'   : Operation.ADD,
     '-'   : Operation.SUB,

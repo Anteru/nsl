@@ -5,6 +5,7 @@ from enum import Enum
 class ParseEntryPoint(Enum):
     Program = 'program'
     Expression = 'expression'
+    Statement = 'statement'
 
 class NslParser:
     def __init__(self, parseEntryPoint = ParseEntryPoint.Program):
@@ -252,10 +253,17 @@ class NslParser:
         
         p [0] = ast.MemberAccessExpression (p[1], member)
 
+    def p_assignment_op(self, p):
+        '''assignment_op : EQUALS 
+        | PLUSEQUAL 
+        | MINUSEQUAL 
+        | DIVEQUAL 
+        | TIMESEQUAL'''
+        p [0] = op.StrToOp (p[1])
+
     def p_assignment_expression(self, p):
-        '''assignment_expression : unary_expression EQUALS expression'''
-        p [0] = ast.AssignmentExpression (p[1], p[3])
-        p [0].SetLocation (self.__GetLocation(p, 2))
+        '''assignment_expression : unary_expression assignment_op expression'''
+        p [0] = ast.AssignmentExpression (p[1], p[3], operation=p[2])
 
     def p_argument(self, p):
         '''argument : var_decl'''
