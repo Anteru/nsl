@@ -5,3 +5,8 @@ parser.out
 stdlib.cache
 env/**
 docs/_build/**
+.eggs/**
+.vscode/**
+*.egg-**
+**/.cache/**
+pass-*.txt
