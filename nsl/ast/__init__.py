@@ -98,34 +98,34 @@ class Node:
     
     def ForEachChild(self, f, ctx=None):
         def Function(n):
+            if not isinstance (n, Node):
+                raise InvalidChildType (type(n))
+
             r = f(n, ctx)
-            if r is None:
-                return n
-            else:
-                return r
+            return r if r is not None else n
 
         def _ProcessSequence(s):
-            for c in s:
-                if not isinstance (c, Node):
-                    raise InvalidChildType (type(c))
-                yield Function (c)
+            return [Function(e) for e in s]
+
+        def _ProcessSet(s):
+            return {Function(e) for e in s}
         
         def _ProcessMapping(m):
+            r = collections.OrderedDict()
             for k,v in m.items():
-                if not isinstance (v, Node):
-                    raise InvalidChildType (type(v))
-                yield (k, Function (v))
+                r[k] = Function (v)
+            return r
 
         def Wrapper(e):
             if e is None:
                 return None
 
             if isinstance(e, collections.abc.Sequence):
-                return list(_ProcessSequence(e))
+                return _ProcessSequence(e)
             elif isinstance(e, collections.abc.Set):
-                return set(_ProcessSequence(e))
+                return _ProcessSet(e)
             elif isinstance(e, collections.abc.Mapping):
-                return collections.OrderedDict(_ProcessMapping(e))
+                return _ProcessMapping(e)
             else:
                 if not isinstance (e, Node):
                     raise InvalidChildType (type(e))
