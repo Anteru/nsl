@@ -10,3 +10,4 @@ docs/_build/**
 *.egg-**
 **/.cache/**
 pass-*.txt
+.mypy_cache/**
