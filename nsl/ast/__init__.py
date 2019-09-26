@@ -81,14 +81,6 @@ class Location:
 class Node:
     def __init__(self):
         self.__location = None
-    
-    '''Base class for all nodes in the AST.
-
-    The generic AST node provides a traversal function, which traverses into
-    all children of the current object. Derived classes can override Traverse()
-    to make the traversal more efficient.'''
-    def _GetChildren (self):
-        return []
 
     def Clone(self):
         import copy
@@ -100,36 +92,54 @@ class Node:
     
     def GetLocation(self):
         return self.__location
+
+    def _Traverse(self, function):
+        pass
     
-    def ForEachChild(self, function, ctx=None):
-        fields = self._GetChildren()
-        for e in fields:
+    def ForEachChild(self, f, ctx=None):
+        def Function(n):
+            r = f(n, ctx)
+            if r is None:
+                return n
+            else:
+                return r
+
+        def _ProcessSequence(s):
+            for c in s:
+                if not isinstance (c, Node):
+                    raise InvalidChildType (type(c))
+                yield Function (c)
+        
+        def _ProcessMapping(m):
+            for k,v in m.items():
+                if not isinstance (v, Node):
+                    raise InvalidChildType (type(v))
+                yield (k, Function (v))
+
+        def Wrapper(e):
             if e is None:
-                continue
-            if isinstance(e, collections.abc.Sequence) or isinstance(e, collections.abc.Set):
-                for c in e:
-                    if not isinstance (c, Node):
-                        raise InvalidChildType (type(c))
-                    function (c, ctx)
+                return None
+
+            if isinstance(e, collections.abc.Sequence):
+                return list(_ProcessSequence(e))
+            elif isinstance(e, collections.abc.Set):
+                return set(_ProcessSequence(e))
             elif isinstance(e, collections.abc.Mapping):
-                for c in e.values ():
-                    if not isinstance (c, Node):
-                        raise InvalidChildType (type(c))
-                    function (c, ctx)
+                return collections.OrderedDict(_ProcessMapping(e))
             else:
                 if not isinstance (e, Node):
                     raise InvalidChildType (type(e))
                 
-                function (e, ctx)
+                return Function (e)
+
+        self._Traverse(Wrapper)
 
     def AcceptVisitor(self, visitor, ctx=None):
         '''Traverse all children of this node.
 
-        By default, this calls `_GetChildren` to obtain the list of fields
-        that contain child nodes, and then traverses into each item of each
-        field.'''
+        By default, this calls `_Traverse` to process all children'''
         def Visit(c, ctx):
-            visitor.v_Generic (c, ctx)
+            return visitor.v_Generic (c, ctx)
         self.ForEachChild (Visit, ctx)
                     
 class Program (Node):
@@ -142,8 +152,10 @@ class Program (Node):
         # Ensure ordering by using an ordered dict
         self.__types = collections.OrderedDict ()
 
-    def _GetChildren (self):
-        return [self.__types, self.__variables, self.__functions]
+    def _Traverse (self, function):
+        self.__types = function(self.__types)
+        self.__variables = function(self.__variables)
+        self.__functions = function(self.__functions)
 
     def AddDeclaration (self, variable):
         self.__variables.append (variable)
@@ -183,8 +195,8 @@ class Expression(Node):
         assert not isinstance(nslType, types.UnresolvedType)
         self.__type = nslType
 
-    def _GetChildren(self):
-        return [self.children]
+    def _Traverse(self, function):
+        self.children = function(self.children)
 
     def __iter__(self):
         return self.children.__iter__()
@@ -266,8 +278,9 @@ class MethodCallExpression(CallExpression):
         super().__init__(types.UnresolvedType (memberAccess.member.GetName ()), expressions)
         self.__memberAccess = memberAccess
         
-    def _GetChildren(self):
-        return [self.__memberAccess, self.children]
+    def _Traverse(self, function):
+        self.__memberAccess = function(self.__memberAccess)
+        self.children = function(self.children)
         
     def GetMemberAccess(self):
         return self.__memberAccess
@@ -434,8 +447,8 @@ class StructureDefinition(Node):
 
         self.__annotations = []
 
-    def _GetChildren(self):
-        return [self.__fields]
+    def _Traverse(self, function):
+        self.__fields = function(self.__fields)
 
     def AddAnnotation (self, annotation):
         assert isinstance(annotation, Annotation)
@@ -468,8 +481,8 @@ class InterfaceDefinition(Node):
         
         self.__type = types.UnresolvedType (name)
 
-    def _GetChildren (self):
-        return [self.__methods]
+    def _Traverse(self, function):
+        self.__methods = function(self.__methods)
     
     def GetMethods (self):
         return self.__methods
@@ -536,13 +549,10 @@ class VariableDeclaration(Node):
     def ResolveType(self, scope):
         self.__type = types.ResolveType(self.__type, scope)
 
-        if self.HasSemantic():
-            self.__type.SetSemantic (self.__semantic)
-
         return self.__type
 
-    def _GetChildren(self):
-        return [self.__initializer]
+    def _Traverse(self, function):
+        self.__initializer = function(self.__initializer)
 
     def __str__(self):
         if not self.__type.NeedsResolve ():
@@ -631,11 +641,10 @@ class Function(Node):
         for arg in self.arguments:
             arg.ResolveType (scope)
 
-    def _GetChildren(self):
-        if self.isForwardDeclaration:
-            return [self.arguments]
-        else:
-            return [self.arguments, self.__body]
+    def _Traverse(self, function):
+        self.arguments = function(self.arguments)
+        if not self.isForwardDeclaration:
+            self.__body = function(self.__body)
 
     def GetName(self):
         return self.name
@@ -692,6 +701,10 @@ class Shader(Function):
 class Statement(Node):
     pass
 
+class BranchControl(Enum):
+    Default = 0
+    Branch = 1
+
 class FlowStatement(Statement):
     pass
 
@@ -703,8 +716,8 @@ class ExpressionStatement(Statement):
         super().__init__()
         self.__expression = expr
 
-    def _GetChildren(self):
-        return [self.__expression]
+    def _Traverse(self, function):
+        self.__expression = function(self.__expression)
 
     def GetExpression(self):
         return self.__expression
@@ -725,8 +738,8 @@ class CompoundStatement(Statement):
     def SetStatements(self, statements):
         self.__statements = statements
 
-    def _GetChildren(self):
-        return [self.__statements]
+    def _Traverse(self, function):
+        self.__statements = function(self.__statements)
 
     def __len__(self):
         return len(self.__statements)
@@ -743,8 +756,8 @@ class ReturnStatement(FlowStatement):
         super().__init__()
         self.__expression = expression
 
-    def _GetChildren(self):
-        return [self.__expression]
+    def _Traverse(self, function):
+        self.__expression = function(self.__expression)
 
     def GetExpression(self):
         return self.__expression
@@ -760,21 +773,25 @@ class DeclarationStatement(Statement):
     def GetDeclarations(self):
         return self.declarations
 
-    def _GetChildren(self):
-        return [self.declarations]
+    def _Traverse(self, function):
+        self.declarations = function(self.declarations)
 
     def __str__(self):
         return '{0} declaration(s)'.format(len(self.declarations))
 
 class IfStatement(FlowStatement):
-    def __init__(self, cond, true_path, else_path=None):
+    def __init__(self, cond, true_path, else_path=None,
+                 *, branch_control=BranchControl.Default):
         super().__init__()
         self.__condition = cond
         self.__trueBlock = true_path
         self.__elseBlock = else_path
+        self.__branchControl = branch_control
 
-    def _GetChildren(self):
-        return [self.__condition, self.__trueBlock, self.__elseBlock]
+    def _Traverse(self, function):
+        self.__condition = function(self.__condition)
+        self.__trueBlock = function(self.__trueBlock)
+        self.__elseBlock = function(self.__elseBlock)
 
     def GetCondition(self):
         return self.__condition
@@ -815,6 +832,12 @@ class ForStatement(FlowStatement):
 
     def GetNext (self):
         return self.__next
+        
+    def _Traverse(self, function):
+        self.__initializer = function(self.__initializer)
+        self.__condition = function(self.__condition)
+        self.__next = function(self.__next)
+        self.__body = function(self.__body)
 
 class DoStatement(FlowStatement):
     def __init__(self, cond, body):
@@ -822,8 +845,9 @@ class DoStatement(FlowStatement):
         self.__condition = cond
         self.__body = body
 
-    def _GetChildren(self):
-        return [self.__body, self.__condition]
+    def _Traverse(self, function):
+        self.__body = function(self.__body)
+        self.__condition = function(self.__condition)
 
     def GetCondition(self):
         return self.__condition
@@ -837,8 +861,9 @@ class WhileStatement(FlowStatement):
         self.__condition = cond
         self.__body = body
 
-    def _GetChildren(self):
-        return [self.__body, self.__condition]
+    def _Traverse(self, function):
+        self.__body = function(self.__body)
+        self.__condition = function(self.__condition)
 
     def GetCondition(self):
         return self.__condition

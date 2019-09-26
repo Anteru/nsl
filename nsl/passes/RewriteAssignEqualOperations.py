@@ -1,48 +1,27 @@
 from nsl import ast, op, types
 
 class RewriteAssignEqualVisitor (ast.DefaultVisitor):        
-    def __ProcessStatements(self, statements):
-        for s in statements:
-            # We have to iterate into those
-            assert not isinstance(s, ast.CompoundStatement)
-            
-            if not isinstance(s, ast.ExpressionStatement):
-                yield s
-                continue
-
-            expr = s.GetExpression ()
-            if not isinstance(expr, ast.AssignmentExpression):
-                yield s
-                continue
-
-            yield ast.ExpressionStatement(
-                self.__ProcessAssignmentExpression(s.GetExpression ()))
-
-    def __ProcessAssignmentExpression(self, node):
-        assert isinstance(node, ast.AssignmentExpression)
+    def v_AssignmentExpression(self, node, ctx=None):
         operation = node.GetOperation ()
-        if operation != op.Operation.ASSIGN:
-            # Rewrite x <op-equal> y to
-            # x = x <op> y
-            left = node.GetLeft ()
-            right = node.GetRight ()
-
-            opMap = {
-                op.Operation.ASSIGN_ADD_EQUAL : op.Operation.ADD,
-                op.Operation.ASSIGN_SUB_EQUAL : op.Operation.SUB,
-                op.Operation.ASSIGN_MUL_EQUAL : op.Operation.MUL,
-                op.Operation.ASSIGN_DIV_EQUAL : op.Operation.DIV
-            }
-
-            operation = opMap [operation]
-            
-            return ast.AssignmentExpression(left,
-                ast.BinaryExpression(operation, left, right))
-        else:
+        if operation == op.Operation.ASSIGN:
             return node
+        
+        # Rewrite x <op-equal> y to
+        # x = x <op> y
+        left = node.GetLeft ()
+        right = node.GetRight ()
 
-    def v_CompoundStatement(self, node, ctx):
-        node.SetStatements(list (self.__ProcessStatements(node.GetStatements ())))
+        opMap = {
+            op.Operation.ASSIGN_ADD_EQUAL : op.Operation.ADD,
+            op.Operation.ASSIGN_SUB_EQUAL : op.Operation.SUB,
+            op.Operation.ASSIGN_MUL_EQUAL : op.Operation.MUL,
+            op.Operation.ASSIGN_DIV_EQUAL : op.Operation.DIV
+        }
+
+        operation = opMap [operation]
+        
+        return ast.AssignmentExpression(left,
+            ast.BinaryExpression(operation, left, right))
 
 def GetPass():
     from nsl import Pass
