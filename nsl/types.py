@@ -145,9 +145,6 @@ class Type:
 	def IsArray(self):
 		return False
 
-	def HasSemantic(self):
-		return False
-
 	def NeedsResolve (self):
 		return False
 

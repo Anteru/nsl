@@ -33,9 +33,7 @@ def ComputeSwizzleType(inType, mask):
 		return swizzleType
 	else:
 		result = types.VectorType (swizzleType, outComponentCount)
-		# Copy semantic if needed
-		if inType.HasSemantic ():
-			result.SetSemantic (inType.GetSemantic ())
+
 		return result
 	
 class FunctionVisitationPass(Enum):
