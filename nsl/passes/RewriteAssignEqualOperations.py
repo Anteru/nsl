@@ -3,12 +3,12 @@ from nsl import ast, op, types
 class RewriteAssignEqualVisitor (ast.DefaultVisitor):        
     def __ProcessStatements(self, statements):
         for s in statements:
+            # We have to iterate into those
+            assert not isinstance(s, ast.CompoundStatement)
+            
             if not isinstance(s, ast.ExpressionStatement):
                 yield s
                 continue
-
-            # We have to iterate into those
-            assert not isinstance(s, ast.CompoundStatement)
 
             expr = s.GetExpression ()
             if not isinstance(expr, ast.AssignmentExpression):
