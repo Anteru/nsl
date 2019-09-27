@@ -557,7 +557,7 @@ class VariableDeclaration(Node):
     def __str__(self):
         if not self.__type.NeedsResolve ():
             if self.__type.IsArray ():
-                result = str(self.__type.GetElementType ()) + ' ' + str(self.GetName ()) + '[' + ', '.join(map(str, self.__type.GetSize())) + ']'
+                result = str(self.__type.GetComponentType ()) + ' ' + str(self.GetName ()) + '[' + ', '.join(map(str, self.__type.GetSize())) + ']'
             else:
                 result = str(self.__type) + ' ' + str(self.GetName ())
         else:

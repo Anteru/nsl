@@ -27,7 +27,7 @@ def ComputeSwizzleType(inType, mask):
 	assert isinstance(inType, types.Type)
 	outComponentCount = len (mask)
 
-	swizzleType = inType.GetElementType ()
+	swizzleType = inType.GetComponentType ()
 
 	if outComponentCount == 1:
 		return swizzleType
@@ -114,12 +114,12 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 				nestedSize = p.GetType().GetSize ()
 				if len(nestedSize) > 1:
 					# Drop one dimension from the array
-					arrayType = types.ArrayType (p.GetType ().GetElementType (), nestedSize [1:])
+					arrayType = types.ArrayType (p.GetType ().GetComponentType (), nestedSize [1:])
 					expr.SetType (arrayType)
 				else:
 					# We've reached the last dimension (array is 1D now), so
 					# return the element type
-					expr.SetType (p.GetType ().GetElementType ())
+					expr.SetType (p.GetType ().GetComponentType ())
 		elif isinstance(expr, ast.PrimaryExpression):
 			# Simply check the name
 			expr.SetType (scope.GetFieldType (expr.GetName ()))

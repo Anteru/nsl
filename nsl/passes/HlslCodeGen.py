@@ -84,7 +84,7 @@ class HlslVisitor(ast.DefaultVisitor):
 	def v_VariableDeclaration(self, decl, ctx):
 		elementType = decl.GetType ()
 		if elementType.IsArray ():
-			elementType = elementType.GetElementType ()
+			elementType = elementType.GetComponentType ()
 			arraySizeDecl = ''.join (['[{}]'.format (s) for s in decl.GetType().GetSize()])
 		else:
 			arraySizeDecl = ''

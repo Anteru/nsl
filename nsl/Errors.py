@@ -53,6 +53,9 @@ class Severity(Enum):
     WARNING = 2
     INFO = 3
 
+ERROR_INTERNAL_COMPILER_ERROR = ErrorMessage (1001, Severity.ERROR,
+    '''Internal compiler error: {}''')
+
 ERROR_INVALID_SWIZZLE_MASK = ErrorMessage (2001, Severity.ERROR,
     '''Invalid swizzle mask. A swizzle mask may contain only 'rgba' or 'xyzw' selectors.''')
 ERROR_MIXED_SWIZZLE_MASK = ErrorMessage (2002, Severity.ERROR,
@@ -74,14 +77,14 @@ ERROR_ARRAY_ACCESS_WITH_NONSCALAR = ErrorMessage (2009, Severity.ERROR,
 ERROR_ARRAY_ACCESS_WITH_NONINTEGER = ErrorMessage (2010, Severity.ERROR,
     '''Array access requires an integer, got '{}'.''')
 
-ERROR_CONTINUE_OUTSIDE_FLOW = ErrorMessage (2201, Severity.ERROR,
-    'continue statements must be inside a do/while/for statement.')
-ERROR_BREAK_OUTSIDE_FLOW_SWITCH = ErrorMessage (2202, Severity.ERROR,
-    'break statements must be inside a do/while/for or switch statement.')
-
 ERROR_AMBIGUOUS_FUNCTION_CALL = ErrorMessage (2101, Severity.ERROR,
     '''Ambiguous function call: '{}'.''')
 ERROR_UNKNOWN_FUNCTION_CALL = ErrorMessage (2102, Severity.ERROR,
     '''Unknown function call: '{}'.''')
 ERROR_NO_MATCHING_OVERLOAD_FUNCTION_CALL = ErrorMessage (2103, Severity.ERROR,
     '''No matching overload found for function call: '{}'.''')
+
+ERROR_CONTINUE_OUTSIDE_FLOW = ErrorMessage (2201, Severity.ERROR,
+    'continue statements must be inside a do/while/for statement.')
+ERROR_BREAK_OUTSIDE_FLOW_SWITCH = ErrorMessage (2202, Severity.ERROR,
+    'break statements must be inside a do/while/for or switch statement.')

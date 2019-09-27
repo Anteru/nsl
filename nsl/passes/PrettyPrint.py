@@ -65,7 +65,7 @@ class PrettyPrintVisitor(ast.Visitor):
 
 	def v_VariableDeclaration(self, decl, ctx):
 		if decl.GetType().IsArray():
-			self._p (ctx, '{0} {1}{2}'.format(decl.GetType().GetElementType(), 
+			self._p (ctx, '{0} {1}{2}'.format(decl.GetType().GetComponentType(), 
 				decl.GetName(), ''.join(['[{}]'.format(s) for s in decl.GetType().GetSize()])), end = '')
 		else:
 			self._p (ctx, '{0} {1}'.format(decl.GetType().GetName (), decl.GetName()), end = '')

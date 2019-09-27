@@ -148,7 +148,7 @@ class Type:
 	def NeedsResolve (self):
 		return False
 
-	def GetElementType(self):
+	def GetComponentType(self):
 		'''For vector, matrix and array types, return the element type.'''
 		return self
 
@@ -199,9 +199,9 @@ def IsCompatible(left, right):
 
 		# reduce single-component vector types to scalars
 		if left.IsVector () and left.GetSize () == (1,):
-				left = left.GetElementType ()
+				left = left.GetComponentType ()
 		if right.IsVector () and right.GetSize () == (1,):
-				right = right.GetElementType ()
+				right = right.GetComponentType ()
 
 		# Our primitive types are all compatible
 		if left.IsVector() and right.IsVector ():
@@ -279,16 +279,25 @@ def _GetCommonPrimitiveType(left, right):
 		assert (left.GetSize () == right.GetSize ())
 		return VectorType (
 			_GetCommonScalarType (
-				left.GetElementType (),
-				right.GetElementType()),
+				left.GetComponentType (),
+				right.GetComponentType()),
 			left.GetSize ())
 	elif isinstance (left, MatrixType) and isinstance (right, MatrixType):
 		assert (left.GetSize () == right.GetSize ())
 		return MatrixType (
 			_GetCommonScalarType (
-				left.GetElementType (),
-				right.GetElementType()),
+				left.GetComponentType (),
+				right.GetComponentType()),
 			left.GetRowCount (), left.GetColumnCount ())
+
+def _GetRowsColumns (primitiveType):
+	assert isinstance (primitiveType, PrimitiveType)
+	if primitiveType.IsMatrix ():
+		return primitiveType.GetSize ()
+	elif primitiveType.IsVector ():
+		return (primitiveType.GetSize () [0], 1)
+	elif primitiveType.IsScalar ():
+		return (1, 1)
 
 def ResolveBinaryExpressionType (operation, left, right):
 	'''Get the type of an expression combining two elements,
@@ -310,49 +319,59 @@ def ResolveBinaryExpressionType (operation, left, right):
 		baseType = _GetCommonPrimitiveType (left, right)
 		return ExpressionType (Integer (), [baseType, baseType])
 
-	if operation in {op.Operation.MUL, op.Operation.DIV} and (left.IsMatrix () or left.IsVector ()):
-		if right.IsScalar ():
-			baseType = _GetCommonScalarType (left.GetElementType (), right)
-			return ExpressionType (left.WithComponentType (baseType),
-				[
-					left.WithComponentType (baseType),
-					right
-				])
-			
-		if operation == op.Operation.DIV and (right.IsMatrix () or right.IsScalar ()):
-			Errors.ERROR_INVALID_BINARY_EXPRESSION_OPERATION.Raise (operation, left, right)
+	# Multiply and divide have special rules -- matrices, vectors and scalars
+	# can participate in those
+	leftRightIsScalar = left.IsScalar () and right.IsScalar ()
+	if operation in {op.Operation.MUL, op.Operation.DIV} and not leftRightIsScalar:
+		baseType = _GetCommonPrimitiveType (
+			left.GetComponentType (),
+			right.GetComponentType ())
 
-		leftSize = left.GetSize ()
-		rightSize = right.GetSize ()
+		if operation == op.Operation.DIV:
+			# Left can have any shape, right must be scalar
+			if not right.IsScalar ():
+				Errors.ERROR_INVALID_BINARY_EXPRESSION_OPERATION.Raise (
+					operation, left, right)
 
-		if len(leftSize) == 1:
-			leftSize = (leftSize[0], 1)
+			# In this branch, right and left cannot be scalar simultaneously
+			assert not left.IsScalar ()		
+			resultType = left.WithComponentType (baseType)
+			return ExpressionType (resultType,
+				[resultType, baseType])
 
-		if len(rightSize) == 1:
-			rightSize = (rightSize[0], 1)
+		# At this point, it must be a MUL
+		assert operation == op.Operation.MUL
 
-		# Shape must be as follows
-		# Left side is a NxM matrix
-		# Right side must be a MxN matrix
-		# Result is a MxM matrix
+		# Only one of both can be scalar
+		if left.IsScalar ():
+			resultType = right.WithComponentType (baseType)
+			return ExpressionType (resultType, [baseType, resultType])
+		elif right.IsScalar ():
+			resultType = left.WithComponentType (baseType)
+			return ExpressionType (resultType, [resultType, baseType])
 
-		if leftSize[1] != rightSize [0]:
-			Errors.ERROR_INCOMPATIBLE_TYPES.Raise (left, right)
+		leftShape = _GetRowsColumns (left)
+		rightShape = _GetRowsColumns (right)
 
-		baseType = _GetCommonScalarType(left.GetElementType (), right.GetElementType ())
-
-		if right.IsVector ():
-			return ExpressionType (VectorType (baseType, left.GetRowCount ()),
-				[
-					left.WithComponentType (baseType),
-					right.WithComponentType (baseType)
-				])
+		# At this point, must be a MUL of matrix * vector or matrix * matrix
+		# We must prevent vector * vector
+		if leftShape [1] != rightShape [0]:
+			Errors.ERROR_INVALID_BINARY_EXPRESSION_OPERATION.Raise (
+				operation, left, right)
+		
+		# Matrix * Vector or Matrix * Matrix
+		resultShape = (leftShape [0], rightShape [1])
+		if resultShape [1] == 1:
+			return ExpressionType (VectorType (baseType, resultShape [0]),
+				[left.WithComponentType (baseType),
+				 right.WithComponentType (baseType)])
+		elif resultShape [1] > 1:
+			return ExpressionType (MatrixType (baseType, resultShape [0], resultShape [1]),
+				[left.WithComponentType (baseType),
+				 right.WithComponentType (baseType)])
 		else:
-			return ExpressionType (MatrixType (baseType, leftSize [1], rightSize [0]),
-				[
-					left.WithComponentType (baseType),
-					right.WithComponentType (baseType)
-				])
+			Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise (
+				'Invalid binary expression')
 
 	if left == right:
 		return ExpressionType (left, [left, right])
@@ -411,11 +430,11 @@ class ArrayType(AggregateType):
 	def GetSize(self):
 		return self.__arraySize
 
-	def GetElementType(self):
+	def GetComponentType(self):
 		return self.__elementType
 
 	def GetName(self):
-		return self.GetElementType().GetName () + ' ' + ''.join(['[{}]'.format(s) for s in self.__arraySize])
+		return self.GetComponentType().GetName () + ' ' + ''.join(['[{}]'.format(s) for s in self.__arraySize])
 
 	def __str__(self):
 		return '{}{}'.format (self.__elementType, ''.join(['[{}]'.format(s) for s in self.__arraySize]))
@@ -549,6 +568,9 @@ class ScalarType(PrimitiveType):
 	def GetKind(self):
 		return PrimitiveTypeKind.Scalar
 
+	def GetComponentType (self):
+		return self
+
 class Float(ScalarType):
 	def GetName(self):
 		return 'float'
@@ -587,7 +609,7 @@ class VectorType(PrimitiveType):
 		self.__componentType = componentType
 		self.__componentCount = componentCount
 
-	def GetElementType(self):
+	def GetComponentType(self):
 		return self.__componentType
 
 	def GetSize(self):
@@ -634,7 +656,7 @@ class MatrixType(PrimitiveType):
 	def GetColumnCount (self):
 		return self.__size [1]
 
-	def GetElementType(self):
+	def GetComponentType(self):
 		return self.__componentType
 
 	def GetSize(self):

@@ -35,13 +35,13 @@ class AddImplicitCastVisitor (ast.DefaultVisitor):
         assert isinstance(node, ast.ConstructPrimitiveExpression)
         
         # The primitive type of each argument must be the same as the result
-        resultType = node.GetType().GetElementType ()
+        resultType = node.GetType().GetComponentType ()
 
         arguments = []
         for p in node.GetArguments ():
             # If this is something like float4 (float2, int, int), we want to
             # cast int->float but float2 should not be casted
-            argumentType = p.GetType().GetElementType()
+            argumentType = p.GetType().GetComponentType()
             if argumentType != resultType:
                 arguments.append (ast.CastExpression (p,
                     self._GetTargetType (p.GetType(), resultType),
@@ -61,10 +61,10 @@ class AddImplicitCastVisitor (ast.DefaultVisitor):
         for arg, expectedType in zip (node.GetArguments (), argumentTypes):
             # If this is something like float4 (float2, int, int), we want to
             # cast int->float but float2 should not be casted
-            argumentType = arg.GetType().GetElementType()
-            if argumentType != expectedType.GetElementType ():
+            argumentType = arg.GetType().GetComponentType()
+            if argumentType != expectedType.GetComponentType ():
                 arguments.append (ast.CastExpression (arg,
-                    self._GetTargetType (arg.GetType(), expectedType.GetElementType()),
+                    self._GetTargetType (arg.GetType(), expectedType.GetComponentType()),
                     True))
             else:
                 arguments.append (arg)
