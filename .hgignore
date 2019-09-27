@@ -11,3 +11,6 @@ docs/_build/**
 **/.cache/**
 pass-*.txt
 .mypy_cache/**
+htmlcov/**
+.pytest_cache/**
+.coverage
