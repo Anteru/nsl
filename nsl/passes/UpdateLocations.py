@@ -16,7 +16,6 @@ class UpdateLocations(ast.DefaultVisitor):
         
         if locations:
             obj.SetLocation (ast.Location.Merge (*locations))
-            print (obj, obj.GetLocation ())
 
 def GetPass():
     import nsl.Pass

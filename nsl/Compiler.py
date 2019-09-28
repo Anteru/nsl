@@ -41,9 +41,9 @@ class Compiler:
 			if not p.Process (ast, output=buffer):
 				print ('Error in pass {}'.format (p.GetName ()))
 				return False
-			
-			if options ['debug-passes']:
-				if buffer.getvalue ():
-					with open('pass-{}-{}.txt'.format (i, p.GetName ()), 'w') as outputFile:
-						outputFile.write (buffer.getvalue ())
+
+			if options ['debug-passes'] and buffer.getvalue ():
+				with open('pass-{}-{}.txt'.format (i, p.GetName ()), 'w') as outputFile:
+					outputFile.write (buffer.getvalue ())
+
 		return True
