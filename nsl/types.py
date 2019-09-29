@@ -498,10 +498,10 @@ class Function(Type):
 		self.returnType = returnType
 		self.arguments = arguments
 		self.name = name
-
+		self.__argumentTypes = OrderedDict ()
+		
 	def Resolve(self, scope):
 		self.returnType = ResolveType(self.returnType, scope)
-		self.__argumentTypes = OrderedDict ()
 		for counter, arg in enumerate (self.arguments):
 			if arg.HasName ():
 				self.__argumentTypes [arg.GetName ()] = ResolveType (arg.GetType (), scope)
