@@ -11,7 +11,9 @@ from nsl.passes import (
 	ValidateArrayOutOfBoundsAccess,
 	ValidateArrayAccessType,
 	UpdateLocations,
-	RewriteAssignEqualOperations)
+	RewriteAssignEqualOperations,
+	LowerToIR,
+)
 from io import StringIO
 
 class Compiler:
@@ -32,7 +34,9 @@ class Compiler:
 			AddImplicitCasts.GetPass (),
 			DebugAst.GetPass (),
 			DebugTypes.GetPass (),
-			PrettyPrint.GetPass ()] + HlslCodeGen.GetPasses()
+			PrettyPrint.GetPass (),
+			LowerToIR.GetPass ()
+			]
 
 	def Compile (self, source, options):
 		ast = self.parser.Parse (source, debug = options ['debug-parsing'])

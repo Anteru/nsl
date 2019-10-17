@@ -37,9 +37,15 @@ shader(vertex) (ApplicationToVertex app2vs) -> VertexToPixel
 	UtilityStruct s;
 	
 	s.member = worldViewProjection * float4 (app2vs.position.xy, 0, 1);
+	if (app2vs.position.x > 1) {
+		result.position = s.member;
+	} else {
+		result.position = 2.0 * s.member;
+	}
 
-	result.position = s.member;
-	result.uv = app2vs.uv;
+	if (app2vs.uv.x > 1) {
+		result.uv = app2vs.uv;
+	}
 
 	return result;
 }
