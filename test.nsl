@@ -1,63 +1,32 @@
-struct ApplicationToVertex
+struct TransformationMatrices
 {
-	float2 position : Position;
-	float2 uv;
+	uint valid;
+	float4x4 matrices[3];
 }
 
-matrix4x4 worldViewProjection;
-Texture2D tex;
-Sampler2D sampler;
-
-function FBar (float4 input) -> float4
+struct TransformInfo
 {
-	return FFoo (input);
+	uint pointsToTransform;
+	TransformationMatrices transforms[32];
 }
 
-function FFoo (float4 input) -> float4
-{
-	input *= 2;
-	return input * 0.5;
-}
+float4 inputPositions[32];
+float4 outputPositions[32];
 
-struct UtilityStruct
+function TransformPoint(float4 p, TransformationMatrices m) -> float4
 {
-	float4 member;
-}
-
-struct VertexToPixel
-{
-	float4 position : Position;
-	float2 uv;
-	float2 nestedArray[2][4];
-}
-
-shader(vertex) (ApplicationToVertex app2vs) -> VertexToPixel
-{
-	VertexToPixel result;
-	UtilityStruct s;
-	
-	s.member = worldViewProjection * float4 (app2vs.position.xy, 0, 1);
-	if (app2vs.position.x > 1) {
-		result.position = s.member;
-	} else {
-		result.position = 2.0 * s.member;
+	if (m.valid) {
+		for (int i = 0; i < 3; ++i) {
+			p = m.matrices[i] * p;
+		}
 	}
 
-	if (app2vs.uv.x > 1) {
-		result.uv = app2vs.uv;
+	return p;
+}
+
+function Transform(TransformInfo info)
+{
+	for (int i = 0; i < info.pointsToTransform; ++i) {
+		outputPositions[i] = TransformPoint (inputPositions[i], info.transforms[i]);
 	}
-
-	return result;
-}
-
-struct FragmentOutput
-{
-	float4 color : ColorOutput[0];
-}
-
-shader(pixel) (VertexToPixel vs2ps) -> FragmentOutput
-{
-	FragmentOutput out;
-	out.color = tex.Sample (sampler, float3(vs2ps.uv, 0)) * vs2ps.nestedArray[1][int(vs2ps.uv.x)].x;
-	return out;
 }
