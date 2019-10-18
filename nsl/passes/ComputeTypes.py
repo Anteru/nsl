@@ -144,6 +144,8 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 			elif isinstance (expr, ast.BinaryExpression):
 				expr.ResolveType (expr.GetLeft().GetType(), expr.GetRight().GetType())
 				expr.SetType (expr.GetOperator ().GetReturnType ())
+			elif isinstance (expr, ast.AffixExpression):
+				expr.SetType (expr.children[0].GetType ())
 
 		return expr.GetType ()
 

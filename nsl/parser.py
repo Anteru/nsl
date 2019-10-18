@@ -186,6 +186,27 @@ class NslParser:
         | construct_primitive_expression'''
         p[0] = p[1]
 
+    def p_unary_expression_3(self, p):
+        '''unary_expression : PLUSPLUS ID
+                            | MINUSMINUS ID'''
+                            
+        p[2] = ast.PrimaryExpression (p[2])
+        p[2].SetLocation (self.__GetLocation (p, 1))
+        if p[1] == '++':
+            p[0] = ast.AffixExpression(op.Operation.ADD, p[2], ast.Affix.PRE)
+        elif p[1] == '--':
+            p[0] = ast.AffixExpression(op.Operation.SUB, p[2], ast.Affix.PRE)
+
+    def p_unary_expression_4(self, p):
+        '''unary_expression : ID PLUSPLUS
+                            | ID MINUSMINUS'''
+        p[2] = ast.PrimaryExpression (p[1])
+        p[2].SetLocation (self.__GetLocation (p, 1))
+        if p[2] == '++':
+            p[0] = ast.AffixExpression(op.Operation.ADD, p[1], ast.Affix.POST)
+        elif p[2] == '--':
+            p[0] = ast.AffixExpression(op.Operation.SUB, p[1], ast.Affix.POST)
+
     def p_expression_opt_1(self, p):
         '''expression_opt : expression'''
         p[0] = p[1]

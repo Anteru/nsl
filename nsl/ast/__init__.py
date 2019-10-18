@@ -403,6 +403,21 @@ class AffixExpression(UnaryExpression):
     def GetOperation (self):
         return self.op
 
+    def GetExpression(self):
+        return self.children[0]
+
+    def __str__(self):
+        if self.affix == Affix.PRE:
+            if self.op == op.Operation.ADD:
+                return f'++{self.children[0]}'
+            elif self.op == op.Operation.SUB:
+                return f'--{self.children[0]}'
+        elif self.affix == Affix.POST:
+            if self.op == op.Operation.ADD:
+                return f'{self.children[0]}++'
+            elif self.op == op.Operation.SUB:
+                return f'{self.children[0]}--'
+
 class LiteralExpression(UnaryExpression):
     def __init__(self, value, literalType):
         super().__init__()
