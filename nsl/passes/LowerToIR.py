@@ -65,6 +65,61 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 		for s in cs.GetStatements():
 			self.v_Visit(s, ctx)
 
+	def v_AffixExpression(self, expr, ctx):
+		constOne = LinearIR.ConstantValue(expr.GetType(), 1)
+		ctx.Function.RegisterValue(constOne)
+		initialValue = self.v_Visit(expr.GetExpression(), ctx)
+		returnValue = None
+
+		if expr.IsPostfix():
+			# Return the value before
+			if expr.GetOperation() == op.Operation.ADD:
+				# increment, save again
+				addInstruction = LinearIR.BinaryInstruction(
+					LinearIR.OpCode.ADD,
+					expr.GetType (),
+					initialValue,
+				)
+				ctx.BasicBlock.AddInstruction(addInstruction)
+				returnValue = initialValue
+		elif expr.IsPrefix():
+			# Return the value after 
+			if expr.GetOperation() == op.Operation.ADD:
+				# increment, save again
+				addInstruction = LinearIR.BinaryInstruction(
+					LinearIR.OpCode.ADD,
+					expr.GetType (),
+					initialValue,
+					constOne
+				)
+				returnValue = ctx.BasicBlock.AddInstruction(addInstruction)
+		destination = self.v_Visit(expr.GetExpression(), ctx)
+		destination.SetStore(addInstruction)
+		return initialValue
+
+
+	def v_ForStatement(self, expr, ctx):
+		init = self.v_Visit(expr.GetInitialization (), ctx)
+		# We translate a loop as following
+		# condition: evaluate condition
+		# conditional branch exit
+		# evaluate body
+		# evaluate next
+		# unconditional branch condition
+		# exit block
+		condBB = ctx.CreateBasicBlock ()
+		cond = self.v_Visit(expr.GetCondition(), ctx)
+		condBranch = LinearIR.BranchInstruction(None, None, cond)
+		ctx.BasicBlock.AddInstruction(condBranch)
+		bodyBB = ctx.CreateBasicBlock ()
+		self.v_Visit(expr.GetBody(), ctx)
+		self.v_Visit(expr.GetNext (), ctx)
+		backBranch = LinearIR.BranchInstruction(condBB)
+		ctx.BasicBlock.AddInstruction(backBranch)
+		exitBB = ctx.CreateBasicBlock ()
+		condBranch.SetTrueBlock(bodyBB)
+		condBranch.SetFalseBlock(exitBB)
+
 	def v_IfStatement(self, expr, ctx):
 		# Evaluate condition
 		condition = self.v_Visit(expr.GetCondition(), ctx)
@@ -123,7 +178,8 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 		return None
 		
 	def v_CastExpression(self, ce, ctx):
-		instruction = LinearIR.CastInstruction(ce.GetArgument (), ce.GetType())
+		castValue = self.v_Visit(ce.GetArgument(), ctx)
+		instruction = LinearIR.CastInstruction(castValue, ce.GetType())
 		ctx.BasicBlock.AddInstruction(instruction)
 		return instruction
 			
@@ -146,6 +202,13 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 		ctx.EndBasicBlock()
 
 		return ri
+
+	def v_VariableDeclaration(self, vd, ctx):
+		if vd.HasInitializerExpression():
+			initValue = self.v_Visit(vd.GetInitializerExpression(), ctx)
+			store = LinearIR.VariableAccessInstruction(vd.GetType (), vd.GetName())
+			ctx.BasicBlock.AddInstruction(store)
+			store.SetStore(initValue)
 
 	def v_Program (self, program, ctx):
 		ctx.OnEnterProgram()

@@ -152,6 +152,7 @@ class BinaryInstruction(Instruction):
             op.Operation.ASSIGN: OpCode.ASSIGN,
             
             op.Operation.CMP_GT: OpCode.CMP_GT,
+            op.Operation.CMP_LT: OpCode.CMP_LT
         }
 
         return BinaryInstruction(mapping[operation], returnType,
@@ -322,7 +323,10 @@ class InstructionPrinter(Visitor):
         pass
 
     def __FormatReference(self, v: Value):
-        return f'%{v.Reference}'
+        if isinstance(v, ConstantValue):
+            return v.Value
+        else:
+            return f'%{v.Reference}'
 
     def __FormatType(self, t: types.Type):
         return str(t)
@@ -360,7 +364,8 @@ class InstructionPrinter(Visitor):
 
     def v_CastInstruction(self, ci, ctx=None):
         print(self.__FormatReference(ci), '=',
-            f'cast.{self.__FormatType(ci.Type)}', ci.Value)
+            f'cast.{self.__FormatType(ci.Type)}',
+            self.__FormatReference (ci.Value))
 
     def v_BinaryInstruction(self, bi, ctx=None):
         print(self.__FormatReference(bi), '=',
