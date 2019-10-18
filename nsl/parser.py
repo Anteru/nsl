@@ -459,13 +459,17 @@ class NslParser:
         '''return_statement : RETURN expression ';' '''
         p[0] = ast.ReturnStatement(p[2])
 
-    def p_var_decl(self, p):
+    def p_var_decl_1(self, p):
         '''var_decl : type ID array_size_declaration_list semantic_decl_opt'''
 
         if p[3]:
             p[0] = ast.VariableDeclaration (p[1], p[2], p[4], arraySize=p[3])
         else:
             p[0] = ast.VariableDeclaration (p[1], p[2], p[4])
+
+    def p_var_decl_2(self, p):
+        '''var_decl : type ID EQUALS expression'''
+        p[0] = ast.VariableDeclaration(p[1], p[2], None, p[4])
 
     def p_array_size_declaration (self, p):
         '''array_size_declaration : '[' constant_integer_expression ']' '''

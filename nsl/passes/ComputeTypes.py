@@ -149,16 +149,15 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 
 		return expr.GetType ()
 
-	def v_DeclarationStatement(self, stmt, ctx):
-		assert isinstance(stmt, ast.DeclarationStatement)
+	def v_VariableDeclaration(self, decl, ctx):
+		assert isinstance(decl, ast.VariableDeclaration)
 		
 		scope = ctx[-1]
-		for decl in stmt.GetDeclarations():
-			scope.RegisterVariable (decl.GetName (),
-							decl.ResolveType (scope))
-			if decl.HasInitializerExpression():
-				self._ProcessExpression(decl.GetInitializerExpression (),
-										scope)
+		scope.RegisterVariable (decl.GetName (),
+						decl.ResolveType (scope))
+		if decl.HasInitializerExpression():
+			self._ProcessExpression(decl.GetInitializerExpression (),
+									scope)
 
 	def v_Expression(self, expr, ctx):
 		self._ProcessExpression(expr, ctx[-1])
