@@ -101,6 +101,11 @@ class PrettyPrintVisitor(ast.Visitor):
 	def v_ReturnStatement (self, stmt, ctx):
 		self._p(ctx, 'return {0};'.format(str(stmt.GetExpression())))
 
+	def v_ForStatement(self, stmt, ctx):
+		self._p(ctx, 'for ({0}; {1}; {2})'.format (stmt.GetInitialization(),
+			stmt.GetCondition(), stmt.GetNext()))
+		self.v_Visit(stmt.GetBody(), ctx)
+
 
 def GetPass():
 	import nsl.Pass

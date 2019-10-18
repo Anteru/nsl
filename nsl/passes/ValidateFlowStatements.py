@@ -13,13 +13,13 @@ class ValidateFlowStatementVisitor(ast.DefaultVisitor):
         ctx -= 1
 
     def v_ForStatement(self, stmt, ctx):
-        self.FlowStatement (stmt, ctx)
+        self.v_FlowStatement (stmt, ctx)
         
     def v_WhileStatement(self, stmt, ctx):
-        self.FlowStatement (stmt, ctx)
+        self.v_FlowStatement (stmt, ctx)
         
     def v_DoStatement (self, stmt, ctx):
-        self.FlowStatement (stmt, ctx)
+        self.v_FlowStatement (stmt, ctx)
         
     def v_ContinueStatement(self, stmt, ctx):
         Errors.ERROR_CONTINUE_OUTSIDE_FLOW.Raise ()
