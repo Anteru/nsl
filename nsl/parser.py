@@ -516,6 +516,10 @@ class NslParser:
         '''type : ID'''
         p[0] = types.UnresolvedType (p[1])
 
+    def p_type_3(self, p):
+        '''type : VOID'''
+        p[0] = types.Void()
+
     def p_primitive_type(self, p):
         '''primitive_type : FLOAT
             | FLOAT2
