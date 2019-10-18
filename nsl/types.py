@@ -153,7 +153,12 @@ class Type:
 		return self
 
 def ResolveType(theType, scope):
-	if theType.NeedsResolve ():
+	if theType.IsArray() and theType.GetComponentType().NeedsResolve():
+		resolvedComponentType = scope.GetType (theType.GetComponentType().GetName ())
+		assert not isinstance (resolvedComponentType, UnresolvedType)
+		result =  theType.WithComponentType (resolvedComponentType)
+		return result
+	elif theType.NeedsResolve ():
 		result = scope.GetType (theType.GetName ())
 		assert not isinstance (result, UnresolvedType)
 		return result
@@ -166,7 +171,7 @@ def ResolveFunction(theType, scope, argumentTypes):
 	else:
 		return theType
 
-class UnresolvedType:
+class UnresolvedType(Type):
 	def __init__(self, name):
 		self.__name = name
 
@@ -433,6 +438,12 @@ class ArrayType(AggregateType):
 	def GetComponentType(self):
 		return self.__elementType
 
+	def WithComponentType(self, componentType):
+		return ArrayType(componentType, self.__arraySize)
+
+	def NeedsResolve(self):
+		return self.__elementType.NeedsResolve()
+
 	def GetName(self):
 		return self.GetComponentType().GetName () + ' ' + ''.join(['[{}]'.format(s) for s in self.__arraySize])
 
@@ -452,7 +463,7 @@ class StructType(AggregateType):
 		self._declarations = declarations
 
 	def __str__(self):
-		return 'struct {}'.format(self._name)
+		return '{}'.format(self._name)
 
 	def __repr__(self):
 		return 'StructType ({}, {})'.format (repr(self._name),

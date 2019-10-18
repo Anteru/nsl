@@ -54,8 +54,8 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 		scope = ctx[-1]
 		fields = OrderedDict ()
 		for field in decl.GetFields ():
-			# Resolve here allows for nested types
-			fields [field.GetName ()] = types.ResolveType (field.GetType (), scope)
+			self.v_Visit(field, ctx)
+			fields [field.GetName ()] = field.GetType ()
 		structType = types.StructType(decl.GetName (), fields)
 		scope.RegisterType (decl.GetName (), structType)
 		decl.SetType (structType)
