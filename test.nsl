@@ -1,7 +1,7 @@
 struct TransformationMatrices
 {
 	uint valid;
-	float4x4 matrices[3];
+	matrix4x4 matrices[3];
 }
 
 struct TransformInfo
@@ -24,7 +24,7 @@ function TransformPoint(float4 p, TransformationMatrices m) -> float4
 	return p;
 }
 
-function Transform(TransformInfo info)
+function Transform(TransformInfo info) -> void
 {
 	for (int i = 0; i < info.pointsToTransform; ++i) {
 		outputPositions[i] = TransformPoint (inputPositions[i], info.transforms[i]);
