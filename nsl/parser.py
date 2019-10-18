@@ -433,7 +433,7 @@ class NslParser:
 
     def p_iteration_statement_1(self, p):
         '''iteration_statement : FOR '(' var_decl_opt ';' expression_opt ';' expression_opt ')' statement'''
-        p[0] = ast.ForStatement (p[3], p[5], p[7])
+        p[0] = ast.ForStatement (p[3], p[5], p[7], p[9])
 
     def p_iteration_statement_2(self, p):
         '''iteration_statement : WHILE '(' expression ')' statement_opt'''
