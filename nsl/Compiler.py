@@ -12,6 +12,7 @@ from nsl.passes import (
 	UpdateLocations,
 	RewriteAssignEqualOperations,
 	LowerToIR,
+	PrintLinearIR,
 )
 from io import StringIO
 
@@ -19,7 +20,7 @@ class Compiler:
 	def __init__(self):
 		self.parser = NslParser ()
 
-		self.passes = [
+		self.astPasses = [
 			DebugAst.GetPass (),
 			RewriteAssignEqualOperations.GetPass (),
 			DebugAst.GetPass (),
@@ -34,19 +35,40 @@ class Compiler:
 			DebugAst.GetPass (),
 			DebugTypes.GetPass (),
 			PrettyPrint.GetPass (),
-			LowerToIR.GetPass ()
 			]
+
+		self.irPasses = [
+			PrintLinearIR.GetPass ()
+		]
+
+	def __RunPass(self, data, passIndex, p, kind, debug = False):
+		buffer = StringIO()
+		if not p.Process (data, output=buffer):
+			print (f'Error in {kind} pass {p.GetName()}')
+			return False
+
+		if debug and buffer.getvalue ():
+			outputFilename = f'{kind.lower()}-pass-{passIndex}-{p.GetName()}.txt'
+			with open(outputFilename, 'w') as outputFile:
+				outputFile.write (buffer.getvalue ())
+
 
 	def Compile (self, source, options):
 		ast = self.parser.Parse (source, debug = options ['debug-parsing'])
-		for i,p in enumerate (self.passes):
-			buffer = StringIO()
-			if not p.Process (ast, output=buffer):
-				print ('Error in pass {}'.format (p.GetName ()))
+		for i,p in enumerate (self.astPasses):
+			if not self.__RunPass(ast, i, p, 'AST', options ['debug-passes']):
 				return False
 
-			if options ['debug-passes'] and buffer.getvalue ():
-				with open('pass-{}-{}.txt'.format (i, p.GetName ()), 'w') as outputFile:
-					outputFile.write (buffer.getvalue ())
+		# Done with the AST, we need to lower to IR now
+		lowerPass = LowerToIR.GetPass ()
+		if not lowerPass.Process (ast):
+			print (f'Failed to lower AST to IR')
+			return False
+
+		ir = lowerPass.visitor.Program
+
+		for i, p in enumerate(self.irPasses):
+			if not self.__RunPass(ir, i, p, 'IR', options ['debug-passes']):
+				return False
 
 		return True

@@ -14,3 +14,4 @@ pass-*.txt
 htmlcov/**
 .pytest_cache/**
 .coverage
+*-pass-*-print*.txt

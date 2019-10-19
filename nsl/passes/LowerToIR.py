@@ -3,6 +3,10 @@ from nsl import ast, LinearIR, op
 class LowerToIRVisitor(ast.DefaultVisitor):
 	def __init__(self, ctx):
 		self.__ctx = ctx
+
+	@property
+	def Program(self):
+		return self.__ctx.Program
 	
 	class Context:
 		def __init__(self):
@@ -14,9 +18,11 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 			pass
 
 		def OnLeaveProgram(self):
-			ip = LinearIR.InstructionPrinter()
-			for function in self.__functions:
-				ip.Print(function)
+			return self.__program
+
+		@property
+		def Program(self):
+			return self.__program
 
 		def OnEnterFunction(self, name, functionType):
 			self.__function = self.__program.CreateFunction(name, functionType)
@@ -45,7 +51,7 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 			self.__startNewBlock = True
 	
 	def GetContext(self):
-		return self.Context ()
+		return self.__ctx
 		
 	def __FormatArgumentList(self, args):
 		return ', '.join(['{0} {1}'.format(arg.GetType().GetName(), arg.GetName()) for arg in args])
@@ -210,7 +216,7 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 		ctx.OnEnterProgram()
 		for function in program.GetFunctions():
 			self.v_Visit(function, ctx)
-		ctx.OnLeaveProgram()
+		return ctx.OnLeaveProgram()
 
 	def v_MethodCallExpression(self, expr, ctx):
 		obj = self.v_Visit(expr.GetMemberAccess().GetParent(), ctx)
@@ -248,4 +254,5 @@ def GetPass():
 		
 	ctx = LowerToIRVisitor.Context()
 
-	return nsl.Pass.MakePassFromVisitor(LowerToIRVisitor (ctx), 'lower-to-linear-LinearIR')
+	return nsl.Pass.MakePassFromVisitor(LowerToIRVisitor (ctx),
+		'lower-to-linear-LinearIR')

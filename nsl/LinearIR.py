@@ -92,10 +92,17 @@ class Program:
     def __init__(self):
         self.__functions = collections.OrderedDict()
 
+    @property
+    def Functions(self):
+        return self.__functions.values()
+
     def CreateFunction(self, name, functionType):
         f = Function(name, functionType)
         self.__functions[name] = f
         return f
+
+    def _Traverse(self, function):
+        self.__functions = function(self.__functions)
 
 class OpCode(Enum):
     ASSIGN = 1
@@ -319,8 +326,11 @@ class ArrayAccessInstruction(Instruction):
 
 
 class InstructionPrinter(Visitor):
-    def __init__(self):
-        pass
+    def __init__(self, printFunction=print):
+        self.__printFunction = printFunction
+
+    def __Print(self, *args, end='\n'):
+        self.__printFunction(*args, end=end)
 
     def __FormatReference(self, v: Value):
         if isinstance(v, ConstantValue):
@@ -338,75 +348,75 @@ class InstructionPrinter(Visitor):
         self.v_Visit(i)
 
     def v_Function(self, function, ctx=None):
-        print('function', function.Name,
+        self.__Print('function', function.Name,
             '(' + ', '.join(map(str, function.Type.GetArguments())) + ')')
         for basicBlock in function.BasicBlocks:
             self.v_Visit(basicBlock, 1)
-        print()
+        self.__Print()
 
     def v_BasicBlock(self, bb, ctx=None):
-        print(f'bb_{bb.Reference}: ')
+        self.__Print(f'bb_{bb.Reference}: ')
         for i in bb.Instructions:
-            print(' ' * (ctx * 4), end='')
+            self.__Print(' ' * (ctx * 4), end='')
             self.v_Visit(i, ctx + 1)
 
     def v_VariableAccessInstruction(self, li, ctx=None):
         if li.Store:
-            print('store',
+            self.__Print('store',
                 self.__FormatType(li.Type),
                 li.Variable,
                 self.__FormatReference(li.Store))
         else:
-            print(self.__FormatReference(li), '=',
+            self.__Print(self.__FormatReference(li), '=',
                 'load',
                 self.__FormatType(li.Type),
                 li.Variable)
     
     def v_ReturnInstruction(self, ri, ctx=None):
         if ri.Value:
-            print('ret', self.__FormatReference(ri.Value))
+            self.__Print('ret', self.__FormatReference(ri.Value))
         else:
-            print('ret')
+            self.__Print('ret')
 
     def v_CastInstruction(self, ci, ctx=None):
-        print(self.__FormatReference(ci), '=',
+        self.__Print(self.__FormatReference(ci), '=',
             f'cast.{self.__FormatType(ci.Type)}',
             self.__FormatReference (ci.Value))
 
     def v_BinaryInstruction(self, bi, ctx=None):
-        print(self.__FormatReference(bi), '=',
+        self.__Print(self.__FormatReference(bi), '=',
             f'{bi.Operation.name.lower()}.{self.__FormatType(bi.Type)}',
             self.__FormatReference(bi.Values[0]),
             self.__FormatReference(bi.Values[1]))
 
     def v_CallInstruction(self, ci, ctx=None):
         if ci.Object:
-            print(self.__FormatReference(ci), '=',
+            self.__Print(self.__FormatReference(ci), '=',
                 'call',
                 self.__FormatReference(ci.Object),
                 self.__FormatType(ci.Type),
                 ci.Function,
                 ", ".join([self.__FormatReference(arg) for arg in ci.Arguments]))
         else:
-            print(self.__FormatReference(ci), '=',
+            self.__Print(self.__FormatReference(ci), '=',
                 'call',
                 self.__FormatType(ci.Type),
                 ci.Function,
                 ", ".join([self.__FormatReference(arg) for arg in ci.Arguments]))
 
     def v_ConstructPrimitiveInstruction(self, cpi, ctx=None):
-        print(self.__FormatReference(cpi), '=',
+        self.__Print(self.__FormatReference(cpi), '=',
             f'construct.{self.__FormatType(cpi.Type)}',
             ", ".join([self.__FormatReference(arg) for arg in cpi.Arguments]))
 
     def v_ArrayAccessInstruction(self, aai, ctx=None):
         if aai.Store:
-            print('store',
+            self.__Print('store',
                 self.__FormatReference(aai.Array),
                 self.__FormatReference(aai.Index),
                 self.__FormatReference(aai.Store))
         else:
-            print(self.__FormatReference(aai), '=',
+            self.__Print(self.__FormatReference(aai), '=',
                 'load',
                 self.__FormatType(aai.Type),
                 self.__FormatReference(aai.Array),
@@ -414,12 +424,12 @@ class InstructionPrinter(Visitor):
 
     def v_MemberAccessInstruction(self, mai, ctx=None):
         if mai.Store:
-            print('setmember',
+            self.__Print('setmember',
                 self.__FormatReference(mai.Parent),
                 mai.Member,
                 self.__FormatReference(mai.Store))
         else:
-            print(self.__FormatReference(mai), '=',
+            self.__Print(self.__FormatReference(mai), '=',
                 'getmember',
                 self.__FormatType(mai.Type),
                 self.__FormatReference(mai.Parent),
@@ -427,10 +437,10 @@ class InstructionPrinter(Visitor):
 
     def v_BranchInstruction(self, bi, ctx=None):
         if bi.Predicate is None:
-            print('branch', self.__FormatLabel(bi.TrueBlock))
+            self.__Print('branch', self.__FormatLabel(bi.TrueBlock))
         else:
-            print('branch', self.__FormatReference(bi.Predicate), end='')
-            print(',', self.__FormatLabel (bi.TrueBlock), end='')
+            self.__Print('branch', self.__FormatReference(bi.Predicate), end='')
+            self.__Print(',', self.__FormatLabel (bi.TrueBlock), end='')
             if bi.FalseBlock:
-                print(',', self.__FormatLabel (bi.FalseBlock), end='')
-            print()
+                self.__Print(',', self.__FormatLabel (bi.FalseBlock), end='')
+            self.__Print()

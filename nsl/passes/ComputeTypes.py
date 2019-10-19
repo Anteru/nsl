@@ -185,9 +185,6 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 		self.v_Visit (func.GetBody(), ctx)
 		ctx.pop ()
 
-	def v_Shader(self, shd, ctx=None):
-		self.v_Function(shd, ctx)
-
 	def v_Program(self, prog, ctx):
 		# Must visit types first
 		for programType in prog.GetTypes ():
