@@ -182,9 +182,6 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 		ctx.BasicBlock.AddInstruction(li)
 		return li
 		
-	def v_Expression(self, expr, ctx):
-		return None
-		
 	def v_CastExpression(self, ce, ctx):
 		castValue = self.v_Visit(ce.GetArgument(), ctx)
 		instruction = LinearIR.CastInstruction(castValue, ce.GetType())
@@ -199,9 +196,6 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 			be.GetType(), left, right)
 		ctx.BasicBlock.AddInstruction(instruction)
 		return instruction
-		
-	def v_ExpressionStatement(self, es, ctx):
-		return self.v_Visit(es.GetExpression(), ctx)
 					
 	def v_ReturnStatement (self, stmt, ctx):
 		v = self.v_Visit(stmt.GetExpression(), ctx)
