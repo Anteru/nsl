@@ -17,8 +17,7 @@ class DebugTypeVisitor(ast.DebugPrintVisitor):
 
 	def v_Expression(self, expr, ctx):
 		self._p (ctx, str(expr) + ':' + str(expr.GetType()))
-		for e in expr:
-			self.v_Visit (e, ctx + 1)
+		expr.AcceptVisitor (self, ctx + 1)
 
 	def v_CompoundStatement(self, stmt, ctx):
 		for s in stmt:

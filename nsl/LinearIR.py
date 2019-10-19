@@ -339,7 +339,7 @@ class InstructionPrinter(Visitor):
 
     def v_Function(self, function, ctx=None):
         print('function', function.Name,
-            ', '.join(map(str, function.Type.GetArguments())))
+            '(' + ', '.join(map(str, function.Type.GetArguments())) + ')')
         for basicBlock in function.BasicBlocks:
             self.v_Visit(basicBlock, 1)
         print()

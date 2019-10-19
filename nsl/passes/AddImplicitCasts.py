@@ -13,6 +13,8 @@ class AddImplicitCastVisitor (ast.DefaultVisitor):
         
     def v_ArrayExpression(self, node, ctx):
         assert isinstance(node, ast.ArrayExpression)
+        node.GetExpression().AcceptVisitor(self, ctx)
+
         if node.GetExpression ().GetType () != types.Integer ():
             node.SetExpression (ast.CastExpression (node.GetExpression (),
                 types.Integer (), True))

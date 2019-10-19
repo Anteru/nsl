@@ -99,24 +99,32 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 
 
 	def v_ForStatement(self, expr, ctx):
+		# We split a loop as following: We always run the initializer, then
+		# we emit the conditional test (which either continues to the body, or
+		# the exit node.) After the body, we place the increment, and an 
+		# unconditional branch back to the conditional test
+		
 		init = self.v_Visit(expr.GetInitialization (), ctx)
-		# We translate a loop as following
-		# condition: evaluate condition
-		# conditional branch exit
-		# evaluate body
-		# evaluate next
-		# unconditional branch condition
-		# exit block
+
+		# Basic block containing the conditional test
 		condBB = ctx.CreateBasicBlock ()
 		cond = self.v_Visit(expr.GetCondition(), ctx)
 		condBranch = LinearIR.BranchInstruction(None, None, cond)
 		ctx.BasicBlock.AddInstruction(condBranch)
+
+		# Basic block containing the body
 		bodyBB = ctx.CreateBasicBlock ()
 		self.v_Visit(expr.GetBody(), ctx)
+
+		# Increment operation
 		self.v_Visit(expr.GetNext (), ctx)
+
+		# Unconditional branch back to the conditional test
 		backBranch = LinearIR.BranchInstruction(condBB)
 		ctx.BasicBlock.AddInstruction(backBranch)
 		exitBB = ctx.CreateBasicBlock ()
+
+		# Fix up the condition to either continue with the body, or exit
 		condBranch.SetTrueBlock(bodyBB)
 		condBranch.SetFalseBlock(exitBB)
 

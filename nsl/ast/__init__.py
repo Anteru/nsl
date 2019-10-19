@@ -297,7 +297,7 @@ class ArrayExpression(VariableAccessExpression):
     '''Expression of the form 'id[expr]', where id can be a nested
     access expression itself.'''
     def __init__(self, identifier, expression):
-        super().__init__([identifier, expression])
+        super().__init__()
         self.id = identifier
         self._expression = expression
 
@@ -310,6 +310,10 @@ class ArrayExpression(VariableAccessExpression):
     def SetExpression(self, expr):
         self._expression = expr
 
+    def _Traverse(self, function):
+        self.id = function(self.id)
+        self._expression = function(self._expression)
+
     def __str__(self):
         return str(self.id) + ' [' + str(self._expression) + ']'
 
@@ -317,7 +321,7 @@ class MemberAccessExpression(VariableAccessExpression):
     '''Expression of the form 'id.member', where id can be a
     access nested expression itself.'''
     def __init__(self, identifier, member):
-        super().__init__([identifier, member])
+        super().__init__()
         self.id = identifier
         self.member = member
 
@@ -326,6 +330,10 @@ class MemberAccessExpression(VariableAccessExpression):
 
     def GetParent(self):
         return self.id
+
+    def _Traverse(self, function):
+        self.id = function(self.id)
+        self.member = function(self.member)
 
     def __str__(self):
         return str(self.id) + '.' + str(self.member)
