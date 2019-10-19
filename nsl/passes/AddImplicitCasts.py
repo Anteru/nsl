@@ -15,7 +15,11 @@ class AddImplicitCastVisitor (ast.DefaultVisitor):
         assert isinstance(node, ast.ArrayExpression)
         node.GetExpression().AcceptVisitor(self, ctx)
 
-        if node.GetExpression ().GetType () != types.Integer ():
+        # We allow Integer or UnsignedInteger
+        exprType = node.GetExpression().GetType()
+        if exprType != types.Integer () and exprType != types.UnsignedInteger():
+            # If it's not an integer type, it's a signed type, so we cast to
+            # integer here.
             node.SetExpression (ast.CastExpression (node.GetExpression (),
                 types.Integer (), True))
 
