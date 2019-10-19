@@ -7,7 +7,6 @@ from nsl.passes import (
 	DebugAst, 
 	DebugTypes,
 	PrettyPrint, 
-	HlslCodeGen, 
 	ValidateArrayOutOfBoundsAccess,
 	ValidateArrayAccessType,
 	UpdateLocations,

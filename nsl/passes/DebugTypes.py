@@ -36,9 +36,6 @@ class DebugTypeVisitor(ast.DebugPrintVisitor):
 		self.Print ()
 		ctx -= 1
 
-	def v_Shader(self, shd, ctx=None):
-		self.v_Function(shd, ctx)
-
 	def v_DeclarationStatement (self, stmt, ctx):
 		for decl in stmt.GetDeclarations():
 			self._p (ctx, decl.GetName () + ':' + str(decl.GetType()))

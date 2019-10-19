@@ -36,13 +36,6 @@ class PrettyPrintVisitor(ast.Visitor):
 			self.v_Visit (func.GetBody (), ctx)
 		self.Print()
 
-	def v_Shader(self, shd, ctx=None):
-		self.Print ('shader({0}) ({1}) -> {2}'.format(shd.GetShaderType().name.lower(),
-										  self.__FormatArgumentList(shd.GetArguments()),
-										  shd.GetType().GetReturnType().GetName ()))
-		self.v_Visit (shd.GetBody (), ctx)
-		self.Print()
-
 	def _p(self, ctx, s, **args):
 		self.Print (' ' * (ctx * 4), end = '')
 		self.Print (s, **args)

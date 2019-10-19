@@ -25,7 +25,7 @@ class NslLexer:
              'INT', 'INT2', 'INT3', 'INT4',
              'UINT', 'UINT2', 'UINT3', 'UINT4',
              'MATRIX3X3', 'MATRIX4X4']
-    reserved_tokens = ['FUNCTION', 'SHADER', 'PIXEL', 'VERTEX',
+    reserved_tokens = ['FUNCTION',
                        'IF', 'ELSE', 'STRUCT', 'RETURN',
                        'FOR', 'CONTINUE', 'BREAK', 'SWITCH',
                        'DO', 'WHILE', 'CASE',

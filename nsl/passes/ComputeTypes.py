@@ -171,8 +171,7 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 				
 		func.ResolveType (ctx [-1])
 		func.GetType ().Resolve (ctx[-1])
-		if not isinstance (func, ast.Shader):
-			ctx[-1].RegisterFunction (func.GetType ().GetName (), func.GetType ())
+		ctx[-1].RegisterFunction (func.GetType ().GetName (), func.GetType ())
 			
 	def v_Function(self, func, ctx):
 		'''Computes the function type and processes all statements.'''

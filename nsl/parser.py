@@ -42,7 +42,7 @@ class NslParser:
     )
 
     def p_program_1(self, p):
-        '''program : shader_or_function'''
+        '''program : function'''
         p[0] = ast.Program ()
         p[0].AddFunction (p[1])
 
@@ -62,7 +62,7 @@ class NslParser:
         p[0].AddType (p[1])
 
     def p_program_5(self, p):
-        '''program : program shader_or_function'''
+        '''program : program function'''
         p[0] = p[1]
         p[0].AddFunction (p[2])
 
@@ -70,11 +70,6 @@ class NslParser:
         '''program : program type_definition'''
         p[0] = p[1]
         p[0].AddType (p[2])
-
-    def p_shader_or_function(self, p):
-        '''shader_or_function : shader
-        | function'''
-        p[0] = p[1]
 
     def p_type_definition(self, p):
         '''type_definition : structure_definition
@@ -289,27 +284,9 @@ class NslParser:
     def p_argument(self, p):
         '''argument : var_decl'''
 
-    def p_shader_type(self, p):
-        '''shader_type : PIXEL
-        | VERTEX'''
-        p[0] = {'vertex'    : ast.ShaderType.Vertex,
-                'hull'      : ast.ShaderType.Hull,
-                'domain'    : ast.ShaderType.Domain,
-                'geometry'  : ast.ShaderType.Geometry,
-                'pixel'     : ast.ShaderType.Pixel,
-                'compute'   : ast.ShaderType.Pixel}[p[1]]
-
-    def p_shader_decl(self, p):
-        '''shader_decl : SHADER '(' shader_type ')' '(' arg_list_opt ')' RARROW type'''
-        p[0] = { 'type' : p[3], 'args' : p[6], 'return-type' : p[9]}
-
     def p_function_decl(self, p):
         '''function_decl : FUNCTION ID '(' arg_list_opt ')' RARROW type'''
         p[0] = { 'name' : p[2], 'args' : p[4], 'return-type' : p[7] }
-
-    def p_shader(self, p):
-        '''shader : shader_decl compound_statement '''
-        p[0] = ast.Shader (p[1]['type'], p[1]['return-type'], p[1]['args'], p[2])
 
     def p_function_1(self, p):
         '''function : function_decl compound_statement '''

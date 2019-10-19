@@ -50,16 +50,10 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 	def __FormatArgumentList(self, args):
 		return ', '.join(['{0} {1}'.format(arg.GetType().GetName(), arg.GetName()) for arg in args])
 	
-	def __v_FunctionOrShaderBody(self, funcOrShader, ctx):
-		ctx.OnEnterFunction(funcOrShader.GetName(), funcOrShader.GetType())
-		funcOrShader.GetBody().AcceptVisitor(self, ctx)
+	def v_Function(self, function, ctx):
+		ctx.OnEnterFunction(function.GetName(), function.GetType())
+		function.GetBody().AcceptVisitor(self, ctx)
 		ctx.OnLeaveFunction()
-		
-	def v_Function(self, func, ctx):
-		self.__v_FunctionOrShaderBody(func, ctx)
-
-	def v_Shader(self, shd, ctx=None):
-		self.__v_FunctionOrShaderBody(shd, ctx)
 
 	def v_CompoundStatement(self, cs, ctx):
 		for s in cs.GetStatements():
