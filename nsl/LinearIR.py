@@ -352,9 +352,15 @@ class InstructionPrinter(Visitor):
 
     def v_VariableAccessInstruction(self, li, ctx=None):
         if li.Store:
-            print('store', li.Variable, self.__FormatReference(li.Store))
+            print('store',
+                self.__FormatType(li.Type),
+                li.Variable,
+                self.__FormatReference(li.Store))
         else:
-            print(self.__FormatReference(li), '=', 'load', li.Variable)
+            print(self.__FormatReference(li), '=',
+                'load',
+                self.__FormatType(li.Type),
+                li.Variable)
     
     def v_ReturnInstruction(self, ri, ctx=None):
         if ri.Value:
@@ -369,7 +375,7 @@ class InstructionPrinter(Visitor):
 
     def v_BinaryInstruction(self, bi, ctx=None):
         print(self.__FormatReference(bi), '=',
-            bi.Operation.name.lower(),
+            f'{bi.Operation.name.lower()}.{self.__FormatType(bi.Type)}',
             self.__FormatReference(bi.Values[0]),
             self.__FormatReference(bi.Values[1]))
 
@@ -402,6 +408,7 @@ class InstructionPrinter(Visitor):
         else:
             print(self.__FormatReference(aai), '=',
                 'load',
+                self.__FormatType(aai.Type),
                 self.__FormatReference(aai.Array),
                 self.__FormatReference(aai.Index))
 
@@ -414,6 +421,7 @@ class InstructionPrinter(Visitor):
         else:
             print(self.__FormatReference(mai), '=',
                 'getmember',
+                self.__FormatType(mai.Type),
                 self.__FormatReference(mai.Parent),
                 mai.Member)
 
