@@ -78,8 +78,12 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 		assert isinstance(stmt, ast.CompoundStatement)
 		
 		ctx.append (types.Scope (ctx[-1]))
-		for s in stmt:
-			self.v_Visit (s, ctx)
+		stmt.AcceptVisitor(self, ctx)
+		ctx.pop()
+
+	def v_ForStatement(self, stmt, ctx):
+		ctx.append (types.Scope (ctx[-1]))
+		stmt.AcceptVisitor(self, ctx)
 		ctx.pop()
 		
 	def _GetClassScopeForMemberAccess(self, expr, scope):
