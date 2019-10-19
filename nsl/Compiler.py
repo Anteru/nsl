@@ -52,6 +52,8 @@ class Compiler:
 			with open(outputFilename, 'w') as outputFile:
 				outputFile.write (buffer.getvalue ())
 
+		return True
+
 
 	def Compile (self, source, options):
 		ast = self.parser.Parse (source, debug = options ['debug-parsing'])
