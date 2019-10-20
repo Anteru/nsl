@@ -233,12 +233,19 @@ class ReturnInstruction(Instruction):
     def Value(self):
         return self.__value
 
+class VariableAccessScope(Enum):
+    GLOBAL = 0
+    FUNCTION_ARGUMENT = 1
+    FUNCTION_LOCAL = 2
+
 class MemberAccessInstruction(Instruction):
-    def __init__(self, memberType, variable, member):
+    def __init__(self, memberType, variable, member,
+        accessScope: VariableAccessScope = VariableAccessScope.FUNCTION_LOCAL):
         super().__init__(memberType)
         self.__parent = variable
         self.__member = member
         self.__store = None
+        self.__scope = accessScope
 
     @property
     def Parent(self):
@@ -247,6 +254,10 @@ class MemberAccessInstruction(Instruction):
     @property
     def Member(self):
         return self.__member
+
+    @property
+    def Scope(self):
+        return self.__scope
 
     def SetStore(self, destination: Value):
         self.__store = destination
@@ -265,10 +276,12 @@ class ConstructPrimitiveInstruction(Instruction):
         return self.__values
 
 class VariableAccessInstruction(Instruction):
-    def __init__(self, returnType: types.Type, variableName):
+    def __init__(self, returnType: types.Type, variableName,
+            accessScope: VariableAccessScope = VariableAccessScope.GLOBAL):
         super().__init__(returnType)
         self.__variable = variableName
         self.__store = None
+        self.__scope = accessScope
 
     @property
     def Variable(self):
@@ -280,6 +293,10 @@ class VariableAccessInstruction(Instruction):
     @property
     def Store(self):
         return self.__store
+
+    @property
+    def Scope(self):
+        return self.__scope
 
 class CallInstruction(Instruction):
     def __init__(self, returnType: types.Type, functionName: str,
@@ -303,11 +320,13 @@ class CallInstruction(Instruction):
         return self.__object
 
 class ArrayAccessInstruction(Instruction):
-    def __init__(self, returnType: types.Type, array, index):
+    def __init__(self, returnType: types.Type, array, index,
+        accessScope: VariableAccessScope = VariableAccessScope.FUNCTION_LOCAL):
         super().__init__(returnType)
         self.__array = array
         self.__index = index
         self.__store = None
+        self.__scope = accessScope
 
     @property
     def Array(self):
@@ -317,6 +336,10 @@ class ArrayAccessInstruction(Instruction):
     def Index(self):
         return self.__index
 
+    @property
+    def Scope(self):
+        return self.__scope
+
     def SetStore(self, destination):
         self.__store = destination
 
@@ -324,6 +347,19 @@ class ArrayAccessInstruction(Instruction):
     def Store(self):
         return self.__store
 
+class DeclaraVariableInstruction(Instruction):
+    def __init__(self, variableType, name, scope = VariableAccessScope.GLOBAL):
+        super().__init__(variableType)
+        self.__name = name
+        self.__scope = scope
+
+    @property
+    def Name(self):
+        return self.__name
+
+    @property
+    def Scope(self):
+        return self.__scope
 
 class InstructionPrinter(Visitor):
     def __init__(self, printFunction=print):
@@ -359,18 +395,6 @@ class InstructionPrinter(Visitor):
         for i in bb.Instructions:
             self.__Print(' ' * (ctx * 4), end='')
             self.v_Visit(i, ctx + 1)
-
-    def v_VariableAccessInstruction(self, li, ctx=None):
-        if li.Store:
-            self.__Print('store',
-                self.__FormatType(li.Type),
-                li.Variable,
-                self.__FormatReference(li.Store))
-        else:
-            self.__Print(self.__FormatReference(li), '=',
-                'load',
-                self.__FormatType(li.Type),
-                li.Variable)
     
     def v_ReturnInstruction(self, ri, ctx=None):
         if ri.Value:
@@ -409,28 +433,54 @@ class InstructionPrinter(Visitor):
             f'construct.{self.__FormatType(cpi.Type)}',
             ", ".join([self.__FormatReference(arg) for arg in cpi.Arguments]))
 
+    def __FormatScope(self, vas: VariableAccessScope):
+        if vas == VariableAccessScope.GLOBAL:
+            return 'global'
+        elif vas == VariableAccessScope.FUNCTION_ARGUMENT:
+            return 'arg'
+        else:
+            return 'local'
+
+    def v_VariableAccessInstruction(self, li, ctx=None):
+        scope = self.__FormatScope(li.Scope)
+
+        if li.Store:
+            self.__Print(f'store.{scope}',
+                self.__FormatType(li.Type),
+                li.Variable,
+                self.__FormatReference(li.Store))
+        else:
+            self.__Print(self.__FormatReference(li), '=',
+                f'load.{scope}',
+                self.__FormatType(li.Type),
+                li.Variable)
+
     def v_ArrayAccessInstruction(self, aai, ctx=None):
+        scope = self.__FormatScope(aai.Scope)
+
         if aai.Store:
-            self.__Print('store',
+            self.__Print(f'store.{scope}',
                 self.__FormatReference(aai.Array),
                 self.__FormatReference(aai.Index),
                 self.__FormatReference(aai.Store))
         else:
             self.__Print(self.__FormatReference(aai), '=',
-                'load',
+                f'load.{scope}',
                 self.__FormatType(aai.Type),
                 self.__FormatReference(aai.Array),
                 self.__FormatReference(aai.Index))
 
     def v_MemberAccessInstruction(self, mai, ctx=None):
+        scope = self.__FormatScope(mai.Scope)
+
         if mai.Store:
-            self.__Print('setmember',
+            self.__Print(f'setmember.{scope}',
                 self.__FormatReference(mai.Parent),
                 mai.Member,
                 self.__FormatReference(mai.Store))
         else:
             self.__Print(self.__FormatReference(mai), '=',
-                'getmember',
+                f'getmember.{scope}',
                 self.__FormatType(mai.Type),
                 self.__FormatReference(mai.Parent),
                 mai.Member)
@@ -444,3 +494,9 @@ class InstructionPrinter(Visitor):
             if bi.FalseBlock:
                 self.__Print(',', self.__FormatLabel (bi.FalseBlock), end='')
             self.__Print()
+
+    def v_DeclaraVariableInstruction(self, dvi, ctx=None):
+        scope = self.__FormatScope(dvi.Scope)
+        self.__Print(f'var.{scope}',
+            self.__FormatType(dvi.Type),
+            dvi.Name)

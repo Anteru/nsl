@@ -1,4 +1,5 @@
 from nsl import ast, LinearIR, op
+import collections
 
 class LowerToIRVisitor(ast.DefaultVisitor):
 	def __init__(self, ctx):
@@ -13,9 +14,15 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 			self.__program = LinearIR.Program()
 			self.__functions = []
 			self.__startNewBlock = False
+			self.__globals = {}
+			self.__args = {}
+			self.__locals = {}
+			self.__variables = {}
 
-		def OnEnterProgram(self):
-			pass
+		def OnEnterProgram(self, program):
+			for g in program.GetDeclarations():
+				for decl in g.GetDeclarations():
+					self.__globals[decl.GetName()] = LinearIR.VariableAccessScope.GLOBAL
 
 		def OnLeaveProgram(self):
 			return self.__program
@@ -26,11 +33,25 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 
 		def OnEnterFunction(self, name, functionType):
 			self.__function = self.__program.CreateFunction(name, functionType)
+			self.__locals = {}
+			self.__args = {}
+			for arg in functionType.GetArguments():
+				self.__args[arg.GetName()] = LinearIR.VariableAccessScope.FUNCTION_ARGUMENT
+			self.__variables = collections.ChainMap(
+				self.__globals,
+				self.__args,
+				self.__locals)
 			self.__startNewBlock = True
 
 		def OnLeaveFunction(self):
 			self.__functions.append(self.__function)
 			self.__function = None
+
+		def RegisterFunctionLocalVariable(self, name):
+			self.__locals[name] = LinearIR.VariableAccessScope.FUNCTION_LOCAL
+
+		def LookupVariableScope(self, name) -> LinearIR.VariableAccessScope:
+			return self.__variables[name]
 
 		@property
 		def Function(self):
@@ -178,7 +199,10 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 			return mai
 
 	def v_PrimaryExpression(self, expr, ctx):
-		li = LinearIR.VariableAccessInstruction(expr.GetType(), expr.GetName ())
+		accessScope = ctx.LookupVariableScope(expr.GetName())
+		li = LinearIR.VariableAccessInstruction(expr.GetType(),
+			expr.GetName (),
+			accessScope)
 		ctx.BasicBlock.AddInstruction(li)
 		return li
 		
@@ -206,14 +230,20 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 		return ri
 
 	def v_VariableDeclaration(self, vd, ctx):
+		ctx.RegisterFunctionLocalVariable(vd.GetName())
+		dvi = LinearIR.DeclaraVariableInstruction(vd.GetType (),
+			vd.GetName(), LinearIR.VariableAccessScope.FUNCTION_LOCAL)
+		ctx.BasicBlock.AddInstruction(dvi)
+	
 		if vd.HasInitializerExpression():
 			initValue = self.v_Visit(vd.GetInitializerExpression(), ctx)
-			store = LinearIR.VariableAccessInstruction(vd.GetType (), vd.GetName())
+			store = LinearIR.VariableAccessInstruction(vd.GetType (), vd.GetName(),
+				LinearIR.VariableAccessScope.FUNCTION_LOCAL)
 			ctx.BasicBlock.AddInstruction(store)
 			store.SetStore(initValue)
 
 	def v_Program (self, program, ctx):
-		ctx.OnEnterProgram()
+		ctx.OnEnterProgram(program)
 		for function in program.GetFunctions():
 			self.v_Visit(function, ctx)
 		return ctx.OnLeaveProgram()
