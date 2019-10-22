@@ -14,6 +14,18 @@ struct TransformInfo
 float4 inputPositions[32];
 float4 outputPositions[32];
 
+function AddTwoIntegers(int a, int b) -> int
+{
+	return a + b;
+}
+
+int global_a;
+
+function AddToGlobal(int a) -> int
+{
+	return a + global_a;
+}
+
 function TransformPoint(float4 p, TransformationMatrices m) -> float4
 {
 	for (int i = 0; i < 3; ++i) {

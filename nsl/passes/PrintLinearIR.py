@@ -11,7 +11,7 @@ class PrintLinearIRVisitor (ast.Visitor):
         self.__printer.Print(function)
 
     def v_Program(self, program, ctx=None):
-        for function in program.Functions:
+        for function in program.Functions.values():
             self.v_Visit(function, ctx)
 
 def GetPass():

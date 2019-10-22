@@ -828,6 +828,9 @@ class ForStatement(FlowStatement):
         self.__next = function(self.__next)
         self.__body = function(self.__body)
 
+    def __str__(self):
+        return 'ForStatement'
+
 class DoStatement(FlowStatement):
     def __init__(self, cond, body):
         super().__init__()

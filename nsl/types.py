@@ -11,7 +11,7 @@ class UnknownSymbol(Exception):
 		return "Unknown symbol: '{}'".format (self.__symbol)
 	
 class UnknownType(Exception):
-	def __init__(self, name):
+	def __init__(self, name = '<unknown>'):
 		self.__typename = name
 		
 	def __str__(self):

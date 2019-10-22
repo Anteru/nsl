@@ -91,15 +91,23 @@ class Function(Value):
 class Program:
     def __init__(self):
         self.__functions = collections.OrderedDict()
+        self.__globals = collections.OrderedDict()
 
     @property
     def Functions(self):
-        return self.__functions.values()
+        return self.__functions
+
+    @property
+    def Globals(self):
+        return self.__globals
 
     def CreateFunction(self, name, functionType):
         f = Function(name, functionType)
         self.__functions[name] = f
         return f
+
+    def CreateGlobalVariable(self, name, variableType):
+        self.__globals[name]= variableType
 
     def _Traverse(self, function):
         self.__functions = function(self.__functions)

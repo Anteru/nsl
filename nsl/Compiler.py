@@ -59,18 +59,18 @@ class Compiler:
 		ast = self.parser.Parse (source, debug = options ['debug-parsing'])
 		for i,p in enumerate (self.astPasses):
 			if not self.__RunPass(ast, i, p, 'AST', options ['debug-passes']):
-				return False
+				return (False, None)
 
 		# Done with the AST, we need to lower to IR now
 		lowerPass = LowerToIR.GetPass ()
 		if not lowerPass.Process (ast):
 			print (f'Failed to lower AST to IR')
-			return False
+			return (False, None)
 
 		ir = lowerPass.visitor.Program
 
 		for i, p in enumerate(self.irPasses):
 			if not self.__RunPass(ir, i, p, 'IR', options ['debug-passes']):
-				return False
+				return (False, None)
 
-		return True
+		return (True, ir)

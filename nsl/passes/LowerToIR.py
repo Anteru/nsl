@@ -244,6 +244,9 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 
 	def v_Program (self, program, ctx):
 		ctx.OnEnterProgram(program)
+		for globalDeclaration in program.GetDeclarations():
+			for decl in globalDeclaration.GetDeclarations():
+				ctx.Program.CreateGlobalVariable(decl.GetName(), decl.GetType())
 		for function in program.GetFunctions():
 			self.v_Visit(function, ctx)
 		return ctx.OnLeaveProgram()
