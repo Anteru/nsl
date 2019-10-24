@@ -1,4 +1,4 @@
-from nsl import ast, LinearIR, op
+from nsl import ast, LinearIR, op, types
 import collections
 
 class LowerToIRVisitor(ast.DefaultVisitor):
@@ -179,9 +179,29 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 		
 	def v_ConstructPrimitiveExpression(self, expr, ctx):
 		values = [self.v_Visit(e, ctx) for e in expr]
-		cpi = LinearIR.ConstructPrimitiveInstruction(expr.GetType(), values)
-		ctx.BasicBlock.AddInstruction(cpi)
-		return cpi
+		dvi = LinearIR.DeclareVariableInstruction(expr.GetType(),
+			scope = LinearIR.VariableAccessScope.FUNCTION_LOCAL)
+		ctx.BasicBlock.AddInstruction(dvi)
+
+		# Set the individual members
+		offset = 0
+		for value in values:
+			cv = LinearIR.ConstantValue(types.Integer(), offset)
+			ctx.Function.RegisterValue(cv)
+
+			cai = LinearIR.ComponentAccessInstruction(
+				dvi.Type, value, cv
+			)
+			cai.SetStore(dvi)
+
+			assert value.Type.IsPrimitive()
+			assert not value.Type.IsMatrix()
+			if value.Type.IsVector():
+				offset += value.Type.GetComponentCount()
+			else:
+				offset += 1
+			ctx.BasicBlock.AddInstruction(cai)
+		return cai
 
 	def v_LiteralExpression(self, expr, ctx):
 		cv = LinearIR.ConstantValue(expr.GetType (), expr.GetValue())
@@ -231,7 +251,7 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 
 	def v_VariableDeclaration(self, vd, ctx):
 		ctx.RegisterFunctionLocalVariable(vd.GetName())
-		dvi = LinearIR.DeclaraVariableInstruction(vd.GetType (),
+		dvi = LinearIR.DeclareVariableInstruction(vd.GetType (),
 			vd.GetName(), LinearIR.VariableAccessScope.FUNCTION_LOCAL)
 		ctx.BasicBlock.AddInstruction(dvi)
 	

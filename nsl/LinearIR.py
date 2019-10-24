@@ -4,6 +4,49 @@ import collections
 from . import types
 from .ast import Visitor
 
+
+class OpCode(Enum):
+    INVALID = 0
+    ASSIGN = 0x0_0001
+
+    BRANCH = 0x0_0101
+    RETURN = 0x0_0102
+    CALL = 0x0_0201
+
+    CAST = 0x0_1001
+
+    # Binary
+    ADD = 0x1_0002
+    SUB = 0x1_0003
+    MUL = 0x1_0004
+    DIV = 0x1_0005
+    MOD = 0x1_0006
+
+    # Unary
+    UA_ADD = 0x2_0120
+    UA_SUB = 0x2_0121
+
+    # comparison
+    CMP_GT = 0x3_0200
+    CMP_LT = 0x3_0201
+    CMP_LE = 0x3_0202
+    CMP_GE = 0x3_0203
+    CMP_NE = 0x3_0204
+    CMP_EQ = 0x3_0205
+
+    # logic
+    LG_OR   = 0x4_0300
+    LG_AND  = 0x4_0301
+    LG_NOT  = 0x4_0302
+
+    BIT_OR  = 0x5_0400
+    BIT_AND = 0x5_0401
+    BIT_NOT = 0x5_0402
+    BIT_XOR = 0x5_0403
+
+    LOAD = 0x6_0001
+    STORE = 0x6_1001
+    
 class Value:
     def __init__(self, valueType: types.Type):
         self.__type = valueType
@@ -37,12 +80,20 @@ class ValueUser(Value):
         super().__init__(valueType)
 
 class Instruction(ValueUser):
-    def __init__(self, returnType: types.Type):
+    def __init__(self, opCode: OpCode, returnType: types.Type):
         super().__init__(returnType)
         self.__parent = None
+        self.__opcode = opCode
 
     def SetParent(self, basicBlock):
         self.__parent = basicBlock
+
+    @property
+    def OpCode(self):
+        return self.__opcode
+
+    def _SetOpCode(self, opcode):
+        self.__opcode = opcode
 
 class BasicBlock(Value):
     def __init__(self, function):
@@ -112,48 +163,10 @@ class Program:
     def _Traverse(self, function):
         self.__functions = function(self.__functions)
 
-class OpCode(Enum):
-    ASSIGN = 1
-
-    # Binary
-    ADD = 102
-    SUB = 103
-    MUL = 104
-    DIV = 105
-    MOD = 106
-
-    # Unary
-    UA_ADD = 120
-    UA_SUB = 121
-
-    # comparison
-    CMP_GT = 200
-    CMP_LT = 201
-    CMP_LE = 202
-    CMP_GE = 203
-    CMP_NE = 204
-    CMP_EQ = 205
-
-    # logic
-    LG_OR   = 300
-    LG_AND  = 301
-    LG_NOT  = 302
-
-    BIT_OR  = 400
-    BIT_AND = 401
-    BIT_XOR = 402
-    BIT_NOT = 403
-
-    BRANCH = 10500
-    RETURN = 10501
-
-    CAST = 10131
-
 class BinaryInstruction(Instruction):
     def __init__(self, operation: OpCode, returnType: types.Type,
         v1: Value, v2: Value):
-        super().__init__(returnType)
-        self.__operation = operation
+        super().__init__(operation, returnType)
         self.__values = [v1, v2]
 
     @staticmethod
@@ -174,17 +187,13 @@ class BinaryInstruction(Instruction):
             v1, v2)
 
     @property
-    def Operation(self):
-        return self.__operation
-
-    @property
     def Values(self):
         return self.__values
 
 class CompareInstruction(Instruction):
     def __init__(self, predicate: OpCode, returnType: types.Type,
         v1: Value, v2: Value):
-        super().__init__(returnType)
+        super().__init__(predicate, returnType)
         self.__predicate = predicate
         self.__values = [v1, v2]
 
@@ -192,7 +201,7 @@ class BranchInstruction(Instruction):
     def __init__(self, trueBlock: BasicBlock,
         falseBlock: BasicBlock = None,
         predicate: Value = None):
-        super().__init__(types.Void())
+        super().__init__(OpCode.BRANCH, types.Void())
         self.__trueBlock = trueBlock
         self.__falseBlock = falseBlock
         self.__predicate = predicate
@@ -217,7 +226,7 @@ class BranchInstruction(Instruction):
 
 class UnaryInstruction(Instruction):
     def __init__(self, operation: OpCode, returnType: types.Type, value: Value):
-        super().__init__(returnType)
+        super().__init__(operation, returnType)
         self.__operation = operation
         self.__value = value
 
@@ -232,9 +241,9 @@ class CastInstruction(UnaryInstruction):
 class ReturnInstruction(Instruction):
     def __init__(self, value: Value):
         if value:
-            super().__init__(value.Type)
+            super().__init__(OpCode.RETURN, value.Type)
         else:
-            super().__init__(types.Void())
+            super().__init__(OpCode.RETURN, types.Void())
         self.__value = value
 
     @property
@@ -249,7 +258,7 @@ class VariableAccessScope(Enum):
 class MemberAccessInstruction(Instruction):
     def __init__(self, memberType, variable, member,
         accessScope: VariableAccessScope = VariableAccessScope.FUNCTION_LOCAL):
-        super().__init__(memberType)
+        super().__init__(OpCode.INVALID, memberType)
         self.__parent = variable
         self.__member = member
         self.__store = None
@@ -274,19 +283,10 @@ class MemberAccessInstruction(Instruction):
     def Store(self):
         return self.__store
 
-class ConstructPrimitiveInstruction(Instruction):
-    def __init__(self, primitiveType: types.PrimitiveType, values):
-        super().__init__(primitiveType)
-        self.__values = values
-
-    @property
-    def Arguments(self):
-        return self.__values
-
 class VariableAccessInstruction(Instruction):
     def __init__(self, returnType: types.Type, variableName,
             accessScope: VariableAccessScope = VariableAccessScope.GLOBAL):
-        super().__init__(returnType)
+        super().__init__(OpCode.LOAD, returnType)
         self.__variable = variableName
         self.__store = None
         self.__scope = accessScope
@@ -297,6 +297,7 @@ class VariableAccessInstruction(Instruction):
 
     def SetStore(self, destination):
         self.__store = destination
+        self._SetOpCode(OpCode.STORE)
 
     @property
     def Store(self):
@@ -310,7 +311,7 @@ class CallInstruction(Instruction):
     def __init__(self, returnType: types.Type, functionName: str,
         arguments = [],
         object = None):
-        super().__init__(returnType)
+        super().__init__(OpCode.CALL, returnType)
         self.__function = functionName
         self.__arguments = arguments
         self.__object = object
@@ -328,13 +329,11 @@ class CallInstruction(Instruction):
         return self.__object
 
 class ArrayAccessInstruction(Instruction):
-    def __init__(self, returnType: types.Type, array, index,
-        accessScope: VariableAccessScope = VariableAccessScope.FUNCTION_LOCAL):
-        super().__init__(returnType)
+    def __init__(self, returnType: types.Type, array, index):
+        super().__init__(OpCode.INVALID, returnType)
         self.__array = array
         self.__index = index
         self.__store = None
-        self.__scope = accessScope
 
     @property
     def Array(self):
@@ -355,9 +354,36 @@ class ArrayAccessInstruction(Instruction):
     def Store(self):
         return self.__store
 
-class DeclaraVariableInstruction(Instruction):
-    def __init__(self, variableType, name, scope = VariableAccessScope.GLOBAL):
-        super().__init__(variableType)
+class ComponentAccessInstruction(Instruction):
+    def __init__(self, returnType: types.Type, array, index):
+        super().__init__(OpCode.INVALID, returnType)
+        self.__array = array
+        self.__index = index
+        self.__store = None
+
+    @property
+    def Array(self):
+        return self.__array
+
+    @property
+    def Index(self):
+        return self.__index
+
+    @property
+    def Scope(self):
+        return self.__scope
+
+    def SetStore(self, destination):
+        self.__store = destination
+
+    @property
+    def Store(self):
+        return self.__store
+
+class DeclareVariableInstruction(Instruction):
+    def __init__(self, variableType, name = None,
+        scope = VariableAccessScope.GLOBAL):
+        super().__init__(OpCode.INVALID, variableType)
         self.__name = name
         self.__scope = scope
 
@@ -417,7 +443,7 @@ class InstructionPrinter(Visitor):
 
     def v_BinaryInstruction(self, bi, ctx=None):
         self.__Print(self.__FormatReference(bi), '=',
-            f'{bi.Operation.name.lower()}.{self.__FormatType(bi.Type)}',
+            f'{bi.OpCode.name.lower()}.{self.__FormatType(bi.Type)}',
             self.__FormatReference(bi.Values[0]),
             self.__FormatReference(bi.Values[1]))
 
@@ -435,11 +461,6 @@ class InstructionPrinter(Visitor):
                 self.__FormatType(ci.Type),
                 ci.Function,
                 ", ".join([self.__FormatReference(arg) for arg in ci.Arguments]))
-
-    def v_ConstructPrimitiveInstruction(self, cpi, ctx=None):
-        self.__Print(self.__FormatReference(cpi), '=',
-            f'construct.{self.__FormatType(cpi.Type)}',
-            ", ".join([self.__FormatReference(arg) for arg in cpi.Arguments]))
 
     def __FormatScope(self, vas: VariableAccessScope):
         if vas == VariableAccessScope.GLOBAL:
@@ -464,31 +485,42 @@ class InstructionPrinter(Visitor):
                 li.Variable)
 
     def v_ArrayAccessInstruction(self, aai, ctx=None):
-        scope = self.__FormatScope(aai.Scope)
-
         if aai.Store:
-            self.__Print(f'store.{scope}',
+            self.__Print(f'store',
                 self.__FormatReference(aai.Array),
                 self.__FormatReference(aai.Index),
                 self.__FormatReference(aai.Store))
         else:
             self.__Print(self.__FormatReference(aai), '=',
-                f'load.{scope}',
+                f'load',
                 self.__FormatType(aai.Type),
                 self.__FormatReference(aai.Array),
                 self.__FormatReference(aai.Index))
 
-    def v_MemberAccessInstruction(self, mai, ctx=None):
-        scope = self.__FormatScope(mai.Scope)
+    def v_ComponentAccessInstruction(self, cai, ctx=None):
+        if cai.Store:
+            self.__Print(self.__FormatReference(cai), '=',
+                f'setelement',
+                self.__FormatReference(cai.Array),
+                self.__FormatReference(cai.Index),
+                self.__FormatReference(cai.Store))
+        else:
+            self.__Print(self.__FormatReference(cai), '=',
+                f'getelement',
+                self.__FormatType(cai.Type),
+                self.__FormatReference(cai.Array),
+                self.__FormatReference(cai.Index))
 
+    def v_MemberAccessInstruction(self, mai, ctx=None):
         if mai.Store:
-            self.__Print(f'setmember.{scope}',
+            self.__Print(self.__FormatReference(mai), '=',
+                f'setmember',
                 self.__FormatReference(mai.Parent),
                 mai.Member,
                 self.__FormatReference(mai.Store))
         else:
             self.__Print(self.__FormatReference(mai), '=',
-                f'getmember.{scope}',
+                f'getmember',
                 self.__FormatType(mai.Type),
                 self.__FormatReference(mai.Parent),
                 mai.Member)
@@ -503,8 +535,13 @@ class InstructionPrinter(Visitor):
                 self.__Print(',', self.__FormatLabel (bi.FalseBlock), end='')
             self.__Print()
 
-    def v_DeclaraVariableInstruction(self, dvi, ctx=None):
+    def v_DeclareVariableInstruction(self, dvi, ctx=None):
         scope = self.__FormatScope(dvi.Scope)
-        self.__Print(f'var.{scope}',
-            self.__FormatType(dvi.Type),
-            dvi.Name)
+        if dvi.Name:
+            self.__Print(f'var.{scope}',
+                self.__FormatType(dvi.Type),
+                dvi.Name)
+        else:
+            self.__Print(self.__FormatReference(dvi), '=',
+                f'var.{scope}',
+                self.__FormatType(dvi.Type))

@@ -49,12 +49,13 @@ class ExecutionContext:
         localScope = Scope(functionScope)
 
         for instruction in currentBB.Instructions:
-            if isinstance(instruction, LinearIR.VariableAccessInstruction):
-                if instruction.Store is None:
-                    ref = instruction.Reference
-                    localScope[ref] = localScope[instruction.Variable]
-            elif isinstance(instruction, LinearIR.BinaryInstruction):
-                operation = instruction.Operation
+            opCode = instruction.OpCode
+
+            if opCode == LinearIR.OpCode.LOAD:
+                ref = instruction.Reference
+                localScope[ref] = localScope[instruction.Variable]
+            elif opCode.value >> 16 == 0x1:
+                operation = instruction.OpCode
                 op1 = localScope[instruction.Values[0].Reference]
                 op2 = localScope[instruction.Values[1].Reference]
                 ref = instruction.Reference
@@ -67,7 +68,7 @@ class ExecutionContext:
                     localScope[ref] = op1 / op2
                 elif operation == LinearIR.OpCode.MUL:
                     localScope[ref] = op1 * op2
-            elif isinstance(instruction, LinearIR.ReturnInstruction):
+            elif opCode == LinearIR.OpCode.RETURN:
                 if instruction.Value:
                     return localScope[instruction.Value.Reference]
                 else:

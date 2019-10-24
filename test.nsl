@@ -26,6 +26,11 @@ function AddToGlobal(int a) -> int
 	return a + global_a;
 }
 
+function CreateFloat4 (float2 a, float b, float c) -> float4
+{
+	return float4(a, b, c);
+}
+
 function TransformPoint(float4 p, TransformationMatrices m) -> float4
 {
 	for (int i = 0; i < 3; ++i) {

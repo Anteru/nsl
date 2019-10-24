@@ -626,6 +626,9 @@ class VectorType(PrimitiveType):
 	def GetSize(self):
 		return (self.__componentCount,)
 
+	def GetComponentCount(self):
+		return self.__componentCount
+
 	def GetName(self):
 		return '{}{}'.format (self.__componentType.GetName (),
 							  self.__componentCount)
