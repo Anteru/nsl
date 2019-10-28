@@ -26,6 +26,13 @@ function AddToGlobal(int a) -> int
 	return a + global_a;
 }
 
+int global_array[2];
+
+function AddToGlobalArray (int a, int index) -> int
+{
+	return a + global_array[index];
+}
+
 function CreateFloat4 (float2 a, float b, float c) -> float4
 {
 	return float4(a, b, c);

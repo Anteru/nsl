@@ -45,7 +45,9 @@ class OpCode(Enum):
     BIT_XOR = 0x5_0403
 
     LOAD = 0x6_0001
+    LOAD_ARRAY = 0x6_0002
     STORE = 0x6_1001
+    STORE_ARRAY = 0x6_1002
     
 class Value:
     def __init__(self, valueType: types.Type):
@@ -330,7 +332,7 @@ class CallInstruction(Instruction):
 
 class ArrayAccessInstruction(Instruction):
     def __init__(self, returnType: types.Type, array, index):
-        super().__init__(OpCode.INVALID, returnType)
+        super().__init__(OpCode.LOAD_ARRAY, returnType)
         self.__array = array
         self.__index = index
         self.__store = None

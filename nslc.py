@@ -19,7 +19,7 @@ def Compile(input_file, debug_parsing, debug_passes):
     result = vm.Invoke('AddTwoIntegers', a=2, b=3)
     print(result)
 
-    vm.BindGlobal('global_a', 23)
+    vm.SetGlobal('global_a', 23)
     result = vm.Invoke('AddToGlobal', a=42)
     print(result)
 

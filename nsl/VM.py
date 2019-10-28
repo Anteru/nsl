@@ -54,6 +54,17 @@ class ExecutionContext:
             if opCode == LinearIR.OpCode.LOAD:
                 ref = instruction.Reference
                 localScope[ref] = localScope[instruction.Variable]
+            elif opCode == LinearIR.OpCode.STORE:
+                if instruction.Scope == LinearIR.VariableAccessScope.GLOBAL:
+                    self.__scope[instruction.Variable] = localScope[instruction.Store.Reference]
+                else:
+                    localScope[instruction.Variable] = localScope[instruction.Store.Reference]
+            elif opCode == LinearIR.OpCode.LOAD_ARRAY:
+                ref = instruction.Reference
+                var = localScope[instruction.Array.Reference][
+                    localScope[instruction.Index.Reference]
+                ]
+                localScope[ref] = var
             elif opCode.value >> 16 == 0x1:
                 operation = instruction.OpCode
                 op1 = localScope[instruction.Values[0].Reference]
@@ -82,8 +93,11 @@ class VirtualMachine:
 
         self.__ctx = ExecutionContext(program.Functions, self.__globalScope)
 
-    def BindGlobal(self, globalVariableName, value):
+    def SetGlobal(self, globalVariableName, value):
         self.__globalScope.Declare(globalVariableName, value)
+
+    def GetGlobal(self, globalVariableName):
+        return self.__globalScope[globalVariableName]
 
     def Invoke(self, functionName, **args):
         return self.__ctx.Invoke(functionName, **args)

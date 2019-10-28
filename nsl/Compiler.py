@@ -55,10 +55,13 @@ class Compiler:
 		return True
 
 
-	def Compile (self, source, options):
-		ast = self.parser.Parse (source, debug = options ['debug-parsing'])
+	def Compile (self, source, options = {}):
+		debugParsing = options.get('debug-parsing', False)
+		debugPasses = options.get('debug-passes', False)
+
+		ast = self.parser.Parse (source, debug = debugParsing)
 		for i,p in enumerate (self.astPasses):
-			if not self.__RunPass(ast, i, p, 'AST', options ['debug-passes']):
+			if not self.__RunPass(ast, i, p, 'AST', debugPasses):
 				return (False, None)
 
 		# Done with the AST, we need to lower to IR now
@@ -70,7 +73,7 @@ class Compiler:
 		ir = lowerPass.visitor.Program
 
 		for i, p in enumerate(self.irPasses):
-			if not self.__RunPass(ir, i, p, 'IR', options ['debug-passes']):
+			if not self.__RunPass(ir, i, p, 'IR', debugPasses):
 				return (False, None)
 
 		return (True, ir)
