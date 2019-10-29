@@ -1,1 +1,1 @@
-PYTHONPATH=. py.test nsl
+PYTHONPATH=. py.test
