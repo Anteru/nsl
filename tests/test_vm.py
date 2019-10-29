@@ -6,7 +6,7 @@ from nsl import (
 import pytest
 
 def testSimpleAddInt():
-    code = '''function f (int a, int b) -> int { return a + b; }'''
+    code = '''export function f (int a, int b) -> int { return a + b; }'''
     c = Compiler.Compiler()
     result, ir = c.Compile(code)
     assert result == True
@@ -17,7 +17,7 @@ def testSimpleAddInt():
 
 def testSimpleAddIntToGlobal():
     code = '''int g;
-    function f (int a) -> int { return a + g; }'''
+    export function f (int a) -> int { return a + g; }'''
 
     c = Compiler.Compiler()
     result, ir = c.Compile(code)
@@ -31,7 +31,7 @@ def testSimpleAddIntToGlobal():
 
 def testSimpleAddIntToGlobalArray():
     code = '''int g[2];
-    function f (int a, int i) -> int { return a + g[i]; }'''
+    export function f (int a, int i) -> int { return a + g[i]; }'''
 
     c = Compiler.Compiler()
     result, ir = c.Compile(code)
@@ -45,7 +45,7 @@ def testSimpleAddIntToGlobalArray():
 
 def testSimpleWriteToGlobal():
     code = '''int g;
-    function f(int v) -> void { g = v; }'''
+    export function f(int v) -> void { g = v; }'''
 
     c = Compiler.Compiler()
     result, ir = c.Compile(code)
@@ -62,7 +62,7 @@ def testSimpleWriteToGlobal():
 def testSimpleFunctionCall():
     code = '''
     function f(int v) -> int { return v; }
-    function g(int a) -> int {
+    export function g(int a) -> int {
         return a + f(a);
     }
     '''
@@ -75,3 +75,28 @@ def testSimpleFunctionCall():
 
     r = vm.Invoke('g', a = 5)
     assert r == 10
+
+def testOverloadedFunctionCall():
+    code = '''
+    function f(float v) -> float { return v; }
+    function f(int v) -> int { return v; }
+    export function g_i(int a) -> int {
+        return a + f(a);
+    }
+
+    export function g_f(float a) -> float {
+        return a + f(a);
+    }
+    '''
+
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('g_i', a = 5)
+    assert r == 10
+
+    r = vm.Invoke('g_f', a = 2.5)
+    assert r == 5

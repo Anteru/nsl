@@ -652,13 +652,16 @@ class Argument(Node):
 class Function(Node):
     def __init__(self, name, arguments = list (),
                  returnType = types.Void (), body = None,
-                 isForwardDeclaration = False):
+                 *,
+                 isForwardDeclaration = False,
+                 isExported = False):
         super().__init__()
         self.name = name
         self.__body = body
-        self.__type = types.Function (name, returnType, arguments)
+        self.__type = types.Function (name, returnType, arguments, isExported)
         self.arguments = arguments
         self.isForwardDeclaration = isForwardDeclaration
+        self.isExported = isExported
 
     def ResolveType(self, scope):
         for arg in self.arguments:

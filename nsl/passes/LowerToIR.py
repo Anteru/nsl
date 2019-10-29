@@ -77,8 +77,19 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 	def __FormatArgumentList(self, args):
 		return ', '.join(['{0} {1}'.format(arg.GetType().GetName(), arg.GetName()) for arg in args])
 	
+	def __GetFunctionName(self, functionType):
+		"""Exported functions use their raw name, everything else uses the
+		mangled name."""
+		if functionType.exported:
+			return functionType.GetName()
+		else:
+			return functionType.GetMangledName()
+		
+
 	def v_Function(self, function, ctx):
-		ctx.OnEnterFunction(function.GetName(), function.GetType())
+		functionType = function.GetType()
+		name = self.__GetFunctionName(functionType)
+		ctx.OnEnterFunction(name, function.GetType())
 		function.GetBody().AcceptVisitor(self, ctx)
 		ctx.OnLeaveFunction()
 
@@ -283,8 +294,9 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 
 	def v_CallExpression(self, expr, ctx):
 		args = [self.v_Visit(arg, ctx) for arg in expr]
+		name = self.__GetFunctionName(expr.GetFunction())
 		ci = LinearIR.CallInstruction(expr.GetType(),
-			expr.GetFunction().GetName(),
+			name,
 			args)
 		ctx.BasicBlock.AddInstruction(ci)
 		return ci

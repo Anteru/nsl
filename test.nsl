@@ -14,21 +14,21 @@ struct TransformInfo
 float4 inputPositions[32];
 float4 outputPositions[32];
 
-function AddTwoIntegers(int a, int b) -> int
+export function AddTwoIntegers(int a, int b) -> int
 {
 	return a + b;
 }
 
 int global_a;
 
-function AddToGlobal(int a) -> int
+export function AddToGlobal(int a) -> int
 {
 	return a + global_a;
 }
 
 int global_array[2];
 
-function AddToGlobalArray (int a, int index) -> int
+export function AddToGlobalArray (int a, int index) -> int
 {
 	return a + global_array[index];
 }

@@ -505,10 +505,11 @@ class ClassType(StructType):
 		return self.__isInterface
 
 class Function(Type):
-	def __init__(self, name, returnType, arguments):
+	def __init__(self, name, returnType, arguments, exported = False):
 		self.returnType = returnType
 		self.arguments = arguments
 		self.name = name
+		self.exported = exported
 		self.__argumentTypes = OrderedDict ()
 		
 	def Resolve(self, scope):

@@ -284,18 +284,40 @@ class NslParser:
     def p_argument(self, p):
         '''argument : var_decl'''
 
+    def p_function_attr(self, p):
+        '''function_attr : __DECLARATION
+                         | EXPORT'''
+        if p[1] == '__declaration':
+            p[0] = { 'isForwardDeclaration': True }
+        elif p[1] == 'export':
+            p[0] = { 'isExported': True }
+
+    def p_function_attr_opt_1(self, p):
+        '''function_attr_opt : function_attr'''
+        p[0] = p[1]
+
+    def p_function_attr_opt_2(self, p):
+        '''function_attr_opt : empty'''
+        p[0] = {}
+
     def p_function_decl(self, p):
-        '''function_decl : FUNCTION ID '(' arg_list_opt ')' RARROW type'''
-        p[0] = { 'name' : p[2], 'args' : p[4], 'return-type' : p[7] }
+        '''function_decl : function_attr_opt FUNCTION ID '(' arg_list_opt ')' RARROW type'''
+        p[0] = {
+            'name' : p[3],
+            'args' : p[5],
+            'return-type' : p[8],
+            'attributes': p[1]
+        }
 
     def p_function_1(self, p):
         '''function : function_decl compound_statement '''
-        p[0] = ast.Function (p[1]['name'], p[1]['args'], p[1]['return-type'], p[2])
+        p[0] = ast.Function (p[1]['name'], p[1]['args'], p[1]['return-type'], p[2],
+                             **p[1]['attributes'])
 
     def p_function_2(self, p):
-        '''function : __DECLARATION function_decl ';' '''
-        p[0] = ast.Function (p[2]['name'], p[2]['args'], p[2]['return-type'],
-                             isForwardDeclaration = True)
+        '''function : function_decl ';' '''
+        p[0] = ast.Function (p[1]['name'], p[1]['args'], p[1]['return-type'],
+                             **p[1]['attributes'])
 
     def p_annotation(self, p):
         '''annotation : '[' ID ']' '''
