@@ -5,7 +5,7 @@ from nsl import (
 
 import pytest
 
-def testSimpleAddIntFunction():
+def testSimpleAddInt():
     code = '''function f (int a, int b) -> int { return a + b; }'''
     c = Compiler.Compiler()
     result, ir = c.Compile(code)
@@ -15,7 +15,7 @@ def testSimpleAddIntFunction():
     r = vm.Invoke('f', a=3, b=5)
     assert r == 8
 
-def testSimpleAddIntToGlobalFunction():
+def testSimpleAddIntToGlobal():
     code = '''int g;
     function f (int a) -> int { return a + g; }'''
 
@@ -29,7 +29,7 @@ def testSimpleAddIntToGlobalFunction():
     r = vm.Invoke('f', a = 42)
     assert r == 65
 
-def testSimpleAddIntToGlobalArrayFunction():
+def testSimpleAddIntToGlobalArray():
     code = '''int g[2];
     function f (int a, int i) -> int { return a + g[i]; }'''
 
@@ -43,7 +43,7 @@ def testSimpleAddIntToGlobalArrayFunction():
     r = vm.Invoke('f', a = 3, i = 1)
     assert r == 10
 
-def testSimpleWriteToGlobalFunction():
+def testSimpleWriteToGlobal():
     code = '''int g;
     function f(int v) -> void { g = v; }'''
 
@@ -58,3 +58,20 @@ def testSimpleWriteToGlobalFunction():
     r = vm.Invoke('f', v = 5)
     g = vm.GetGlobal('g')
     assert g == 5
+
+def testSimpleFunctionCall():
+    code = '''
+    function f(int v) -> int { return v; }
+    function g(int a) -> int {
+        return a + f(a);
+    }
+    '''
+
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('g', a = 5)
+    assert r == 10

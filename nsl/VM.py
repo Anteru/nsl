@@ -33,15 +33,27 @@ class Scope:
 
 class ExecutionContext:
     def __init__(self, functions, globalScope: Scope):
-        self.__scope = globalScope
+        self.__globalScope = globalScope
         self.__functions = functions
 
     def Invoke(self, functionName, **args):
-        functionScope = Scope(self.__scope)
+        functionScope = Scope(self.__globalScope)
         for k,v in args.items():
             functionScope.Declare(k, v)
 
         return self.__Execute(self.__functions[functionName], functionScope)
+
+    def _Invoke(self, functionName, args):
+        '''Similar to _Invoke, but we get a list of args and those are matched
+        to the arguments of the function.'''
+        functionScope = Scope(self.__globalScope)
+        function = self.__functions[functionName]
+
+        functionArgs = function.Type.GetArguments()
+        for i, k in enumerate(functionArgs):
+            functionScope.Declare(k.GetName(), args[i])
+
+        return self.__Execute(function, functionScope)
 
     def __Execute(self, function: LinearIR.Function, functionScope):
         currentBB = function.BasicBlocks[0]
@@ -56,7 +68,7 @@ class ExecutionContext:
                 localScope[ref] = localScope[instruction.Variable]
             elif opCode == LinearIR.OpCode.STORE:
                 if instruction.Scope == LinearIR.VariableAccessScope.GLOBAL:
-                    self.__scope[instruction.Variable] = localScope[instruction.Store.Reference]
+                    self.__globalScope[instruction.Variable] = localScope[instruction.Store.Reference]
                 else:
                     localScope[instruction.Variable] = localScope[instruction.Store.Reference]
             elif opCode == LinearIR.OpCode.LOAD_ARRAY:
@@ -84,6 +96,15 @@ class ExecutionContext:
                     return localScope[instruction.Value.Reference]
                 else:
                     return None
+            elif opCode == LinearIR.OpCode.CALL:
+                if instruction.Object is None:
+                    args = [
+                        localScope[arg.Reference] for arg in
+                        instruction.Arguments
+                    ]
+                    localScope[instruction.Reference] = self._Invoke(instruction.Function, args)
+            else:
+                raise Exception(f"Unhandled opcode: {opCode}")
 
 class VirtualMachine:
     def __init__(self, program):
