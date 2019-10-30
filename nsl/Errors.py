@@ -95,3 +95,6 @@ ERROR_CONTINUE_OUTSIDE_FLOW = ErrorMessage (2201, Severity.ERROR,
     'continue statements must be inside a do/while/for statement.')
 ERROR_BREAK_OUTSIDE_FLOW_SWITCH = ErrorMessage (2202, Severity.ERROR,
     'break statements must be inside a do/while/for or switch statement.')
+
+ERROR_OVERLOADED_EXPORTED_FUNCTION = ErrorMessage (2301, Severity.ERROR,
+    '''Exported function '{}' cannot be overloaded.''')
