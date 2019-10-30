@@ -58,13 +58,26 @@ class ExecutionContext:
     def __Execute(self, function: LinearIR.Function, functionScope):
         currentBB = function.BasicBlocks[0]
 
+        instructions = list()
+        blockOffsets = {}
+
+        for bb in function.BasicBlocks:
+            blockOffsets[bb.Reference] = len(instructions)
+            instructions.extend(bb.Instructions)
+
         localScope = Scope(functionScope)
 
         # Register all constants
         for constant in function.Constants:
             localScope.Declare(constant.Reference, constant.Value)
 
-        for instruction in currentBB.Instructions:
+        currentInstruction = 0
+        lastInstruction = len(instructions)
+
+        while currentInstruction < lastInstruction:
+            instruction = instructions[currentInstruction]
+            currentInstruction += 1
+
             opCode = instruction.OpCode
 
             if opCode == LinearIR.OpCode.LOAD:
@@ -95,6 +108,18 @@ class ExecutionContext:
                     localScope[ref] = op1 / op2
                 elif operation == LinearIR.OpCode.MUL:
                     localScope[ref] = op1 * op2
+                elif operation == LinearIR.OpCode.CMP_GT:
+                    localScope[ref] = op1 > op2
+            elif opCode == LinearIR.OpCode.BRANCH:
+                if instruction.Predicate:
+                    predicate = localScope[instruction.Predicate.Reference]
+                    if predicate:
+                        currentInstruction = blockOffsets[instruction.TrueBlock.Reference]
+                    else:
+                        if instruction.FalseBlock:
+                            currentInstruction = blockOffsets[instruction.FalseBlock.Reference]
+                else:
+                    currentInstruction = blockOffsets[instruction.TrueBlock.Reference]
             elif opCode == LinearIR.OpCode.RETURN:
                 if instruction.Value:
                     return localScope[instruction.Value.Reference]

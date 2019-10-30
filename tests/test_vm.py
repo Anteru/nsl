@@ -111,3 +111,19 @@ def testPrefixIncrement():
 
     r = vm.Invoke('f', a = 1)
     assert r == 2
+
+def testSimpleBranch():
+    code = '''export function f(int a) -> int {
+        if(a > 5) return 0; return 1; 
+    }'''
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('f', a = 0)
+    assert r == 1
+
+    r = vm.Invoke('f', a = 6)
+    assert r == 0

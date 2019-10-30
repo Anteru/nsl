@@ -22,17 +22,17 @@ class OpCode(Enum):
     DIV = 0x1_0005
     MOD = 0x1_0006
 
+    # comparison
+    CMP_GT = 0x1_0100
+    CMP_LT = 0x1_0101
+    CMP_LE = 0x1_0102
+    CMP_GE = 0x1_0103
+    CMP_NE = 0x1_0104
+    CMP_EQ = 0x1_0105
+
     # Unary
     UA_ADD = 0x2_0120
     UA_SUB = 0x2_0121
-
-    # comparison
-    CMP_GT = 0x3_0200
-    CMP_LT = 0x3_0201
-    CMP_LE = 0x3_0202
-    CMP_GE = 0x3_0203
-    CMP_NE = 0x3_0204
-    CMP_EQ = 0x3_0205
 
     # logic
     LG_OR   = 0x4_0300
