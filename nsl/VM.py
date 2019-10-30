@@ -1,17 +1,6 @@
 from . import (LinearIR, types)
 import collections
 
-class Value:
-    def __init__(self, value = None, valueType: types.Type = types.UnknownType()):
-        self.__value = value
-        self.__type = valueType
-
-    def Get(self):
-        return self.__value
-
-    def Set(self, value):
-        self.__value = value
-
 class Scope:
     def __init__(self, parent: 'Scope' = None):
         self.__parent = parent

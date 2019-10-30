@@ -1,3 +1,4 @@
+import collections
 import collections.abc
 from nsl import op, types
 from enum import Enum
@@ -449,8 +450,8 @@ class PrimaryExpression(UnaryExpression):
     def __str__(self):
         return self.identifier
 
-class InvalidStructureDefinition(Exception):
-    def __init__(self, structName, memberName):
+class InvalidStructureDefinitionException(Exception):
+    def __init__(self, structName: str, memberName: str):
         self.structName = structName
         self.memberName = memberName
 
@@ -465,7 +466,7 @@ class StructureDefinition(Node):
         fieldNames = set()
         for field in fields:
             if field.GetName () in fieldNames:
-                raise InvalidStructureDefinition()
+                raise InvalidStructureDefinitionException(name, field.GetName())
             fieldNames.add (field.GetName ())
 
         self.__annotations = []

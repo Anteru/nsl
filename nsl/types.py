@@ -3,133 +3,29 @@ from nsl import op, Errors
 from enum import Enum
 import collections
 
-class UnknownSymbol(Exception):
+class UnknownSymbolException(Exception):
 	def __init__(self, symbol):
 		self.__symbol = symbol
 
+	def GetSymbol(self):
+		return self.__symbol
+
 	def __str__(self):
 		return "Unknown symbol: '{}'".format (self.__symbol)
-	
-class UnknownType(Exception):
+
+class UnknownTypeException(Exception):
 	def __init__(self, name = '<unknown>'):
 		self.__typename = name
+
+	def GetName(self):
+		return self.__typename
 		
 	def __str__(self):
 		return "Unknown type: '{}'".format (self.__typename)
 
-class UnknownFunction(Exception):
-	pass
-
 class InvalidDeclaration(Exception):
 	def __init__(self, message):
 		self.message = message
-
-class Scope:
-	'''Handles generic __symbols and __functions, which allow overloading.'''
-	def __init__(self, parent = None):
-		# We store everything in ordered dicts so we can use
-		# this for structures/classes without further modification
-		self.__symbols = OrderedDict ()
-		self.__types = OrderedDict ()
-		self.__parent = parent
-		self.__functions = OrderedDict ()
-
-		self.__registeredObjects = set ()
-
-	def GetSymbolNames(self):
-		return self.__symbols.keys()
-
-	def HasParent(self):
-		return self.__parent is not None
-
-	def GetParent(self):
-		return self.__parent
-	
-	def RegisterType(self, typename, typeinfo):
-		assert isinstance (typeinfo, Type)
-		assert typename not in self.__types
-		
-		if typename in self.__registeredObjects:
-			raise InvalidDeclaration ("Cannot define type '{}': A function or variable with that name already exists in the current scope.".format (typename))
-		
-		self.__types [typename] = typeinfo
-		self.__registeredObjects.add (typename)
-
-
-	def RegisterVariable(self, symbol, typeinfo):
-		assert isinstance (typeinfo, Type), 'Expected Type instance but got {}'.format (type(typeinfo))
-		assert symbol not in self.__symbols
-
-		if symbol in self.__registeredObjects:
-			raise InvalidDeclaration ("Cannot define variable '{}': A function or type with that name already exists in the current scope.".format (symbol))
-
-		self.__symbols [symbol] = typeinfo
-		self.__registeredObjects.add (symbol)
-
-	def GetFieldType (self, symbol):
-		if symbol in self.__symbols:
-			return self.__symbols [symbol]
-		else:
-			if self.__parent is not None:
-				return self.__parent.GetFieldType (symbol)
-			else:
-				raise UnknownSymbol(symbol)
-
-	def GetType (self, typename):
-		if typename in self.__types:
-			return self.__types [typename]
-		else:
-			if self.__parent is not None:
-				return self.__parent.GetType (typename)
-			else:
-				raise UnknownType(typename)
-
-	def RegisterFunction(self, functionName, typeinfo):
-		if functionName in self.__registeredObjects and functionName in self.__symbols:
-			raise InvalidDeclaration ("Cannot define function '{}': A variable or type with that name already exists in the current scope.".format (functionName))
-
-		if not functionName in self.__functions:
-			self.__functions [functionName] = []
-		self.__functions [functionName].append (typeinfo)
-		self.__registeredObjects.add (functionName)
-
-	def GetMethodType(self, functionName, argumentTypes):
-		'''Get a matching function.
-
-		@param argumentTypes: The type of each function parameter.'''
-
-		# Resolve overloaded __functions
-		if not functionName in self.__functions:
-			if not self.__parent is None:
-				return self.__parent.GetMethodType(functionName,
-												   argumentTypes)
-			else:
-				Errors.ERROR_UNKNOWN_FUNCTION_CALL.Raise (functionName)
-
-		def GetFirst(t):
-			return t[0]
-
-		def IsValidCandidate(candidate):
-			return candidate[0] >= 0
-
-		candidates = self.__functions [functionName]
-		ranking = list (filter (IsValidCandidate,
-						  sorted ([(candidate.Match (argumentTypes), candidate)
-								   for candidate in candidates],
-						  key=GetFirst)))
-
-		if len(ranking) == 0:
-			Errors.ERROR_NO_MATCHING_OVERLOAD_FUNCTION_CALL.Raise (functionName)
-
-		if len(ranking) == 1:
-			return ranking[0][1]
-
-		# if the first two candidates have the same score, the overload is
-		# ambiguous
-		if ranking[0][0] == ranking[1][0]:
-			Errors.ERROR_AMBIGUOUS_FUNCTION_CALL.Raise (functionName)
-
-		return ranking[0][1]
 
 class Type:
 	'''Base class for all type calculations.'''
@@ -741,3 +637,110 @@ def BuiltinTypeFactory(typeName):
 	}
 
 	return typeDict [typeName]
+
+class Scope:
+	'''Handles generic __symbols and __functions, which allow overloading.'''
+	def __init__(self, parent = None):
+		# We store everything in ordered dicts so we can use
+		# this for structures/classes without further modification
+		self.__symbols = OrderedDict ()
+		self.__types = OrderedDict ()
+		self.__parent = parent
+		self.__functions = OrderedDict ()
+
+		self.__registeredObjects = set ()
+
+	def GetSymbolNames(self):
+		return self.__symbols.keys()
+
+	def HasParent(self):
+		return self.__parent is not None
+
+	def GetParent(self):
+		return self.__parent
+	
+	def RegisterType(self, typename, typeinfo):
+		assert isinstance (typeinfo, Type)
+		assert typename not in self.__types
+		
+		if typename in self.__registeredObjects:
+			raise InvalidDeclaration ("Cannot define type '{}': A function or variable with that name already exists in the current scope.".format (typename))
+		
+		self.__types [typename] = typeinfo
+		self.__registeredObjects.add (typename)
+
+
+	def RegisterVariable(self, symbol, typeinfo):
+		assert isinstance (typeinfo, Type), 'Expected Type instance but got {}'.format (type(typeinfo))
+		assert symbol not in self.__symbols
+
+		if symbol in self.__registeredObjects:
+			raise InvalidDeclaration ("Cannot define variable '{}': A function or type with that name already exists in the current scope.".format (symbol))
+
+		self.__symbols [symbol] = typeinfo
+		self.__registeredObjects.add (symbol)
+
+	def GetFieldType (self, symbol):
+		if symbol in self.__symbols:
+			return self.__symbols [symbol]
+		else:
+			if self.__parent is not None:
+				return self.__parent.GetFieldType (symbol)
+			else:
+				raise UnknownSymbolException(symbol)
+
+	def GetType (self, typename):
+		if typename in self.__types:
+			return self.__types [typename]
+		else:
+			if self.__parent is not None:
+				return self.__parent.GetType (typename)
+			else:
+				raise UnknownTypeException(typename)
+
+	def RegisterFunction(self, functionName, typeinfo):
+		if functionName in self.__registeredObjects and functionName in self.__symbols:
+			raise InvalidDeclaration ("Cannot define function '{}': A variable or type with that name already exists in the current scope.".format (functionName))
+
+		if not functionName in self.__functions:
+			self.__functions [functionName] = []
+		self.__functions [functionName].append (typeinfo)
+		self.__registeredObjects.add (functionName)
+
+	def GetMethodType(self, functionName, argumentTypes):
+		'''Get a matching function.
+
+		@param argumentTypes: The type of each function parameter.'''
+
+		# Resolve overloaded __functions
+		if not functionName in self.__functions:
+			if not self.__parent is None:
+				return self.__parent.GetMethodType(functionName,
+												   argumentTypes)
+			else:
+				Errors.ERROR_UNKNOWN_FUNCTION_CALL.Raise (functionName)
+
+		def GetFirst(t):
+			return t[0]
+
+		def IsValidCandidate(candidate):
+			return candidate[0] >= 0
+
+		candidates = self.__functions [functionName]
+		ranking = list (filter (IsValidCandidate,
+						  sorted ([(candidate.Match (argumentTypes), candidate)
+								   for candidate in candidates],
+						  key=GetFirst)))
+
+		if len(ranking) == 0:
+			Errors.ERROR_NO_MATCHING_OVERLOAD_FUNCTION_CALL.Raise (functionName)
+
+		if len(ranking) == 1:
+			return ranking[0][1]
+
+		# if the first two candidates have the same score, the overload is
+		# ambiguous
+		if ranking[0][0] == ranking[1][0]:
+			Errors.ERROR_AMBIGUOUS_FUNCTION_CALL.Raise (functionName)
+
+		return ranking[0][1]

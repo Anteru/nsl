@@ -102,32 +102,38 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 		initialValue = self.v_Visit(expr.GetExpression(), ctx)
 		returnValue = None
 
+		opMap = {
+			op.Operation.ADD: LinearIR.OpCode.ADD,
+			op.Operation.SUB: LinearIR.OpCode.SUB
+		}
+
+		operation = opMap[expr.GetOperation()]
+
 		if expr.IsPostfix():
 			# Return the value before
-			if expr.GetOperation() == op.Operation.ADD:
-				# increment, save again
-				addInstruction = LinearIR.BinaryInstruction(
-					LinearIR.OpCode.ADD,
-					expr.GetType (),
-					initialValue,
-				)
-				ctx.BasicBlock.AddInstruction(addInstruction)
-				returnValue = initialValue
+			# increment, save again
+			instruction = LinearIR.BinaryInstruction(
+				operation,
+				expr.GetType (),
+				initialValue,
+				constOne
+			)
+			ctx.BasicBlock.AddInstruction(instruction)
+			returnValue = initialValue
 		elif expr.IsPrefix():
 			# Return the value after 
-			if expr.GetOperation() == op.Operation.ADD:
-				# increment, save again
-				addInstruction = LinearIR.BinaryInstruction(
-					LinearIR.OpCode.ADD,
-					expr.GetType (),
-					initialValue,
-					constOne
-				)
-				returnValue = ctx.BasicBlock.AddInstruction(addInstruction)
+			# increment, save again
+			instruction = LinearIR.BinaryInstruction(
+				operation,
+				expr.GetType (),
+				initialValue,
+				constOne
+			)
+			returnValue = ctx.BasicBlock.AddInstruction(instruction)
 		destination = self.v_Visit(expr.GetExpression(), ctx)
-		destination.SetStore(addInstruction)
-		return returnValue
 
+		destination.SetStore(instruction)
+		return returnValue
 
 	def v_ForStatement(self, expr, ctx):
 		# We split a loop as following: We always run the initializer, then

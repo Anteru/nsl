@@ -356,10 +356,6 @@ class ArrayAccessInstruction(Instruction):
     def Index(self):
         return self.__index
 
-    @property
-    def Scope(self):
-        return self.__scope
-
     def SetStore(self, destination):
         self.__store = destination
 
@@ -381,10 +377,6 @@ class ComponentAccessInstruction(Instruction):
     @property
     def Index(self):
         return self.__index
-
-    @property
-    def Scope(self):
-        return self.__scope
 
     def SetStore(self, destination):
         self.__store = destination
