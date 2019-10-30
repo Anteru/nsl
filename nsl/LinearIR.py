@@ -192,7 +192,8 @@ class BinaryInstruction(Instruction):
             op.Operation.ASSIGN: OpCode.ASSIGN,
             
             op.Operation.CMP_GT: OpCode.CMP_GT,
-            op.Operation.CMP_LT: OpCode.CMP_LT
+            op.Operation.CMP_LT: OpCode.CMP_LT,
+            op.Operation.CMP_EQ: OpCode.CMP_EQ,
         }
 
         return BinaryInstruction(mapping[operation], returnType,

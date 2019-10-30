@@ -110,6 +110,10 @@ class ExecutionContext:
                     localScope[ref] = op1 * op2
                 elif operation == LinearIR.OpCode.CMP_GT:
                     localScope[ref] = op1 > op2
+                elif operation == LinearIR.OpCode.CMP_LT:
+                    localScope[ref] = op1 < op2
+                elif operation == LinearIR.OpCode.CMP_EQ:
+                    localScope[ref] = op1 == op2
             elif opCode == LinearIR.OpCode.BRANCH:
                 if instruction.Predicate:
                     predicate = localScope[instruction.Predicate.Reference]

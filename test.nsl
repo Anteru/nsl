@@ -33,6 +33,10 @@ export function AddToGlobalArray (int a, int index) -> int
 	return a + global_array[index];
 }
 
+export function branchIfElseIfElse(int a) -> int {
+        if(a < 5) { return 0; } else if (a > 5) { return 1; } else { return -1; }
+}
+
 function CreateFloat4 (float2 a, float b, float c) -> float4
 {
 	return float4(a, b, c);

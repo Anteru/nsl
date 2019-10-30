@@ -127,3 +127,38 @@ def testSimpleBranch():
 
     r = vm.Invoke('f', a = 6)
     assert r == 0
+
+def testSimpleIfElseBranch():
+    code = '''export function f(int a) -> int {
+        if(a > 5) { return 0; } else { return 1; }
+    }'''
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('f', a = 0)
+    assert r == 1
+
+    r = vm.Invoke('f', a = 6)
+    assert r == 0
+
+def testSimpleIfElseIfElseBranch():
+    code = '''export function f(int a) -> int {
+        if(a > 0) { return 1; } else if (a < 0) { return -1; } else { return 0; }
+    }'''
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('f', a = 0)
+    assert r == 0
+
+    r = vm.Invoke('f', a = 2)
+    assert r == 1
+
+    r = vm.Invoke('f', a = -2)
+    assert r == -1
