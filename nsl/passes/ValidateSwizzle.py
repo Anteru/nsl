@@ -12,13 +12,12 @@ def ValidateSwizzleMask(mask):
             Errors.ERROR_MIXED_SWIZZLE_MASK.Raise ()
 
 class ValidateSwizzleMaskVisitor(ast.DefaultVisitor):
-    def GetContext (self):
-        return 0
+    '''Validate swizzle masks on vector types.'''
     
     def __init__(self):
         self.valid = True
         
-    def v_MethodCallExpression(self, expr,ctx=None):
+    def v_MethodCallExpression(self, expr, ctx=None):
         return
     
     def v_MemberAccessExpression (self, expr, ctx=None):

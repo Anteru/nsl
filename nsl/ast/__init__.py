@@ -882,7 +882,8 @@ class Annotation(Node):
 
 class Visitor:
     def __init__(self):
-        pass
+        from nsl.Errors import NullErrorHandler
+        self.errorHandler = NullErrorHandler()
     
     def SetErrorHandler (self, errorHandler):
         self.errorHandler = errorHandler

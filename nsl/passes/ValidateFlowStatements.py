@@ -5,11 +5,13 @@ class ValidateFlowStatementVisitor(ast.DefaultVisitor):
         return 0
     
     def __init__(self):
+        super().__init__()
         self.valid = True
     
     def v_FlowStatement(self, stmt, ctx):
         ctx += 1
-        stmt.AcceptVisitor(self, ctx)
+        with Errors.CompileExceptionToErrorHandler (self.errorHandler):
+            stmt.AcceptVisitor(self, ctx)
         ctx -= 1
 
     def v_ForStatement(self, stmt, ctx):
@@ -22,12 +24,12 @@ class ValidateFlowStatementVisitor(ast.DefaultVisitor):
         self.v_FlowStatement (stmt, ctx)
         
     def v_ContinueStatement(self, stmt, ctx):
-        Errors.ERROR_CONTINUE_OUTSIDE_FLOW.Raise ()
         self.valid = False
+        Errors.ERROR_CONTINUE_OUTSIDE_FLOW.Raise ()
         
     def v_BreakStatement(self, stmt, ctx):
-        Errors.ERROR_BREAK_OUTSIDE_FLOW_SWITCH.Raise ()
         self.valid = False
+        Errors.ERROR_BREAK_OUTSIDE_FLOW_SWITCH.Raise ()
         
 def GetPass():
     from nsl import Pass

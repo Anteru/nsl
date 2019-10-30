@@ -1,6 +1,6 @@
 from nsl import ast
 
-class UpdateLocations(ast.DefaultVisitor):
+class UpdateLocationsVisitor(ast.DefaultVisitor):
     def v_Generic(self, obj, ctx=None):
         obj.AcceptVisitor(self)
         
@@ -19,4 +19,4 @@ class UpdateLocations(ast.DefaultVisitor):
 
 def GetPass():
     import nsl.Pass
-    return nsl.Pass.MakePassFromVisitor (UpdateLocations (), 'update-locations')
+    return nsl.Pass.MakePassFromVisitor (UpdateLocationsVisitor (), 'update-locations')

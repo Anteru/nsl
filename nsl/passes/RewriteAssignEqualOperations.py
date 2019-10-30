@@ -1,6 +1,7 @@
 from nsl import ast, op, types
 
-class RewriteAssignEqualVisitor (ast.DefaultVisitor):        
+class RewriteAssignEqualVisitor (ast.DefaultVisitor):  
+    '''Translate a <op-equal> b to a = a <op> b.'''      
     def v_AssignmentExpression(self, node, ctx=None):
         operation = node.GetOperation ()
         if operation == op.Operation.ASSIGN:

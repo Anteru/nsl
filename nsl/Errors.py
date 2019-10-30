@@ -25,6 +25,13 @@ class ErrorHandler:
             self.warnings += 1
         self.messages.append (messageText)
 
+class NullErrorHandler(ErrorHandler):
+    def __init__(self):
+        pass
+
+    def Log(self, *args):
+        pass
+
 class CompileExceptionToErrorHandler:
     def __init__(self, errorHandler):
         self.errorHandler = errorHandler

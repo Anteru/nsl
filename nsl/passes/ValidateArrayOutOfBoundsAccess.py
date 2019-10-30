@@ -1,7 +1,9 @@
 from nsl import ast, Errors
 
-class ValidateArrayOutOfBoundsAccess(ast.DefaultVisitor):
+class ValidateArrayOutOfBoundsAccessVisitor(ast.DefaultVisitor):
+	'''Validate that accesses to an array using constants are within bounds.'''
 	def __init__(self):
+		super().__init__()
 		self.valid = True
 		
 	def _ValidateArrayExpression(self, expr):
@@ -27,6 +29,6 @@ def GetPass():
 	from nsl import Pass
 	def IsValid (visitor):
 		return visitor.valid
-	return Pass.MakePassFromVisitor(ValidateArrayOutOfBoundsAccess(),
+	return Pass.MakePassFromVisitor(ValidateArrayOutOfBoundsAccessVisitor(),
 									'validate-array-out-of-bounds-access',
 									validator = IsValid)
