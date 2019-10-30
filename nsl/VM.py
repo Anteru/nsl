@@ -60,6 +60,10 @@ class ExecutionContext:
 
         localScope = Scope(functionScope)
 
+        # Register all constants
+        for constant in function.Constants:
+            localScope.Declare(constant.Reference, constant.Value)
+
         for instruction in currentBB.Instructions:
             opCode = instruction.OpCode
 

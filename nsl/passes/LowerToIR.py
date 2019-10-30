@@ -84,7 +84,6 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 			return functionType.GetName()
 		else:
 			return functionType.GetMangledName()
-		
 
 	def v_Function(self, function, ctx):
 		functionType = function.GetType()
@@ -99,7 +98,7 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 
 	def v_AffixExpression(self, expr, ctx):
 		constOne = LinearIR.ConstantValue(expr.GetType(), 1)
-		ctx.Function.RegisterValue(constOne)
+		ctx.Function.RegisterConstant(constOne)
 		initialValue = self.v_Visit(expr.GetExpression(), ctx)
 		returnValue = None
 
@@ -127,7 +126,7 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 				returnValue = ctx.BasicBlock.AddInstruction(addInstruction)
 		destination = self.v_Visit(expr.GetExpression(), ctx)
 		destination.SetStore(addInstruction)
-		return initialValue
+		return returnValue
 
 
 	def v_ForStatement(self, expr, ctx):
@@ -198,7 +197,7 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 		offset = 0
 		for value in values:
 			cv = LinearIR.ConstantValue(types.Integer(), offset)
-			ctx.Function.RegisterValue(cv)
+			ctx.Function.RegisterConstant(cv)
 
 			cai = LinearIR.ComponentAccessInstruction(
 				dvi.Type, value, cv
@@ -216,7 +215,7 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 
 	def v_LiteralExpression(self, expr, ctx):
 		cv = LinearIR.ConstantValue(expr.GetType (), expr.GetValue())
-		ctx.Function.RegisterValue(cv)
+		ctx.Function.RegisterConstant(cv)
 		return cv
 
 	def v_MemberAccessExpression(self, expr, ctx):

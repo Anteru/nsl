@@ -100,3 +100,14 @@ def testOverloadedFunctionCall():
 
     r = vm.Invoke('g_f', a = 2.5)
     assert r == 5
+
+def testPrefixIncrement():
+    code = '''export function f(int a) -> int { return ++a; }'''
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('f', a = 1)
+    assert r == 2

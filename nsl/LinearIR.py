@@ -113,6 +113,7 @@ class BasicBlock(Value):
         instruction.SetParent(self)
         self.__function.RegisterValue(instruction)
         self.__instructions.append(instruction)
+        return instruction
 
 class Function(Value):
     def __init__(self, name, functionType):
@@ -120,6 +121,7 @@ class Function(Value):
         self.__basicBlocks = []
         self.__name = name
         self.__values = []
+        self.__constants = []
 
     def CreateBasicBlock(self):
         bb = BasicBlock (self)
@@ -136,6 +138,14 @@ class Function(Value):
         value.SetReference(n)
         self.__values.append(value)
         return n
+
+    def RegisterConstant(self, value: ConstantValue):
+        self.__constants.append (value)
+        return self.RegisterValue (value)
+    
+    @property
+    def Constants(self):
+        return self.__constants
 
     @property
     def Name(self):
