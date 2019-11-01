@@ -1,4 +1,4 @@
-from nsl import ast, LinearIR, op, types
+from nsl import ast, LinearIR, op, types, Errors
 import collections
 
 class LowerToIRVisitor(ast.DefaultVisitor):
@@ -100,6 +100,8 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 		constOne = LinearIR.ConstantValue(expr.GetType(), 1)
 		ctx.Function.RegisterConstant(constOne)
 		initialValue = self.v_Visit(expr.GetExpression(), ctx)
+		assert isinstance(initialValue, LinearIR.Value)
+
 		returnValue = None
 
 		opMap = {
@@ -130,6 +132,11 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 				constOne
 			)
 			returnValue = ctx.BasicBlock.AddInstruction(instruction)
+		else:
+			Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise(
+				"Invalid affix expression -- must be either prefix or postfix"
+			)
+
 		destination = self.v_Visit(expr.GetExpression(), ctx)
 
 		destination.SetStore(instruction)
@@ -146,7 +153,10 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 		# Basic block containing the conditional test
 		condBB = ctx.CreateBasicBlock ()
 		cond = self.v_Visit(expr.GetCondition(), ctx)
-		condBranch = LinearIR.BranchInstruction(None, None, cond)
+		condBranch = LinearIR.BranchInstruction(
+			condBB, # We will replace this later
+			None,
+			cond)
 		ctx.BasicBlock.AddInstruction(condBranch)
 
 		# Basic block containing the body
@@ -170,7 +180,10 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 		condition = self.v_Visit(expr.GetCondition(), ctx)
 
 		# Insert branch, targets will be set later
-		branch = LinearIR.BranchInstruction(None, None, condition)
+		branch = LinearIR.BranchInstruction(
+			ctx.BasicBlock, # We will replace this later
+			None,
+			condition)
 		ctx.BasicBlock.AddInstruction(branch)
 
 		# Process the "true" side
@@ -180,7 +193,9 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 
 		# Add branch to exit
 		if expr.HasElsePath():
-			exitBranch = LinearIR.BranchInstruction(None)
+			exitBranch = LinearIR.BranchInstruction(
+				trueBlock # We will replace this later
+			)
 			ctx.BasicBlock.AddInstruction(exitBranch)
 			falseBlock = ctx.CreateBasicBlock()
 			self.v_Visit(expr.GetElsePath(), ctx)
@@ -201,6 +216,9 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 
 		# Set the individual members
 		offset = 0
+		assert len(values) > 0
+		lastComponentAccess = None
+
 		for value in values:
 			cv = LinearIR.ConstantValue(types.Integer(), offset)
 			ctx.Function.RegisterConstant(cv)
@@ -217,7 +235,11 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 			else:
 				offset += 1
 			ctx.BasicBlock.AddInstruction(cai)
-		return cai
+
+			lastComponentAccess = cai
+
+		assert lastComponentAccess is not None
+		return lastComponentAccess
 
 	def v_LiteralExpression(self, expr, ctx):
 		cv = LinearIR.ConstantValue(expr.GetType (), expr.GetValue())
@@ -244,6 +266,9 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 		
 	def v_CastExpression(self, ce, ctx):
 		castValue = self.v_Visit(ce.GetArgument(), ctx)
+
+		assert isinstance(castValue, LinearIR.Value)
+
 		instruction = LinearIR.CastInstruction(castValue, ce.GetType())
 		ctx.BasicBlock.AddInstruction(instruction)
 		return instruction
@@ -251,6 +276,9 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 	def v_BinaryExpression(self, be, ctx):
 		left = self.v_Visit (be.GetLeft (), ctx)
 		right = self.v_Visit (be.GetRight (), ctx)
+
+		assert isinstance(left, LinearIR.Value)
+		assert isinstance(right, LinearIR.Value)
 		
 		instruction = LinearIR.BinaryInstruction.FromOperation (be.GetOperation (),
 			be.GetType(), left, right)
@@ -259,6 +287,9 @@ class LowerToIRVisitor(ast.DefaultVisitor):
 					
 	def v_ReturnStatement (self, stmt, ctx):
 		v = self.v_Visit(stmt.GetExpression(), ctx)
+
+		assert isinstance(v, LinearIR.Value)
+
 		ri = LinearIR.ReturnInstruction(v)
 		ctx.BasicBlock.AddInstruction(ri)
 		ctx.EndBasicBlock()
