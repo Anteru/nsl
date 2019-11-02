@@ -53,6 +53,9 @@ class Location:
         return self.__span [1]
     
     def __str__(self):
+        if self.__span == (-1, -1):
+            return '<unknown>'
+
         if self.__sourceMapping:
             # Lines are 0 based (as are columns), and we need to offset
             # with +1 for display
@@ -81,7 +84,7 @@ class Location:
 
 class Node:
     def __init__(self):
-        self.__location = None
+        self.__location = Location((-1, -1))
 
     def Clone(self):
         import copy

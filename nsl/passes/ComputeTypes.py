@@ -74,14 +74,27 @@ class ComputeTypeVisitor(ast.DefaultVisitor):
 		scope.RegisterType (decl.GetName (), classType)
 		decl.SetType (classType)
 
-	def v_CompoundStatement(self, stmt, ctx):
-		assert isinstance(stmt, ast.CompoundStatement)
-		
+	def v_CompoundStatement(self, stmt, ctx):		
 		ctx.append (types.Scope (ctx[-1]))
 		stmt.AcceptVisitor(self, ctx)
 		ctx.pop()
 
 	def v_ForStatement(self, stmt, ctx):
+		ctx.append (types.Scope (ctx[-1]))
+		stmt.AcceptVisitor(self, ctx)
+		ctx.pop()
+
+	def v_DoStatement(self, stmt, ctx):
+		ctx.append (types.Scope (ctx[-1]))
+		stmt.AcceptVisitor(self, ctx)
+		ctx.pop()
+
+	def v_WhileStatement(self, stmt, ctx):
+		ctx.append (types.Scope (ctx[-1]))
+		stmt.AcceptVisitor(self, ctx)
+		ctx.pop()
+
+	def v_IfStatement(self, stmt, ctx):
 		ctx.append (types.Scope (ctx[-1]))
 		stmt.AcceptVisitor(self, ctx)
 		ctx.pop()

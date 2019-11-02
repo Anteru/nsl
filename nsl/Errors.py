@@ -33,8 +33,15 @@ class NullErrorHandler(ErrorHandler):
         pass
 
 class CompileExceptionToErrorHandler:
-    def __init__(self, errorHandler):
+    '''A context handler which handles compile exceptions and logs them
+    using the provided error handler. This allows multiple exceptions to
+    be handled at the appropriate recovery level.
+
+    Additionally, an error callback can be specified which is called when
+    an exception has been raised.'''
+    def __init__(self, errorHandler, onErrorCallback=None):
         self.errorHandler = errorHandler
+        self.__errorCallback = onErrorCallback
 
     def __enter__(self):
         pass
@@ -44,6 +51,8 @@ class CompileExceptionToErrorHandler:
             return True
         if issubclass(exc_type, CompileException):
             self.errorHandler.Log (exc_val.messageText, exc_val.message)
+            if self.__errorCallback:
+                self.__errorCallback()
             return True
         return False
 
@@ -98,3 +107,6 @@ ERROR_BREAK_OUTSIDE_FLOW_SWITCH = ErrorMessage (2202, Severity.ERROR,
 
 ERROR_OVERLOADED_EXPORTED_FUNCTION = ErrorMessage (2301, Severity.ERROR,
     '''Exported function '{}' cannot be overloaded.''')
+
+ERROR_VARIABLE_NAME_ALREADY_USED = ErrorMessage (2401, Severity.ERROR,
+    '''The variable '{}' ({}) is already declared here {}''')
