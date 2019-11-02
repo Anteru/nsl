@@ -1,6 +1,6 @@
-﻿from nsl import ast, Errors
+﻿from nsl import Errors, Visitor
 
-class ValidateFlowStatementVisitor(ast.DefaultVisitor):
+class ValidateFlowStatementVisitor(Visitor.DefaultVisitor):
     def GetContext (self):
         return 0
     

@@ -1,6 +1,6 @@
-from nsl import ast, Errors
+from nsl import ast, Errors, Visitor
 
-class ValidateArrayOutOfBoundsAccessVisitor(ast.DefaultVisitor):
+class ValidateArrayOutOfBoundsAccessVisitor(Visitor.DefaultVisitor):
 	'''Validate that accesses to an array using constants are within bounds.'''
 	def __init__(self):
 		super().__init__()

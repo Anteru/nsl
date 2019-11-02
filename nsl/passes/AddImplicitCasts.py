@@ -1,6 +1,6 @@
-﻿from nsl import ast, types
+﻿from nsl import ast, types, Visitor
 
-class AddImplicitCastVisitor (ast.DefaultVisitor):
+class AddImplicitCastVisitor (Visitor.DefaultVisitor):
     def _GetTargetType (self, sourceType, componentType):
         assert isinstance(sourceType, types.Type)
         assert isinstance(componentType, types.Type)

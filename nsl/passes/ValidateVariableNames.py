@@ -1,7 +1,7 @@
 from typing import Optional
-from nsl import ast, Errors, types
+from nsl import ast, Errors, Visitor
 
-class ValidateVariableNamesVisitor(ast.DefaultVisitor):
+class ValidateVariableNamesVisitor(Visitor.DefaultVisitor):
     '''Validate that variable names are unique in their scope. We don't allow
     shadowing a variable with another (if we wanted to, we have to generate
     unique variable names per scope.)'''

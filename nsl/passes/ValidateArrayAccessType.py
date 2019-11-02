@@ -1,6 +1,6 @@
-from nsl import ast, Errors, types
+from nsl import ast, Errors, types, Visitor
 
-class ValidateArrayAccessTypeVisitor(ast.DefaultVisitor):
+class ValidateArrayAccessTypeVisitor(Visitor.DefaultVisitor):
     '''Validate that array indices have integer type.'''
     def __init__(self):
         super().__init__()

@@ -1,7 +1,7 @@
-from nsl import ast, LinearIR, op, types, Errors
+from nsl import ast, LinearIR, op, types, Errors, Visitor
 import collections
 
-class LowerToIRVisitor(ast.DefaultVisitor):
+class LowerToIRVisitor(Visitor.DefaultVisitor):
 	def __init__(self, ctx):
 		self.__ctx = ctx
 

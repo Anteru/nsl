@@ -1,6 +1,6 @@
-from nsl import ast, Errors, types
+from nsl import Errors, Visitor
 
-class ValidateExportedFunctionsVisitor(ast.DefaultVisitor):
+class ValidateExportedFunctionsVisitor(Visitor.DefaultVisitor):
     '''Validate that exported functions have no overloads.'''
     def __init__(self):
         super().__init__()

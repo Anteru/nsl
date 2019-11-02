@@ -1,6 +1,6 @@
-from nsl import ast
+from nsl import ast, Visitor
 
-class UpdateLocationsVisitor(ast.DefaultVisitor):
+class UpdateLocationsVisitor(Visitor.DefaultVisitor):
     def v_Generic(self, obj, ctx=None):
         obj.AcceptVisitor(self)
         

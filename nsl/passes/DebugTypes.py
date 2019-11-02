@@ -1,6 +1,6 @@
-﻿from nsl import ast
+﻿from nsl import ast, Visitor
 
-class DebugTypeVisitor(ast.DebugPrintVisitor):
+class DebugTypeVisitor(Visitor.DefaultVisitor):
 	def GetContext (self):
 		return 0
 
@@ -40,9 +40,6 @@ class DebugTypeVisitor(ast.DebugPrintVisitor):
 		for decl in stmt.GetDeclarations():
 			self._p (ctx, decl.GetName () + ':' + str(decl.GetType()))
 		self.Print ()
-
-	def v_Generic(self, node, ctx):
-		ast.Visitor.v_Generic (self, node, ctx)
 
 def GetPass():
 	import nsl.Pass

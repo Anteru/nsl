@@ -2,7 +2,7 @@ from . import op
 from enum import Enum
 import collections
 from . import types
-from .ast import Visitor
+from .Visitor import Node, Visitor
 
 
 class OpCode(Enum):
@@ -49,7 +49,7 @@ class OpCode(Enum):
     STORE = 0x6_1001
     STORE_ARRAY = 0x6_1002
     
-class Value:
+class Value(Node):
     def __init__(self, valueType: types.Type):
         self.__type = valueType
         self.__number = id(self)
@@ -109,6 +109,9 @@ class BasicBlock(Value):
     def Instructions(self):
         return self.__instructions
 
+    def _Traverse(self, function):
+        self.__instructions = function(self.__instructions)
+
     def AddInstruction(self, instruction: Instruction):
         instruction.SetParent(self)
         self.__function.RegisterValue(instruction)
@@ -133,6 +136,9 @@ class Function(Value):
     def BasicBlocks(self):
         return self.__basicBlocks
 
+    def _Traverse(self, function):
+        self.__basicBlocks = function(self.__basicBlocks)
+
     def RegisterValue(self, value: Value):
         n = len(self.__values)
         value.SetReference(n)
@@ -151,7 +157,7 @@ class Function(Value):
     def Name(self):
         return self.__name
 
-class Program:
+class Program(Node):
     def __init__(self):
         self.__functions = collections.OrderedDict()
         self.__globals = collections.OrderedDict()

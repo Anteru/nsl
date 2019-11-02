@@ -1,4 +1,4 @@
-﻿from nsl import ast
+﻿from nsl import Visitor
 
 def ValidateSwizzleMask(mask):
     from .. import Utility, Errors
@@ -11,7 +11,7 @@ def ValidateSwizzleMask(mask):
     elif (Utility.ContainsAnyOf(mask, 'rgba') and Utility.ContainsAnyOf (mask, 'xyzw')):
             Errors.ERROR_MIXED_SWIZZLE_MASK.Raise ()
 
-class ValidateSwizzleMaskVisitor(ast.DefaultVisitor):
+class ValidateSwizzleMaskVisitor(Visitor.DefaultVisitor):
     '''Validate swizzle masks on vector types.'''
     
     def __init__(self):

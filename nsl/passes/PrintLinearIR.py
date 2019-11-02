@@ -1,7 +1,7 @@
-from nsl import ast
+from nsl import Visitor
 from .. import LinearIR
 
-class PrintLinearIRVisitor (ast.Visitor):
+class PrintLinearIRVisitor (Visitor.DefaultVisitor):
     def __init__(self):
         def PrintCallback(*args, end='\n'):
             self.Print(*args, end=end)

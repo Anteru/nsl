@@ -1,6 +1,6 @@
-﻿from nsl import ast
+﻿from nsl import ast, Visitor
 
-class PrettyPrintVisitor(ast.Visitor):
+class PrettyPrintVisitor(Visitor.DefaultVisitor):
 	def v_Program (self, prog, ctx):
 		for programType in prog.GetTypes():
 			self.v_Visit (programType, ctx)
@@ -8,9 +8,6 @@ class PrettyPrintVisitor(ast.Visitor):
 			self.v_Visit (decl, ctx)
 		for func in prog.GetFunctions():
 			self.v_Visit (func, ctx)
-
-	def v_Generic(self, node, ctx):
-		ast.Visitor.v_Generic(self, node, ctx)
 
 	def GetContext(self):
 		return 0

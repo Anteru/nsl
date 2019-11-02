@@ -1,5 +1,5 @@
 ﻿from collections import OrderedDict
-from nsl import ast, types, Errors
+from nsl import ast, types, Errors, Visitor
 from enum import Enum
 
 def ParseSwizzleMask(mask):
@@ -40,7 +40,7 @@ class FunctionVisitationPass(Enum):
 	Register = 0
 	Visit = 1
 
-class ComputeTypeVisitor(ast.DefaultVisitor):
+class ComputeTypeVisitor(Visitor.DefaultVisitor):
 	def GetContext(self):
 		return [self.scope]
 
