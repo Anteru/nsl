@@ -1,52 +1,31 @@
 from . import (LinearIR, types)
 import collections
 
-class Scope:
-    def __init__(self, parent: 'Scope' = None):
-        self.__parent = parent
-        self.__variables = {}
-
-    def Declare(self, variable, value=None):
-        self.__variables[variable] = value
-
-    def __getitem__(self, name):
-        if name in self.__variables:
-            return self.__variables[name]
-        elif self.__parent:
-            return self.__parent[name]
-        else:
-            raise Exception(f"Variable {name} not found")
-
-    def __setitem__(self, key, value):
-        self.__variables[key] = value
-
 class ExecutionContext:
-    def __init__(self, functions, globalScope: Scope):
+    def __init__(self, functions, globalScope: dict()):
         self.__globalScope = globalScope
         self.__functions = functions
 
     def Invoke(self, functionName, **args):
-        functionScope = Scope(self.__globalScope)
-        for k,v in args.items():
-            functionScope.Declare(k, v)
-
-        return self.__Execute(self.__functions[functionName], functionScope)
-
-    def _Invoke(self, functionName, args):
-        '''Similar to _Invoke, but we get a list of args and those are matched
-        to the arguments of the function.'''
-        functionScope = Scope(self.__globalScope)
         function = self.__functions[functionName]
 
-        functionArgs = function.Type.GetArguments()
-        for i, k in enumerate(functionArgs):
-            functionScope.Declare(k.GetName(), args[i])
+        # Internally, function args are always a flat list for fast access
+        # The global invoke method uses key-value pairs though, so we build
+        # a flat list and use the provided arguments (or None if nothing was
+        # set)        
+        functionArgs = [args.get(arg.GetName(), None)
+            for arg in function.Type.GetArguments()]
 
-        return self.__Execute(function, functionScope)
+        return self.__Execute(self.__functions[functionName], functionArgs)
 
-    def __Execute(self, function: LinearIR.Function, functionScope):
-        currentBB = function.BasicBlocks[0]
+    def _Invoke(self, functionName, args):
+        '''Similar to Invoke, but we get a list of args and those are matched
+        to the arguments of the function already.'''
+        function = self.__functions[functionName]
 
+        return self.__Execute(function, args)
+
+    def __Execute(self, function: LinearIR.Function, args):
         instructions = list()
         blockOffsets = {}
 
@@ -54,11 +33,11 @@ class ExecutionContext:
             blockOffsets[bb.Reference] = len(instructions)
             instructions.extend(bb.Instructions)
 
-        localScope = Scope(functionScope)
+        localScope = dict()
 
         # Register all constants
         for constant in function.Constants:
-            localScope.Declare(constant.Reference, constant.Value)
+            localScope [constant.Reference] = constant.Value
 
         currentInstruction = 0
         lastInstruction = len(instructions)
@@ -71,10 +50,17 @@ class ExecutionContext:
 
             if opCode == LinearIR.OpCode.LOAD:
                 ref = instruction.Reference
-                localScope[ref] = localScope[instruction.Variable]
+                if instruction.Scope == LinearIR.VariableAccessScope.GLOBAL:
+                    localScope[ref] = self.__globalScope[instruction.Variable]
+                elif instruction.Scope == LinearIR.VariableAccessScope.FUNCTION_ARGUMENT:
+                    localScope[ref] = args[instruction.Variable]
+                else:
+                    localScope[ref] = localScope[instruction.Variable]
             elif opCode == LinearIR.OpCode.STORE:
                 if instruction.Scope == LinearIR.VariableAccessScope.GLOBAL:
                     self.__globalScope[instruction.Variable] = localScope[instruction.Store.Reference]
+                elif instruction.Scope == LinearIR.VariableAccessScope.FUNCTION_ARGUMENT:
+                    args[instruction.Variable] = localScope[instruction.Store.Reference]
                 else:
                     localScope[instruction.Variable] = localScope[instruction.Store.Reference]
             elif opCode == LinearIR.OpCode.LOAD_ARRAY:
@@ -130,14 +116,12 @@ class ExecutionContext:
 
 class VirtualMachine:
     def __init__(self, program):
-        self.__globalScope = Scope()
-        for decl in program.Globals.keys():
-            self.__globalScope.Declare(decl)
+        self.__globalScope = {k: None for k in program.Globals.keys()}
 
         self.__ctx = ExecutionContext(program.Functions, self.__globalScope)
 
     def SetGlobal(self, globalVariableName, value):
-        self.__globalScope.Declare(globalVariableName, value)
+        self.__globalScope [globalVariableName] = value
 
     def GetGlobal(self, globalVariableName):
         return self.__globalScope[globalVariableName]
