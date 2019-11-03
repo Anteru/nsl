@@ -85,13 +85,23 @@ class ExecutionContext:
                     localScope[ref] = op1 * op2
                 elif operation == LinearIR.OpCode.CMP_GT:
                     localScope[ref] = op1 > op2
+                elif operation == LinearIR.OpCode.CMP_GE:
+                    localScope[ref] = op1 >= op2
                 elif operation == LinearIR.OpCode.CMP_LT:
                     localScope[ref] = op1 < op2
+                elif operation == LinearIR.OpCode.CMP_LE:
+                    localScope[ref] = op1 <= op2
                 elif operation == LinearIR.OpCode.CMP_EQ:
                     localScope[ref] = op1 == op2
+                elif operation == LinearIR.OpCode.CMP_NE:
+                    localScope[ref] = op1 != op2
             elif opCode == LinearIR.OpCode.BRANCH:
                 if instruction.Predicate:
                     predicate = localScope[instruction.Predicate.Reference]
+
+                    # Predicated branches must have at least a 'true' target
+                    assert instruction.TrueBlock.Reference is not None
+
                     if predicate:
                         currentInstruction = blockOffsets[instruction.TrueBlock.Reference]
                     else:
