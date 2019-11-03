@@ -69,6 +69,15 @@ class ExecutionContext:
                     localScope[instruction.Index.Reference]
                 ]
                 localScope[ref] = var
+            elif opCode == LinearIR.OpCode.STORE_ARRAY:
+                ref = instruction.Reference
+                var = localScope[instruction.Store.Reference]
+                array = instruction.Array.Reference
+                if instruction.Array.Name:
+                    array = instruction.Array.Name
+                localScope[array][
+                    localScope[instruction.Index.Reference]
+                ] = var
             elif opCode.value >> 16 == 0x1:
                 operation = instruction.OpCode
                 op1 = localScope[instruction.Values[0].Reference]
@@ -120,6 +129,22 @@ class ExecutionContext:
                     instruction.Arguments
                 ]
                 localScope[instruction.Reference] = self._Invoke(instruction.Function, args)
+            elif opCode == LinearIR.OpCode.NEW_VARIABLE:
+                varType = instruction.Type
+                var = 0
+                if varType.IsVector():
+                    var = [0] * varType.GetComponentCount()
+                elif varType.IsMatrix():
+                    var = [
+                        [0] * varType.GetColumnCount ()
+                    ] * varType.GetRowCount ()
+                else:
+                    # structures not handled yet
+                    pass
+                # The semantics of NEW_VARIABLE are such that it registers a new
+                # variable and loads it at the same time
+                localScope[instruction.Name] = var
+                localScope[instruction.Reference] = var
             else:
                 raise Exception(f"Unhandled opcode: {opCode}")
 

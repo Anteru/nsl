@@ -17,7 +17,11 @@ class RewriteFunctionArgAccessVisitor (Visitor.DefaultVisitor):
         if vai.Scope == LinearIR.VariableAccessScope.FUNCTION_ARGUMENT:
             instruction = LinearIR.VariableAccessInstruction (
                 vai.Type, ctx[vai.Variable], vai.Scope)
+
+            # Copy remaining fields over
             instruction.SetReference (vai.Reference)
+            if vai.Store:
+                instruction.SetStore(vai.Store)
             return instruction
 
 def GetPass():

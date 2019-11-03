@@ -15,6 +15,8 @@ class OpCode(Enum):
 
     CAST = 0x0_1001
 
+    NEW_VARIABLE = 0x0_2001
+
     # Binary
     ADD = 0x1_0002
     SUB = 0x1_0003
@@ -45,8 +47,9 @@ class OpCode(Enum):
     BIT_XOR = 0x5_0403
 
     LOAD = 0x6_0001
-    LOAD_ARRAY = 0x6_0002
     STORE = 0x6_1001
+    
+    LOAD_ARRAY = 0x6_0002
     STORE_ARRAY = 0x6_1002
     
 class Value(Node):
@@ -358,28 +361,7 @@ class ArrayAccessInstruction(Instruction):
 
     def SetStore(self, destination):
         self.__store = destination
-
-    @property
-    def Store(self):
-        return self.__store
-
-class ComponentAccessInstruction(Instruction):
-    def __init__(self, returnType: types.Type, array, index):
-        super().__init__(OpCode.INVALID, returnType)
-        self.__array = array
-        self.__index = index
-        self.__store = None
-
-    @property
-    def Array(self):
-        return self.__array
-
-    @property
-    def Index(self):
-        return self.__index
-
-    def SetStore(self, destination):
-        self.__store = destination
+        self._SetOpCode(OpCode.STORE_ARRAY)
 
     @property
     def Store(self):
@@ -388,7 +370,7 @@ class ComponentAccessInstruction(Instruction):
 class DeclareVariableInstruction(Instruction):
     def __init__(self, variableType, name = None,
         scope = VariableAccessScope.GLOBAL):
-        super().__init__(OpCode.INVALID, variableType)
+        super().__init__(OpCode.NEW_VARIABLE, variableType)
         self.__name = name
         self.__scope = scope
 
@@ -399,6 +381,11 @@ class DeclareVariableInstruction(Instruction):
     @property
     def Scope(self):
         return self.__scope
+
+    def SetReference(self, reference):
+        super().SetReference(reference)
+        if self.__name is None:
+            self.__name = f'${self.Reference}'
 
 class InstructionPrinter(Visitor):
     def __init__(self, printFunction=print):
@@ -494,20 +481,6 @@ class InstructionPrinter(Visitor):
                 self.__FormatReference(aai.Array),
                 self.__FormatReference(aai.Index))
 
-    def v_ComponentAccessInstruction(self, cai, ctx=None):
-        if cai.Store:
-            self.__Print(self.__FormatReference(cai), '=',
-                f'setelement',
-                self.__FormatReference(cai.Array),
-                self.__FormatReference(cai.Index),
-                self.__FormatReference(cai.Store))
-        else:
-            self.__Print(self.__FormatReference(cai), '=',
-                f'getelement',
-                self.__FormatType(cai.Type),
-                self.__FormatReference(cai.Array),
-                self.__FormatReference(cai.Index))
-
     def v_MemberAccessInstruction(self, mai, ctx=None):
         if mai.Store:
             self.__Print(self.__FormatReference(mai), '=',
@@ -534,11 +507,7 @@ class InstructionPrinter(Visitor):
 
     def v_DeclareVariableInstruction(self, dvi, ctx=None):
         scope = self.__FormatScope(dvi.Scope)
-        if dvi.Name:
-            self.__Print(f'var.{scope}',
-                self.__FormatType(dvi.Type),
-                dvi.Name)
-        else:
-            self.__Print(self.__FormatReference(dvi), '=',
-                f'var.{scope}',
-                self.__FormatType(dvi.Type))
+        self.__Print(self.__FormatReference(dvi), '=',
+            f'var.{scope}',
+            self.__FormatType(dvi.Type),
+            dvi.Name)

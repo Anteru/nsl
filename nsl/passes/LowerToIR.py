@@ -217,16 +217,15 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		# Set the individual members
 		offset = 0
 		assert len(values) > 0
-		lastComponentAccess = None
 
 		for value in values:
 			cv = LinearIR.ConstantValue(types.Integer(), offset)
 			ctx.Function.RegisterConstant(cv)
 
-			cai = LinearIR.ComponentAccessInstruction(
-				dvi.Type, value, cv
+			cai = LinearIR.ArrayAccessInstruction(
+				dvi.Type, dvi, cv
 			)
-			cai.SetStore(dvi)
+			cai.SetStore(value)
 
 			assert value.Type.IsPrimitive()
 			assert not value.Type.IsMatrix()
@@ -236,10 +235,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 				offset += 1
 			ctx.BasicBlock.AddInstruction(cai)
 
-			lastComponentAccess = cai
-
-		assert lastComponentAccess is not None
-		return lastComponentAccess
+		return dvi
 
 	def v_LiteralExpression(self, expr, ctx):
 		cv = LinearIR.ConstantValue(expr.GetType (), expr.GetValue())
@@ -319,12 +315,10 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		return ctx.OnLeaveProgram()
 
 	def v_MethodCallExpression(self, expr, ctx):
-		obj = self.v_Visit(expr.GetMemberAccess().GetParent(), ctx)
 		args = [self.v_Visit(arg, ctx) for arg in expr]
 		ci = LinearIR.CallInstruction(expr.GetType(),
 			expr.GetMemberAccess().member.GetName(),
-			args,
-			obj)
+			args)
 		ctx.BasicBlock.AddInstruction(ci)
 		return ci
 

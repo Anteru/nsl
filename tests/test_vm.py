@@ -193,3 +193,33 @@ def testArrayAccessOnMatrix():
         [16, 17, 18, 19]
     ], i = 2, j = 3)
     assert r == 15
+
+def testConstructPrimitiveVector():
+    code = '''export function f(float a, float b, float c, float d) -> float4 {
+        return float4(a, b, c, d);
+    }'''
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('f', a = 1, b = 2, c = 3, d = 4)
+    assert r == [1, 2, 3, 4]
+
+def testRunSimpleLoop():
+    code = '''export function f(float f, int l) -> float {
+        for (int i = 0; i < l; ++i) {
+            f *= f;
+        }
+
+        return f;
+    }'''
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('f', f = 2, l = 4)
+    assert r == 2**16
