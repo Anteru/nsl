@@ -328,12 +328,10 @@ class VariableAccessInstruction(Instruction):
 
 class CallInstruction(Instruction):
     def __init__(self, returnType: types.Type, functionName: str,
-        arguments = [],
-        object = None):
+        arguments = []):
         super().__init__(OpCode.CALL, returnType)
         self.__function = functionName
         self.__arguments = arguments
-        self.__object = object
 
     @property
     def Arguments(self):
@@ -342,10 +340,6 @@ class CallInstruction(Instruction):
     @property
     def Function(self):
         return self.__function
-
-    @property
-    def Object(self):
-        return self.__object
 
 class ArrayAccessInstruction(Instruction):
     def __init__(self, returnType: types.Type, array, index):
@@ -459,19 +453,11 @@ class InstructionPrinter(Visitor):
             self.__FormatReference(bi.Values[1]))
 
     def v_CallInstruction(self, ci, ctx=None):
-        if ci.Object:
-            self.__Print(self.__FormatReference(ci), '=',
-                'call',
-                self.__FormatReference(ci.Object),
-                self.__FormatType(ci.Type),
-                ci.Function,
-                ", ".join([self.__FormatReference(arg) for arg in ci.Arguments]))
-        else:
-            self.__Print(self.__FormatReference(ci), '=',
-                'call',
-                self.__FormatType(ci.Type),
-                ci.Function,
-                ", ".join([self.__FormatReference(arg) for arg in ci.Arguments]))
+        self.__Print(self.__FormatReference(ci), '=',
+            'call',
+            self.__FormatType(ci.Type),
+            ci.Function,
+            ", ".join([self.__FormatReference(arg) for arg in ci.Arguments]))
 
     def __FormatScope(self, vas: VariableAccessScope):
         if vas == VariableAccessScope.GLOBAL:

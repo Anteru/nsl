@@ -222,25 +222,6 @@ class CallExpression(UnaryExpression):
         self.function = types.ResolveFunction(self.function,
             scope, [expr.GetType() for expr in self.GetArguments ()])
         
-class MethodCallExpression(CallExpression):
-    '''A function call of the form ID.ID ([expr], ...). ID.ID references
-    a member function of a class/interface type.'''
-    def __init__(self, memberAccess, expressions):
-        super().__init__(types.UnresolvedType (memberAccess.member.GetName ()), expressions)
-        self.__memberAccess = memberAccess
-        
-    def _Traverse(self, function):
-        self.__memberAccess = function(self.__memberAccess)
-        self.children = function(self.children)
-        
-    def GetMemberAccess(self):
-        return self.__memberAccess
-
-    def __str__(self):
-        r = str (self.__memberAccess) + ' ('
-        r += ', '.join(['{0}'.format(str(expr)) for expr in self.children])
-        return r + ')'
-
 class VariableAccessExpression(UnaryExpression):
     pass
 

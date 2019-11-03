@@ -15,7 +15,8 @@ class NslParser:
         
         self.parser = ply.yacc.yacc(module=self, 
             start=parseEntryPoint.value,
-            errorlog=ply.yacc.NullLogger())
+            # errorlog=ply.yacc.NullLogger())
+        )
 
     def __GetLocation(self, p, which):
         return ast.Location(
@@ -72,8 +73,7 @@ class NslParser:
         p[0].AddType (p[2])
 
     def p_type_definition(self, p):
-        '''type_definition : structure_definition
-        | interface_definition'''
+        '''type_definition : structure_definition'''
         p[0] = p[1]
 
     def p_argument_1(self, p):
@@ -210,13 +210,9 @@ class NslParser:
         '''expression_opt : empty'''
         p[0] = ast.EmptyExpression ()
 
-    def p_function_call_expression_1(self, p):
+    def p_function_call_expression(self, p):
         '''function_call_expression : ID '(' expression_list_opt ')' '''
         p[0] = ast.CallExpression (types.UnresolvedType (p[1]), p[3])
-
-    def p_function_call_expression_2(self, p):
-        '''function_call_expression : member_access_expression '(' expression_list_opt ')' '''
-        p[0] = ast.MethodCallExpression (p[1], p[3])
 
     def p_binary_expression(self, p):
         '''binary_expression : expression bin_op expression
@@ -285,11 +281,8 @@ class NslParser:
         '''argument : var_decl'''
 
     def p_function_attr(self, p):
-        '''function_attr : __DECLARATION
-                         | EXPORT'''
-        if p[1] == '__declaration':
-            p[0] = { 'isForwardDeclaration': True }
-        elif p[1] == 'export':
+        '''function_attr : EXPORT'''
+        if p[1] == 'export':
             p[0] = { 'isExported': True }
 
     def p_function_attr_opt_1(self, p):
@@ -339,13 +332,6 @@ class NslParser:
         for annotation in p[1]:
             p[0].AddAnnotation (annotation)
     
-    def p_interface_definition (self, p):
-        '''interface_definition : annotation_list INTERFACE ID '{' function_list '}' '''
-        p[0] = ast.InterfaceDefinition(p[3], p[5])
-
-        for annotation in p[1]:
-            p[0].AddAnnotation (annotation)
-
     def p_function_list_1 (self, p):
         '''function_list : empty'''
         p[0] = []

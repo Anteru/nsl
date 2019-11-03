@@ -30,12 +30,9 @@ class NslLexer:
                        'FOR', 'CONTINUE', 'BREAK', 'SWITCH',
                        'DO', 'WHILE', 'CASE',
 
-                        'EXPORT',
+                       'EXPORT',
 
-                       '__DECLARATION',
                        '__OPTIONAL',
-                       # Built-in complex types
-                       'TEXTURE', 'BUFFER',
 
                        # Reserve for future use
                        'TEMPLATE', 'CLASS', 'INTERFACE',

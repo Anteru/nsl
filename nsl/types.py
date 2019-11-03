@@ -374,32 +374,6 @@ class StructType(AggregateType):
 	def GetFieldType(self, variableName):
 		return self._members.GetFieldType (variableName)
 
-class ClassType(StructType):
-	'''Struct type with additional support for member __functions.'''
-	def __init__(self, name, declarations, functions, isInterface=False):
-		super(ClassType, self).__init__(name, declarations)
-		for func in functions:
-			self._members.RegisterFunction(func.GetName (), func)
-		self.__isInterface = isInterface
-
-	def __str__(self):
-		if self.__isInterface:
-			return 'interface {}'.format(self._name)
-		else:
-			return 'class {}'.format(self._name)
-
-	def __repr__(self):
-		return 'ClassType ({}, {}, {}, {})'.format (repr(self._name),
-													repr(self._declarations),
-													repr(self._members),
-													repr(self.__isInterface))
-
-	def GetMethodType(self, functionName, argumentTypes):
-		return self._members.GetMethodType(functionName, argumentTypes)
-
-	def IsInterface(self):
-		return self.__isInterface
-
 class Function(Type):
 	def __init__(self, name, returnType, arguments, exported = False):
 		self.returnType = returnType

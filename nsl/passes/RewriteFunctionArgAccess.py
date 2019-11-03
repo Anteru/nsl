@@ -3,7 +3,7 @@ from .. import LinearIR
 
 class RewriteFunctionArgAccessVisitor (Visitor.DefaultVisitor):
     '''We want to store function arguments in a list for simple access instead
-    of going through the hash function. In this pass, we will translate any
+    of going through a dictionary lookup. In this pass, we will translate any
     load.arg <name> to load.arg <index> with index being the argument number.'''
     
     def v_Function(self, function, ctx=None):

@@ -60,20 +60,6 @@ class ComputeTypeVisitor(Visitor.DefaultVisitor):
 		scope.RegisterType (decl.GetName (), structType)
 		decl.SetType (structType)
 
-	def v_InterfaceDefinition (self, decl, ctx):
-		assert isinstance(decl, ast.InterfaceDefinition)
-		
-		scope = ctx[-1]
-		methods = []
-		for method in decl.GetMethods ():
-			# Resolve here allows for nested types
-			methodType = method.GetType ()
-			methodType.Resolve (scope)
-			methods.append (methodType)
-		classType = types.ClassType(decl.GetName (), dict(), methods, isInterface=True)
-		scope.RegisterType (decl.GetName (), classType)
-		decl.SetType (classType)
-
 	def v_CompoundStatement(self, stmt, ctx):		
 		ctx.append (types.Scope (ctx[-1]))
 		stmt.AcceptVisitor(self, ctx)
@@ -148,12 +134,7 @@ class ComputeTypeVisitor(Visitor.DefaultVisitor):
 			# during the walking up, we can compute the expression
 			# type as well
 
-			if isinstance(expr, ast.MethodCallExpression):
-				# We resolve the method call with the scope of the class/interface
-				# The arguments have been already resolved above
-				expr.ResolveType(self._GetClassScopeForMemberAccess(expr, scope))
-				expr.SetType(expr.function.GetReturnType ())
-			elif isinstance(expr, ast.CallExpression):
+			if isinstance(expr, ast.CallExpression):
 				# As we know the parameter types now, we can finally resolve
 				# overloaded functions
 				expr.ResolveType (scope)

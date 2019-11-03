@@ -105,12 +105,11 @@ class ExecutionContext:
                 else:
                     return None
             elif opCode == LinearIR.OpCode.CALL:
-                if instruction.Object is None:
-                    args = [
-                        localScope[arg.Reference] for arg in
-                        instruction.Arguments
-                    ]
-                    localScope[instruction.Reference] = self._Invoke(instruction.Function, args)
+                args = [
+                    localScope[arg.Reference] for arg in
+                    instruction.Arguments
+                ]
+                localScope[instruction.Reference] = self._Invoke(instruction.Function, args)
             else:
                 raise Exception(f"Unhandled opcode: {opCode}")
 
