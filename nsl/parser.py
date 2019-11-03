@@ -519,7 +519,9 @@ class NslParser:
             | UINT3
             | UINT4
             | MATRIX3X3
-            | MATRIX4X4'''
+            | MATRIX4X4
+            | FLOAT3X3
+            | FLOAT4X4'''
         p[0] = types.BuiltinTypeFactory(p[1])
 
     def p_construct_primitive_expression(self, p):

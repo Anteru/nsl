@@ -37,6 +37,17 @@ export function branchIfElseIfElse(int a) -> int {
         if(a < 5) { return 0; } else if (a > 5) { return 1; } else { return -1; }
 }
 
+export function mydot(float4 a, float4 b) -> float
+{
+    float result = 0;
+
+    for (int i = 0; i < 4; ++i) {
+        result += a[i] * b[i];
+    }
+
+    return result;
+}
+
 function CreateFloat4 (float2 a, float b, float c) -> float4
 {
 	return float4(a, b, c);

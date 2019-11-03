@@ -607,6 +607,8 @@ def BuiltinTypeFactory(typeName):
 		'uint4'         : VectorType (UnsignedInteger (), 4),
 		'matrix3x3'     : MatrixType (Float (), 3, 3),
 		'matrix4x4'     : MatrixType (Float (), 4, 4),
+		'float3x3'      : MatrixType (Float (), 3, 3),
+		'float4x4'      : MatrixType (Float (), 4, 4),
 		'void'          : Void ()
 	}
 

@@ -1,9 +1,10 @@
-__declaration function mul(float4,matrix4x4) -> float4;
-__declaration function mul(float3,matrix3x3) -> float3;
-__declaration function sin(float) -> float;
-__declaration function cos(float) -> float;
-__declaration function tan(float) -> float;
-__declaration function dot(float, float) -> float;
-__declaration function dot(float2, float2) -> float;
-__declaration function dot(float3, float3) -> float;
-__declaration function dot(float4, float4) -> float;
+function dot(float4 a, float4 b) -> float
+{
+    float result = 0;
+
+    for (int i = 0; i < 4; ++i) {
+        result += a[i] * b[i];
+    }
+
+    return result;
+}

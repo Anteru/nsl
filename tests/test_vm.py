@@ -162,3 +162,34 @@ def testSimpleIfElseIfElseBranch():
 
     r = vm.Invoke('f', a = -2)
     assert r == -1
+
+def testArrayAccessOnVector():
+    code = '''export function f(float4 f, int i) -> float {
+        return f[i];
+    }'''
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('f', f = [4, 5, 6, 7], i = 2)
+    assert r == 6
+
+def testArrayAccessOnMatrix():
+    code = '''export function f(float4x4 f, int i, int j) -> float {
+        return f[i][j];
+    }'''
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('f', f = [
+        [4, 5, 6, 7],
+        [8, 9, 10, 11],   
+        [12, 13, 14, 15],   
+        [16, 17, 18, 19]
+    ], i = 2, j = 3)
+    assert r == 15

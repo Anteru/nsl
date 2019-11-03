@@ -24,7 +24,8 @@ class NslLexer:
              'FLOAT', 'FLOAT2', 'FLOAT3', 'FLOAT4',
              'INT', 'INT2', 'INT3', 'INT4',
              'UINT', 'UINT2', 'UINT3', 'UINT4',
-             'MATRIX3X3', 'MATRIX4X4']
+             'MATRIX3X3', 'MATRIX4X4',
+             'FLOAT3X3', 'FLOAT4X4']
     reserved_tokens = ['FUNCTION',
                        'IF', 'ELSE', 'STRUCT', 'RETURN',
                        'FOR', 'CONTINUE', 'BREAK', 'SWITCH',
