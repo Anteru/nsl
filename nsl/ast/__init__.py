@@ -251,11 +251,15 @@ class ArrayExpression(VariableAccessExpression):
 
 class MemberAccessExpression(VariableAccessExpression):
     '''Expression of the form 'id.member', where id can be a
-    access nested expression itself.'''
+    access nested expression itself.
+    
+    A member access expression can be a swizzle. If so, ``isSwizzle`` should be
+    set to ``True``.'''
     def __init__(self, identifier, member):
         super().__init__()
         self.id = identifier
         self.member = member
+        self.isSwizzle = False
 
     def GetMember(self):
         return self.member
@@ -266,6 +270,9 @@ class MemberAccessExpression(VariableAccessExpression):
     def _Traverse(self, function):
         self.id = function(self.id)
         self.member = function(self.member)
+
+    def SetSwizzle(self, isSwizzle: bool) -> None:
+        self.isSwizzle = isSwizzle
 
     def __str__(self):
         return str(self.id) + '.' + str(self.member)

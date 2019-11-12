@@ -56,6 +56,11 @@ export function simpleLoop(float f, int l) -> float {
         return f;
 }
 
+export function assignSwizzleToFunctionArgument(float4 p) -> float4 {
+        p.xz = float2(5, 6);
+        return p;
+}
+
 function CreateFloat4 (float2 a, float b, float c) -> float4
 {
 	return float4(a, b, c);

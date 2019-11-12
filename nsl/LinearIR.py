@@ -1,3 +1,4 @@
+from typing import List
 from . import op
 from enum import Enum
 import collections
@@ -16,6 +17,7 @@ class OpCode(Enum):
     CAST = 0x0_1001
 
     NEW_VARIABLE = 0x0_2001
+    CONSTRUCT_PRIMITIVE = 0x02002
 
     # Binary
     ADD = 0x1_0002
@@ -51,6 +53,11 @@ class OpCode(Enum):
     
     LOAD_ARRAY = 0x6_0002
     STORE_ARRAY = 0x6_1002
+
+    LOAD_MEMBER = 0x6_0004
+    STORE_MEMBER = 0x6_1004
+
+    SHUFFLE = 0x6_0010
     
 class Value(Node):
     def __init__(self, valueType: types.Type):
@@ -277,6 +284,16 @@ class VariableAccessScope(Enum):
     FUNCTION_ARGUMENT = 1
     FUNCTION_LOCAL = 2
 
+class ConstructPrimitiveInstruction(Instruction):
+    def __init__(self, returnType: types.Type,
+        items: List[Value]):
+        super().__init__(OpCode.CONSTRUCT_PRIMITIVE, returnType)
+        self.__values = items
+
+    @property
+    def Values(self):
+        return self.__values
+
 class MemberAccessInstruction(Instruction):
     def __init__(self, memberType, variable, member,
         accessScope: VariableAccessScope = VariableAccessScope.FUNCTION_LOCAL):
@@ -304,6 +321,28 @@ class MemberAccessInstruction(Instruction):
     @property
     def Store(self):
         return self.__store
+
+class ShuffleInstruction(Instruction):
+    def __init__(self, returnType: types.VectorType,
+        first: Value,
+        second: Value,
+        indices: List[int]):
+        super().__init__(OpCode.SHUFFLE, returnType)
+        self.__first = first
+        self.__second = second
+        self.__indices = indices
+
+    @property
+    def First(self):
+        return self.__first
+
+    @property
+    def Second(self):
+        return self.__second
+
+    @property
+    def Indices(self):
+        return self.__indices
 
 class VariableAccessInstruction(Instruction):
     def __init__(self, returnType: types.Type, variableName,
@@ -511,3 +550,15 @@ class InstructionPrinter(Visitor):
             f'var.{scope}',
             self.__FormatType(dvi.Type),
             dvi.Name)
+
+    def v_ConstructPrimitiveInstruction(self, cpi, ctx=None):
+        self.__Print(self.__FormatReference(cpi), '=',
+            'constructprimitive',
+            ', '.join([self.__FormatReference(v) for v in cpi.Values]))
+
+    def v_ShuffleInstruction(self, si, ctx=None):
+        self.__Print(self.__FormatReference(si), '=',
+            'shuffle',
+            self.__FormatReference(si.First),
+            self.__FormatReference(si.Second),
+            ', '.join(map(str, si.Indices)))

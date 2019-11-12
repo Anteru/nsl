@@ -16,6 +16,7 @@ from nsl.passes import (
 	LowerToIR,
 	PrintLinearIR,
 	RewriteFunctionArgAccess,
+	IdentifySwizzles,
 )
 from io import StringIO
 
@@ -36,6 +37,7 @@ class Compiler:
 			ValidateSwizzle.GetPass (),
 			ValidateExportedFunctions.GetPass (),
 			ValidateVariableNames.GetPass (),
+			IdentifySwizzles.GetPass (),
 			AddImplicitCasts.GetPass (),
 			DebugAst.GetPass (),
 			DebugTypes.GetPass (),

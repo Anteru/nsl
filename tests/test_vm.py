@@ -195,8 +195,8 @@ def testArrayAccessOnMatrix():
     assert r == 15
 
 def testConstructPrimitiveVector():
-    code = '''export function f(float a, float b, float c, float d) -> float4 {
-        return float4(a, b, c, d);
+    code = '''export function f(float2 a, float b, float c) -> float4 {
+        return float4(a, b, c);
     }'''
     c = Compiler.Compiler()
     result, ir = c.Compile(code)
@@ -204,7 +204,7 @@ def testConstructPrimitiveVector():
 
     vm = VM.VirtualMachine(ir)
 
-    r = vm.Invoke('f', a = 1, b = 2, c = 3, d = 4)
+    r = vm.Invoke('f', a = [1, 2], b = 3, c = 4)
     assert r == [1, 2, 3, 4]
 
 def testRunSimpleLoop():
@@ -223,3 +223,32 @@ def testRunSimpleLoop():
 
     r = vm.Invoke('f', f = 2, l = 4)
     assert r == 2**16
+
+def testRunSimpleSwizzleRead():
+    code = '''export function f(float4 p) -> float2 {
+        return p.xz;
+    }'''
+    
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('f', p = [1, 2, 3, 4])
+    assert r == [1, 3]
+
+def testRunSimpleSwizzleWrite():
+    code = '''export function f(float4 p) -> float4 {
+        p.y = 3.0;
+        return p;
+    }'''
+    
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('f', p = [5, 6, 7, 8])
+    assert r == [5, 3, 7, 8]

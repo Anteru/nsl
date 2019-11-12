@@ -18,6 +18,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			self.__args = {}
 			self.__locals = {}
 			self.__variables = {}
+			self.__assignmentValue = []
 
 		def OnEnterProgram(self, program):
 			for g in program.GetDeclarations():
@@ -53,6 +54,26 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		def LookupVariableScope(self, name) -> LinearIR.VariableAccessScope:
 			return self.__variables[name]
 
+		def OnEnterNode(self):
+			self.__assignmentValue.append (None)
+
+		def OnLeaveNode(self):
+			self.__assignmentValue.pop ()
+
+		def BeginAssignment(self, value):
+			self.__assignmentValue.append(value)
+
+		def EndAssignment(self):
+			self.__assignmentValue.pop()
+
+		@property
+		def InAssignment(self):
+			return len(self.__assignmentValue) >= 2 and self.__assignmentValue[-2] is not None
+
+		@property
+		def AssignmentValue(self):
+			return self.__assignmentValue[-2]
+
 		@property
 		def Function(self):
 			return self.__function
@@ -73,9 +94,6 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 	
 	def GetContext(self):
 		return self.__ctx
-		
-	def __FormatArgumentList(self, args):
-		return ', '.join(['{0} {1}'.format(arg.GetType().GetName(), arg.GetName()) for arg in args])
 	
 	def __GetFunctionName(self, functionType):
 		"""Exported functions use their raw name, everything else uses the
@@ -210,32 +228,12 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		
 	def v_ConstructPrimitiveExpression(self, expr, ctx):
 		values = [self.v_Visit(e, ctx) for e in expr]
-		dvi = LinearIR.DeclareVariableInstruction(expr.GetType(),
-			scope = LinearIR.VariableAccessScope.FUNCTION_LOCAL)
-		ctx.BasicBlock.AddInstruction(dvi)
+		
+		cpi = LinearIR.ConstructPrimitiveInstruction(expr.GetType(),
+			values)
+		ctx.BasicBlock.AddInstruction(cpi)
 
-		# Set the individual members
-		offset = 0
-		assert len(values) > 0
-
-		for value in values:
-			cv = LinearIR.ConstantValue(types.Integer(), offset)
-			ctx.Function.RegisterConstant(cv)
-
-			cai = LinearIR.ArrayAccessInstruction(
-				dvi.Type, dvi, cv
-			)
-			cai.SetStore(value)
-
-			assert value.Type.IsPrimitive()
-			assert not value.Type.IsMatrix()
-			if value.Type.IsVector():
-				offset += value.Type.GetComponentCount()
-			else:
-				offset += 1
-			ctx.BasicBlock.AddInstruction(cai)
-
-		return dvi
+		return cpi
 
 	def v_LiteralExpression(self, expr, ctx):
 		cv = LinearIR.ConstantValue(expr.GetType (), expr.GetValue())
@@ -247,6 +245,59 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		member = expr.GetMember ()
 		if parent:
 			value = self.v_Visit(parent, ctx)
+		else:
+			# ICE
+			return
+
+		if expr.isSwizzle:
+			last = value
+
+			swizzleComponentToIndex = {
+				'r' : 0,
+				'g' : 1,
+				'b' : 2,
+				'a' : 3,
+				'x' : 0,
+				'y' : 1,
+				'z' : 2,
+				'w' : 3,
+			}
+
+			# If it's a load, it's simple -- we just shuffle the elements in
+			# value. For a store, we combine the parent and the value as
+			# specified
+			if not ctx.InAssignment:
+				indices = []
+				for c in member.GetName():
+					indices.append(swizzleComponentToIndex[c])
+
+				assert isinstance(value, LinearIR.Value)
+
+				si = LinearIR.ShuffleInstruction(expr.GetType(),
+					value, value, indices)
+				ctx.BasicBlock.AddInstruction(si)
+				return si
+			else:
+				leftComponentCount = value.Type.GetComponentCount()
+				indices = list(range(leftComponentCount))
+
+				for i, c in enumerate(member.GetName()):
+					writeIndex = swizzleComponentToIndex[c]
+					readIndex = leftComponentCount + i
+					indices[writeIndex] = readIndex
+
+				assert isinstance(value, LinearIR.Value)
+
+				si = LinearIR.ShuffleInstruction(expr.GetType(),
+					value, ctx.AssignmentValue, indices)
+				ctx.BasicBlock.AddInstruction(si)
+
+				ctx.BeginAssignment(si)
+				result = self.v_Visit(parent, ctx)
+				ctx.EndAssignment()
+
+				return result
+		else:
 			mai = LinearIR.MemberAccessInstruction(member.GetType (),
 				value, member)
 			ctx.BasicBlock.AddInstruction(mai)
@@ -257,6 +308,10 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		li = LinearIR.VariableAccessInstruction(expr.GetType(),
 			expr.GetName (),
 			accessScope)
+
+		if ctx.InAssignment:
+			li.SetStore(ctx.AssignmentValue)
+		
 		ctx.BasicBlock.AddInstruction(li)
 		return li
 		
@@ -333,16 +388,28 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 	
 	def v_AssignmentExpression(self, expr, ctx):
 		value = self.v_Visit(expr.GetRight(), ctx)
+		ctx.BeginAssignment(value)
 		destination = self.v_Visit(expr.GetLeft(), ctx)
-		destination.SetStore(value)
+		ctx.EndAssignment()
+
 		return destination
 
 	def v_ArrayExpression(self, expr, ctx):
 		array = self.v_Visit(expr.GetParent(), ctx)
 		index = self.v_Visit(expr.GetExpression(), ctx)
 		ai = LinearIR.ArrayAccessInstruction(expr.GetType(), array, index)
+
+		if ctx.InAssignment:
+			ai.SetStore(ctx.AssignmentValue)
+
 		ctx.BasicBlock.AddInstruction(ai)
 		return ai
+
+	def OnEnter(self, _, ctx):
+		ctx.OnEnterNode()
+
+	def OnLeave(self, _, ctx):
+		ctx.OnLeaveNode()
 		
 def GetPass():
 	import nsl.Pass

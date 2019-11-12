@@ -1,5 +1,6 @@
 from . import (LinearIR, types)
 import collections
+import math
 
 class ExecutionContext:
     def __init__(self, functions, globalScope: dict()):
@@ -69,6 +70,18 @@ class ExecutionContext:
                     localScope[instruction.Index.Reference]
                 ]
                 localScope[ref] = var
+            elif opCode == LinearIR.OpCode.SHUFFLE:
+                ref = instruction.Reference
+                indices = instruction.Indices
+                first = localScope[instruction.First.Reference]
+                second = localScope[instruction.Second.Reference]
+                if not isinstance(first, list):
+                    first = [first]
+                if not isinstance(second, list):
+                    second = [second]
+                combined = first + second
+                result = [combined[i] for i in indices]
+                localScope[ref] = result
             elif opCode == LinearIR.OpCode.STORE_ARRAY:
                 ref = instruction.Reference
                 var = localScope[instruction.Store.Reference]
@@ -145,6 +158,26 @@ class ExecutionContext:
                 # variable and loads it at the same time
                 localScope[instruction.Name] = var
                 localScope[instruction.Reference] = var
+            elif opCode == LinearIR.OpCode.CAST:
+                ref = instruction.Reference
+                var = localScope[instruction.Value.Reference]
+
+                if instruction.Type == types.Integer():
+                    var = math.floor(var)
+                elif instruction.Type == types.UnsignedInteger():
+                    var = abs(math.floor(var))
+                
+                localScope[ref] = var
+            elif opCode == LinearIR.OpCode.CONSTRUCT_PRIMITIVE:
+                ref = instruction.Reference
+                var = []
+                for value in instruction.Values:
+                    value = localScope[value.Reference]
+                    if isinstance(value, list):
+                        var += value
+                    else:
+                        var.append(value)
+                localScope[ref] = var
             else:
                 raise Exception(f"Unhandled opcode: {opCode}")
 

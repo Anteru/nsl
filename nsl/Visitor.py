@@ -68,6 +68,15 @@ class Visitor:
     def Print(self, *args, end='\n'):
         print (*args, end=end, file=self.output)
 
+    def OnEnter(self, obj, ctx=None):
+        '''Called before a node is visited.'''
+        pass
+
+    def OnLeave(self, obj, ctx=None):
+        '''Called after visiting a node, with the return value of the
+        visitor.'''
+        pass
+
     def v_Generic (self, obj, ctx=None):
         '''The default visitation function.
         
@@ -76,6 +85,9 @@ class Visitor:
         of the object. For each class, a function v_ClassName is called. This
         makes it possible for instance to have a generic handler for all
         ``Expression`` classes yet keep an overload for ``BinaryExpression``.'''
+
+        self.OnEnter(obj, ctx)
+
         import inspect
         
         # This includes the class itself
@@ -89,9 +101,16 @@ class Visitor:
             
             if hasattr(self, fname):
                 func = getattr (self, fname)
-                return func (obj, ctx)
+                result = func (obj, ctx)
+
+                self.OnLeave(result, ctx)
+                return result
         
-        return self.v_Default (obj, ctx)
+        result = self.v_Default (obj, ctx)
+
+        self.OnLeave(result, ctx)
+
+        return result
 
     def v_Default(self, obj, ctx):
         print ('Missing visit method: "{}.v_{}"'.format (
@@ -113,7 +132,8 @@ class DefaultVisitor(Visitor):
         super().__init__()
     
     def v_Default(self, obj, ctx=None):
-        '''Traverse further if possible.'''
+        '''Traverse further if possible (that is, if the object has an
+        ``AcceptVisitor`` method).'''
         super().__init__()
         if hasattr (obj, 'AcceptVisitor'):
             return obj.AcceptVisitor (self, ctx)
