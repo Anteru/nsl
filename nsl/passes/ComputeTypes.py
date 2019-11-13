@@ -100,6 +100,7 @@ class ComputeTypeVisitor(Visitor.DefaultVisitor):
 					if p.GetType().IsVector () or p.GetType().IsScalar ():
 						# We allow both swizzling of vector and scalar types
 						expr.SetType (ComputeSwizzleType(p.GetType(), expr.GetMember ().GetName ()))
+						expr.SetSwizzle(True)
 					else:
 						Errors.ERROR_CANNOT_SWIZZLE_PRIMITIVE_TYPE.Raise ()
 				elif isinstance (p.GetType(), types.StructType):
