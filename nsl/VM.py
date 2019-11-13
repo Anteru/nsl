@@ -1,4 +1,4 @@
-from . import (LinearIR, types)
+from . import (LinearIR, Errors, types)
 import collections
 import math
 
@@ -190,14 +190,24 @@ class ExecutionContext:
                 localScope[ref] = var
             elif opCode == LinearIR.OpCode.CONSTRUCT_PRIMITIVE:
                 ref = instruction.Reference
-                var = []
-                for value in instruction.Values:
-                    value = localScope[value.Reference]
-                    if isinstance(value, list):
-                        var += value
-                    else:
+                if instruction.Type.IsVector():
+                    var = []
+                    for value in instruction.Values:
+                        value = localScope[value.Reference]
+                        if isinstance(value, list):
+                            var += value
+                        else:
+                            var.append(value)
+                    localScope[ref] = var
+                elif instruction.Type.IsMatrix():
+                    var = []
+                    for value in instruction.Values:
+                        value = localScope[value.Reference]
+                        assert isinstance(value, list)
                         var.append(value)
-                localScope[ref] = var
+                    localScope[ref] = var
+                else:
+                    Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise()
             else:
                 raise Exception(f"Unhandled opcode: {opCode}")
 

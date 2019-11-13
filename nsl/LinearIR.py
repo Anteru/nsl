@@ -511,7 +511,7 @@ class InstructionPrinter(Visitor):
 
     def __FormatReference(self, v: Value):
         if isinstance(v, ConstantValue):
-            return v.Value
+            return str(v.Value)
         else:
             return f'%{v.Reference}'
 

@@ -280,3 +280,27 @@ def testRunSimpleVectorAdd():
 
     r = vm.Invoke('f', a = [1, 2, 3, 4], b = [1, 0, 3, 0])
     assert r == [2, 2, 6, 4]
+
+def testCreateMatrix():
+    code = '''export function f() -> float4x4 {
+        return float4x4(
+            float4(1, 2, 3, 4),
+            float4(5, 6, 7, 8),
+            float4(9, 10, 11, 12),
+            float4(13, 14, 15, 16)
+        );
+    }'''
+
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('f')
+    assert r == [
+        [1, 2, 3, 4],
+        [5, 6, 7, 8],
+        [9, 10, 11, 12],
+        [13, 14, 15, 16]
+    ]
