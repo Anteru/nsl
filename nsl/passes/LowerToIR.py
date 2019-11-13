@@ -115,8 +115,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			self.v_Visit(s, ctx)
 
 	def v_AffixExpression(self, expr, ctx):
-		constOne = LinearIR.ConstantValue(expr.GetType(), 1)
-		ctx.Function.RegisterConstant(constOne)
+		constOne = ctx.Function.CreateConstant(expr.GetType(), 1)
 		initialValue = self.v_Visit(expr.GetExpression(), ctx)
 		assert isinstance(initialValue, LinearIR.Value)
 
@@ -236,9 +235,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		return cpi
 
 	def v_LiteralExpression(self, expr, ctx):
-		cv = LinearIR.ConstantValue(expr.GetType (), expr.GetValue())
-		ctx.Function.RegisterConstant(cv)
-		return cv
+		return ctx.Function.CreateConstant(expr.GetType (), expr.GetValue())
 
 	def v_MemberAccessExpression(self, expr, ctx):
 		parent = expr.GetParent ()

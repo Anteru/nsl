@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from . import op
 from enum import Enum
 import collections
@@ -141,21 +141,20 @@ class BasicBlock(Value):
         self.__instructions.append(instruction)
         return instruction
 
-    def Replace(self, oldInstruction, newInstruction):
+    def Replace(self, oldInstruction: Instruction, newInstruction: Optional[Value]):
         self.__replacements[oldInstruction] = newInstruction
 
     def __Replace(self):
-        for oldInstruction, newInstruction in self.__replacements.items():
-            for index in range(len(self.__instructions)):
-                instruction = self.__instructions[index]
-                if instruction == oldInstruction:
-                    print(f'Replacing: {instruction}, {newInstruction}')
-                    newInstruction.SetReference(oldInstruction.Reference)
-                    if isinstance(newInstruction, Instruction):
-                        self.__instructions[index] = newInstruction
-                    else:
-                        # Constant value or something like that
-                        self.__instructions[index] = None
+        for index in range(len(self.__instructions)):
+            instruction = self.__instructions[index]
+            if instruction in self.__replacements:
+                newInstruction = self.__replacements[instruction]
+                newInstruction.SetReference(instruction.Reference)
+                if isinstance(newInstruction, Instruction):
+                    self.__instructions[index] = newInstruction
+                else:
+                    # Constant value or something like that
+                    self.__instructions[index] = None
 
         self.__instructions = [i for i in self.__instructions if i]
 
@@ -166,7 +165,7 @@ class Function(Value):
         self.__basicBlocks = []
         self.__name = name
         self.__values = []
-        self.__constants = []
+        self.__constants = {}
 
     def CreateBasicBlock(self):
         bb = BasicBlock (self)
@@ -187,13 +186,20 @@ class Function(Value):
         self.__values.append(value)
         return n
 
-    def RegisterConstant(self, value: ConstantValue):
-        self.__constants.append (value)
-        return self.RegisterValue (value)
+    def CreateConstant(self, constantType: types.Type, value):
+        result = self.__constants.get(value, None)
+        if result:
+            return result
+        
+        cv = ConstantValue(constantType, value)
+        self.RegisterValue (cv)
+        self.__constants[value] = cv
+
+        return cv
     
     @property
     def Constants(self):
-        return self.__constants
+        return self.__constants.values()
 
     @property
     def Name(self):
