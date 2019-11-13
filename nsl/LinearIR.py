@@ -25,6 +25,12 @@ class OpCode(Enum):
     MUL = 0x1_0004
     DIV = 0x1_0005
     MOD = 0x1_0006
+    
+    VECTOR_ADD = 0x1_1002
+    VECTOR_SUB = 0x1_1003
+    VECTOR_MUL = 0x1_1004
+    VECTOR_DIV = 0x1_1005
+    VECTOR_MOD = 0x1_1006
 
     # comparison
     CMP_GT = 0x1_0100
@@ -33,14 +39,13 @@ class OpCode(Enum):
     CMP_GE = 0x1_0103
     CMP_NE = 0x1_0104
     CMP_EQ = 0x1_0105
-
     
-    VECTOR_CMP_GT = 0x1_0200
-    VECTOR_CMP_LT = 0x1_0201
-    VECTOR_CMP_LE = 0x1_0202
-    VECTOR_CMP_GE = 0x1_0203
-    VECTOR_CMP_NE = 0x1_0204
-    VECTOR_CMP_EQ = 0x1_0205
+    VECTOR_CMP_GT = 0x1_1100
+    VECTOR_CMP_LT = 0x1_1101
+    VECTOR_CMP_LE = 0x1_1102
+    VECTOR_CMP_GE = 0x1_1103
+    VECTOR_CMP_NE = 0x1_1104
+    VECTOR_CMP_EQ = 0x1_1105
 
     # Unary
     UA_ADD = 0x2_0120
@@ -250,11 +255,12 @@ class BinaryInstruction(Instruction):
 
         if returnType.IsScalar():
             mapping = {
+                op.Operation.ASSIGN: OpCode.ASSIGN,
+
                 op.Operation.ADD: OpCode.ADD,
                 op.Operation.MUL: OpCode.MUL,
                 op.Operation.SUB: OpCode.SUB,
                 op.Operation.DIV: OpCode.DIV,
-                op.Operation.ASSIGN: OpCode.ASSIGN,
                 
                 op.Operation.CMP_GT: OpCode.CMP_GT,
                 op.Operation.CMP_GE: OpCode.CMP_GE,
@@ -265,11 +271,12 @@ class BinaryInstruction(Instruction):
             }
         elif returnType.IsVector():
             mapping = {
-                op.Operation.ADD: OpCode.ADD,
-                op.Operation.MUL: OpCode.MUL,
-                op.Operation.SUB: OpCode.SUB,
-                op.Operation.DIV: OpCode.DIV,
                 op.Operation.ASSIGN: OpCode.ASSIGN,
+
+                op.Operation.ADD: OpCode.VECTOR_ADD,
+                op.Operation.MUL: OpCode.VECTOR_MUL,
+                op.Operation.SUB: OpCode.VECTOR_SUB,
+                op.Operation.DIV: OpCode.VECTOR_DIV,
                 
                 op.Operation.CMP_GT: OpCode.VECTOR_CMP_GT,
                 op.Operation.CMP_GE: OpCode.VECTOR_CMP_GE,

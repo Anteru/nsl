@@ -117,6 +117,14 @@ class ExecutionContext:
                     localScope[ref] = op1 == op2
                 elif operation == LinearIR.OpCode.CMP_NE:
                     localScope[ref] = op1 != op2
+                elif operation == LinearIR.OpCode.VECTOR_ADD:
+                    localScope[ref] = [x + y for x, y in zip(op1, op2)]
+                elif operation == LinearIR.OpCode.VECTOR_SUB:
+                    localScope[ref] = [x - y for x, y in zip(op1, op2)]
+                elif operation == LinearIR.OpCode.VECTOR_DIV:
+                    localScope[ref] = [x / y for x, y in zip(op1, op2)]
+                elif operation == LinearIR.OpCode.VECTOR_MUL:
+                    localScope[ref] = [x * y for x, y in zip(op1, op2)]
                 elif operation == LinearIR.OpCode.VECTOR_CMP_GT:
                     localScope[ref] = [1 if x > y else 0 for x, y in zip(op1, op2)]
                 elif operation == LinearIR.OpCode.VECTOR_CMP_GE:
