@@ -96,17 +96,18 @@ class ComputeTypeVisitor(Visitor.DefaultVisitor):
 			# Figure out the parent type
 			self._ProcessExpression(p, scope)
 			if isinstance (expr, ast.MemberAccessExpression):
-				if p.GetType().IsPrimitive ():
-					if p.GetType().IsVector () or p.GetType().IsScalar ():
+				parentType = p.GetType()
+				if parentType.IsPrimitive ():
+					if parentType.IsVector () or parentType.IsScalar ():
 						# We allow both swizzling of vector and scalar types
-						expr.SetType (ComputeSwizzleType(p.GetType(), expr.GetMember ().GetName ()))
+						expr.SetType (ComputeSwizzleType(parentType, expr.GetMember ().GetName ()))
 						expr.SetSwizzle(True)
 					else:
 						Errors.ERROR_CANNOT_SWIZZLE_PRIMITIVE_TYPE.Raise ()
-				elif isinstance (p.GetType(), types.StructType):
-					expr.SetType (p.GetType().GetMembers ().GetFieldType (expr.GetMember ().GetName ()))
+				elif parentType.IsAggregate():
+					expr.SetType (parentType.GetMembers ().GetFieldType (expr.GetMember ().GetName ()))
 				else:
-					Errors.ERROR_CANNOT_SWIZZLE_TYPE.Raise (p.GetType())
+					Errors.ERROR_CANNOT_SWIZZLE_TYPE.Raise (parentType)
 				
 				expr.GetMember ().SetType (expr.GetType ())
 			elif isinstance (expr, ast.ArrayExpression):
