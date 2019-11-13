@@ -178,11 +178,13 @@ def _GetCommonPrimitiveType(left, right):
 		return _GetCommonScalarType(left, right)
 	elif isinstance (left, VectorType) and isinstance(right, VectorType):
 		assert (left.GetSize () == right.GetSize ())
+		assert isinstance(left, VectorType)
+		assert isinstance(right, VectorType)
 		return VectorType (
 			_GetCommonScalarType (
 				left.GetComponentType (),
 				right.GetComponentType()),
-			left.GetSize ())
+			left.GetComponentCount ())
 	elif isinstance (left, MatrixType) and isinstance (right, MatrixType):
 		assert (left.GetSize () == right.GetSize ())
 		return MatrixType (
@@ -218,6 +220,11 @@ def ResolveBinaryExpressionType (operation, left, right):
 	if op.IsComparison (operation):
 		# Cast may be still necessary if we compare integers with floats
 		baseType = _GetCommonPrimitiveType (left, right)
+
+		if left.IsVector() and right.IsVector():
+			assert left.GetComponentCount() == right.GetComponentCount()
+			return ExpressionType (VectorType(Integer(),
+				left.GetComponentCount()), [baseType, baseType])	
 		return ExpressionType (Integer (), [baseType, baseType])
 
 	# Multiply and divide have special rules -- matrices, vectors and scalars

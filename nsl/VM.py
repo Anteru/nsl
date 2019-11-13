@@ -117,6 +117,18 @@ class ExecutionContext:
                     localScope[ref] = op1 == op2
                 elif operation == LinearIR.OpCode.CMP_NE:
                     localScope[ref] = op1 != op2
+                elif operation == LinearIR.OpCode.VECTOR_CMP_GT:
+                    localScope[ref] = [1 if x > y else 0 for x, y in zip(op1, op2)]
+                elif operation == LinearIR.OpCode.VECTOR_CMP_GE:
+                    localScope[ref] = [1 if x >= y else 0 for x, y in zip(op1, op2)]
+                elif operation == LinearIR.OpCode.VECTOR_CMP_LT:
+                    localScope[ref] = [1 if x < y else 0 for x, y in zip(op1, op2)]
+                elif operation == LinearIR.OpCode.VECTOR_CMP_LE:
+                    localScope[ref] = [1 if x <= y else 0 for x, y in zip(op1, op2)]
+                elif operation == LinearIR.OpCode.VECTOR_CMP_EQ:
+                    localScope[ref] = [1 if x == y else 0 for x, y in zip(op1, op2)]
+                elif operation == LinearIR.OpCode.VECTOR_CMP_NE:
+                    localScope[ref] = [1 if x != y else 0 for x, y in zip(op1, op2)]
             elif opCode == LinearIR.OpCode.BRANCH:
                 if instruction.Predicate:
                     predicate = localScope[instruction.Predicate.Reference]

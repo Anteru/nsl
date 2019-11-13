@@ -2,7 +2,7 @@ from typing import List, Optional
 from . import op
 from enum import Enum
 import collections
-from . import types
+from . import Errors, types
 from .Visitor import Node, Visitor
 
 
@@ -33,6 +33,14 @@ class OpCode(Enum):
     CMP_GE = 0x1_0103
     CMP_NE = 0x1_0104
     CMP_EQ = 0x1_0105
+
+    
+    VECTOR_CMP_GT = 0x1_0200
+    VECTOR_CMP_LT = 0x1_0201
+    VECTOR_CMP_LE = 0x1_0202
+    VECTOR_CMP_GE = 0x1_0203
+    VECTOR_CMP_NE = 0x1_0204
+    VECTOR_CMP_EQ = 0x1_0205
 
     # Unary
     UA_ADD = 0x2_0120
@@ -238,17 +246,40 @@ class BinaryInstruction(Instruction):
     @staticmethod
     def FromOperation(operation: op.Operation, returnType: types.Type,
         v1: Value, v2: Value):
-        mapping = {
-            op.Operation.ADD: OpCode.ADD,
-            op.Operation.MUL: OpCode.MUL,
-            op.Operation.SUB: OpCode.SUB,
-            op.Operation.DIV: OpCode.DIV,
-            op.Operation.ASSIGN: OpCode.ASSIGN,
-            
-            op.Operation.CMP_GT: OpCode.CMP_GT,
-            op.Operation.CMP_LT: OpCode.CMP_LT,
-            op.Operation.CMP_EQ: OpCode.CMP_EQ,
-        }
+        assert isinstance(returnType, types.PrimitiveType)
+
+        if returnType.IsScalar():
+            mapping = {
+                op.Operation.ADD: OpCode.ADD,
+                op.Operation.MUL: OpCode.MUL,
+                op.Operation.SUB: OpCode.SUB,
+                op.Operation.DIV: OpCode.DIV,
+                op.Operation.ASSIGN: OpCode.ASSIGN,
+                
+                op.Operation.CMP_GT: OpCode.CMP_GT,
+                op.Operation.CMP_GE: OpCode.CMP_GE,
+                op.Operation.CMP_LT: OpCode.CMP_LT,
+                op.Operation.CMP_LE: OpCode.CMP_LE,
+                op.Operation.CMP_EQ: OpCode.CMP_EQ,
+                op.Operation.CMP_NE: OpCode.CMP_NE,
+            }
+        elif returnType.IsVector():
+            mapping = {
+                op.Operation.ADD: OpCode.ADD,
+                op.Operation.MUL: OpCode.MUL,
+                op.Operation.SUB: OpCode.SUB,
+                op.Operation.DIV: OpCode.DIV,
+                op.Operation.ASSIGN: OpCode.ASSIGN,
+                
+                op.Operation.CMP_GT: OpCode.VECTOR_CMP_GT,
+                op.Operation.CMP_GE: OpCode.VECTOR_CMP_GE,
+                op.Operation.CMP_LT: OpCode.VECTOR_CMP_LT,
+                op.Operation.CMP_LE: OpCode.VECTOR_CMP_LE,
+                op.Operation.CMP_EQ: OpCode.VECTOR_CMP_EQ,
+                op.Operation.CMP_NE: OpCode.VECTOR_CMP_NE,
+            }
+        else:
+            Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise()
 
         return BinaryInstruction(mapping[operation], returnType,
             v1, v2)
@@ -592,6 +623,7 @@ class InstructionPrinter(Visitor):
     def v_ConstructPrimitiveInstruction(self, cpi, ctx=None):
         self.__Print(self.__FormatReference(cpi), '=',
             'constructprimitive',
+            self.__FormatType(cpi.Type),
             ', '.join([self.__FormatReference(v) for v in cpi.Values]))
 
     def v_ShuffleInstruction(self, si, ctx=None):

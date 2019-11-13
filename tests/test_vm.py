@@ -252,3 +252,17 @@ def testRunSimpleSwizzleWrite():
 
     r = vm.Invoke('f', p = [5, 6, 7, 8])
     assert r == [5, 3, 7, 8]
+
+def testRunSimpleVectorCompare():
+    code = '''export function f(int4 a, int4 b) -> int4 {
+        return a == b;
+    }'''
+    
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('f', a = [1, 2, 3, 4], b = [1, 0, 3, 0])
+    assert r == [1, 0, 1, 0]
