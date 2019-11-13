@@ -240,7 +240,7 @@ def testRunSimpleSwizzleRead():
 
 def testRunSimpleSwizzleWrite():
     code = '''export function f(float4 p) -> float4 {
-        p.y = 3.0;
+        p.y = 3;
         return p;
     }'''
     

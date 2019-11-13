@@ -101,6 +101,10 @@ class Instruction(ValueUser):
         self.__parent = basicBlock
 
     @property
+    def Parent(self):
+        return self.__parent
+
+    @property
     def OpCode(self):
         return self.__opcode
 
@@ -114,19 +118,47 @@ class BasicBlock(Value):
         self.__predecessors = []
         self.__successors = []
         self.__function = function
+        self.__replacements = {}
+
+    @property
+    def Parent(self):
+        return self.__function
 
     @property
     def Instructions(self):
         return self.__instructions
 
     def _Traverse(self, function):
+        self.__replacements = {}
         self.__instructions = function(self.__instructions)
+        # During traversal, we can register replacements which cannot be
+        # executed immediately, we record them and then apply them here
+        self.__Replace()
 
     def AddInstruction(self, instruction: Instruction):
         instruction.SetParent(self)
         self.__function.RegisterValue(instruction)
         self.__instructions.append(instruction)
         return instruction
+
+    def Replace(self, oldInstruction, newInstruction):
+        self.__replacements[oldInstruction] = newInstruction
+
+    def __Replace(self):
+        for oldInstruction, newInstruction in self.__replacements.items():
+            for index in range(len(self.__instructions)):
+                instruction = self.__instructions[index]
+                if instruction == oldInstruction:
+                    print(f'Replacing: {instruction}, {newInstruction}')
+                    newInstruction.SetReference(oldInstruction.Reference)
+                    if isinstance(newInstruction, Instruction):
+                        self.__instructions[index] = newInstruction
+                    else:
+                        # Constant value or something like that
+                        self.__instructions[index] = None
+
+        self.__instructions = [i for i in self.__instructions if i]
+
 
 class Function(Value):
     def __init__(self, name, functionType):
