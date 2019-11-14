@@ -304,3 +304,33 @@ def testCreateMatrix():
         [9, 10, 11, 12],
         [13, 14, 15, 16]
     ]
+
+def testVectorTimesScalar():
+    code = '''export function f(float4 v, float s) -> float4 {
+        return v * s;
+    }'''
+
+    
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('f', v=[1, 2, 3, 4], s = 2)
+    assert r == [2, 4, 6, 8]
+
+def testVectorDividedByScalar():
+    code = '''export function f(float4 v, float s) -> float4 {
+        return v / s;
+    }'''
+
+    
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    r = vm.Invoke('f', v=[2, 4, 6, 8], s = 2)
+    assert r == [1, 2, 3, 4]

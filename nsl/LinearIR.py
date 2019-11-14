@@ -32,6 +32,9 @@ class OpCode(Enum):
     VECTOR_DIV = 0x1_1005
     VECTOR_MOD = 0x1_1006
 
+    VECTOR_MUL_SCALAR = 0x1_2004
+    VECTOR_DIV_SCALAR = 0x1_2005
+
     # comparison
     CMP_GT = 0x1_0100
     CMP_LT = 0x1_0101
@@ -252,6 +255,8 @@ class BinaryInstruction(Instruction):
     def FromOperation(operation: op.Operation, returnType: types.Type,
         v1: Value, v2: Value):
         assert isinstance(returnType, types.PrimitiveType)
+        assert isinstance(v1.Type, types.PrimitiveType)
+        assert isinstance(v2.Type, types.PrimitiveType)
 
         if returnType.IsScalar():
             mapping = {
@@ -286,7 +291,15 @@ class BinaryInstruction(Instruction):
                 op.Operation.CMP_NE: OpCode.VECTOR_CMP_NE,
             }
         else:
-            Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise()
+            Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise(
+                f"Cannot lower binary operation {operation} with types: {v1.Type}, {v2.Type}")
+
+        if operation == op.Operation.MUL and v1.Type.IsVector () and v2.Type.IsScalar():
+            return BinaryInstruction(OpCode.VECTOR_MUL_SCALAR, returnType,
+                v1, v2)
+        elif operation == op.Operation.DIV and v1.Type.IsVector () and v2.Type.IsScalar ():
+            return BinaryInstruction(OpCode.VECTOR_DIV_SCALAR, returnType,
+                v1, v2)        
 
         return BinaryInstruction(mapping[operation], returnType,
             v1, v2)

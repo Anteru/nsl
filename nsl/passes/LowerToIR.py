@@ -1,3 +1,4 @@
+from math import e
 from nsl import ast, LinearIR, op, types, Errors, Visitor
 import collections
 

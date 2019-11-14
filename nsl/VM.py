@@ -137,6 +137,14 @@ class ExecutionContext:
                     localScope[ref] = [1 if x == y else 0 for x, y in zip(op1, op2)]
                 elif operation == LinearIR.OpCode.VECTOR_CMP_NE:
                     localScope[ref] = [1 if x != y else 0 for x, y in zip(op1, op2)]
+                elif operation == LinearIR.OpCode.VECTOR_MUL_SCALAR:
+                    localScope[ref] = [v * op2 for v in op1]
+                elif operation == LinearIR.OpCode.VECTOR_DIV_SCALAR:
+                    localScope[ref] = [v / op2 for v in op1]
+                else:
+                    Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise(
+                        f'Unsupported binary operation: {operation}'
+                    )
             elif opCode == LinearIR.OpCode.BRANCH:
                 if instruction.Predicate:
                     predicate = localScope[instruction.Predicate.Reference]
@@ -207,7 +215,9 @@ class ExecutionContext:
                         var.append(value)
                     localScope[ref] = var
                 else:
-                    Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise()
+                    Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise(
+                        f'Cannot construct primitive of type: {instruction.Type}'
+                    )
             else:
                 raise Exception(f"Unhandled opcode: {opCode}")
 
