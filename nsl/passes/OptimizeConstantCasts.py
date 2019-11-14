@@ -11,7 +11,9 @@ class OptimizeConstantCastVisitor (Visitor.DefaultVisitor):
             if ci.Type == types.Float():
                 constant = float(constant)
             else:
-                Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise()
+                Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise(
+                    f'Cannot cast constant {ci.Value} to type {ci.Type}'
+                )
             # Parent is basic block, and the parent of the basic block is
             # a function
             cv = ci.Parent.Parent.CreateConstant(ci.Type, constant)
