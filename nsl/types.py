@@ -525,22 +525,13 @@ class VectorType(PrimitiveType):
 		'''Return a copy of this type with a new component type.'''
 		return VectorType(componentType, self.__componentCount)
 
-class MatrixOrder(Enum):
-	RowMajor       = 1
-	ColumnMajor    = 2
-
 class MatrixType(PrimitiveType):
-	def __init__(self, componentType, rows, columns,
-				 order = MatrixOrder.RowMajor):
+	def __init__(self, componentType, rows, columns):
 		assert rows > 0 and columns > 0
 		assert isinstance(componentType, ScalarType)
 		super(MatrixType, self).__init__()
 		self.__componentType = componentType
 		self.__size = (rows, columns,)
-		self.__order = order
-
-	def GetOrder (self):
-		return self.__order
 
 	def GetRowCount (self):
 		return self.__size [0]
@@ -572,7 +563,7 @@ class MatrixType(PrimitiveType):
 
 	def WithComponentType(self, componentType):
 		'''Return a copy of this type with a new component type.'''
-		return MatrixType(componentType, self.__size [0], self.__size [1], self.__order)
+		return MatrixType(componentType, self.__size [0], self.__size [1])
 
 class Operator:
 	pass
