@@ -26,6 +26,18 @@ class ExecutionContext:
 
         return self.__Execute(function, args)
 
+    def __MatrixMatrixMultiply(self, resultShape, m0, m1):
+        result = [
+            [0 for _ in range(resultShape[1])] for _ in range(resultShape[0])
+        ]
+
+        for i in range(len(m0)):
+            for j in range(len(m1[0])):
+                for k in range(len(m0[0])):
+                    result[i][j] += m0[i][k] * m1[k][j]
+
+        return result
+
     def __Execute(self, function: LinearIR.Function, args):
         instructions = list()
         blockOffsets = {}
@@ -141,6 +153,9 @@ class ExecutionContext:
                     localScope[ref] = [v * op2 for v in op1]
                 elif operation == LinearIR.OpCode.VECTOR_DIV_SCALAR:
                     localScope[ref] = [v / op2 for v in op1]
+                elif operation == LinearIR.OpCode.MATRIX_MUL_MATRIX:
+                    localScope[ref] = self.__MatrixMatrixMultiply(
+                        instruction.Type.GetSize(), op1, op2)
                 else:
                     Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise(
                         f'Unsupported binary operation: {operation}'

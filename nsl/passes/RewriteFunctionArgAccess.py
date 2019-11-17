@@ -6,7 +6,7 @@ class RewriteFunctionArgAccessVisitor (Visitor.DefaultVisitor):
     of going through a dictionary lookup. In this pass, we will translate any
     load.arg <name> to load.arg <index> with index being the argument number.'''
     
-    def v_Function(self, function, ctx=None):
+    def v_Function(self, function: LinearIR.Function, ctx=None):
         mapping = {}
         for i, arg in enumerate(function.Type.GetArguments()):
             mapping[arg.GetName()] = i

@@ -374,3 +374,35 @@ def testMatrixMatrixAdd():
     ]
     r = vm.Invoke('f', a=m, b=m)
     assert r == [[i * 2 for i in r] for r in m]
+
+def testMatrixMatrixMultiply():
+    code = '''export function f(float4x4 a, float4x4 b) -> float4x4 {
+        return a * b;
+    }'''
+
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    a = [
+        [5, 1, 4, 4],
+        [5, 5, 6, 2],
+        [4, 1, 0, 1],
+        [5, 0, 4, 4],
+    ]
+    b = [
+        [2, 0, 4, 4],
+        [8, 1, 9, 6],
+        [4, 3, 5, 7],
+        [8, 8, 0, 3],
+    ]
+
+    r = vm.Invoke('f', a=a, b=b)
+    assert r == [
+        [66, 45, 49, 66],
+        [90, 39, 95, 98],
+        [24,  9, 25, 25],
+        [58, 44, 40, 60],
+    ]

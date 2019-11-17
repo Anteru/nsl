@@ -35,6 +35,8 @@ class OpCode(Enum):
     VECTOR_MUL_SCALAR = 0x1_2004
     VECTOR_DIV_SCALAR = 0x1_2005
 
+    MATRIX_MUL_MATRIX = 0x1_3004
+
     # comparison
     CMP_GT = 0x1_0100
     CMP_LT = 0x1_0101
@@ -176,7 +178,7 @@ class BasicBlock(Value):
 
 
 class Function(Value):
-    def __init__(self, name, functionType):
+    def __init__(self, name, functionType: types.Function):
         super().__init__(functionType)
         self.__basicBlocks = []
         self.__name = name

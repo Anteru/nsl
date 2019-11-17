@@ -339,8 +339,10 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			# M <op> M, needs to get lowered per row
 			operation = be.GetOperation()
 			if operation == op.Operation.MUL:
-				# matrix-matrix multiply
-				pass
+				mul = LinearIR.BinaryInstruction(LinearIR.OpCode.MATRIX_MUL_MATRIX,
+					be.GetType(), left, right)
+				ctx.BasicBlock.AddInstruction(mul)
+				return mul
 			else:
 				assert operation != op.Operation.DIV
 				# ADD, SUB, or CMP -- these can be executed per row, and then
