@@ -116,10 +116,17 @@ class ComputeTypeVisitor(Visitor.DefaultVisitor):
 				if not expr.GetExpression ().GetType ().IsScalar ():
 					Errors.ERROR_ARRAY_ACCESS_WITH_NONSCALAR.Raise (expr.GetExpression ().GetType ())
 				
-				nestedSize = p.GetType().GetSize ()
-				if len(nestedSize) > 1:
+				parentType = p.GetType()
+				nestedSize = parentType.GetSize ()
+
+				if isinstance(parentType, types.MatrixType):
+					# Array access on matrix returns a vector
+					arrayType = types.VectorType(parentType.GetComponentType (),
+						parentType.GetColumnCount())
+					expr.SetType(arrayType)
+				elif len(nestedSize) > 1:
 					# Drop one dimension from the array
-					arrayType = types.ArrayType (p.GetType ().GetComponentType (), nestedSize [1:])
+					arrayType = types.ArrayType (parentType.GetComponentType (), nestedSize [1:])
 					expr.SetType (arrayType)
 				else:
 					# We've reached the last dimension (array is 1D now), so
