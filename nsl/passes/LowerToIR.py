@@ -321,6 +321,9 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		instruction = LinearIR.CastInstruction(castValue, ce.GetType())
 		ctx.BasicBlock.AddInstruction(instruction)
 		return instruction
+
+	def __GetMatrixRowType(self, m: types.MatrixType):
+		return types.VectorType(m.GetComponentType(), m.GetColumnCount())
 			
 	def v_BinaryExpression(self, be, ctx):
 		left = self.v_Visit (be.GetLeft (), ctx)
@@ -328,6 +331,79 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
 		assert isinstance(left, LinearIR.Value)
 		assert isinstance(right, LinearIR.Value)
+
+		assert isinstance(left.Type, types.PrimitiveType)
+		assert isinstance(right.Type, types.PrimitiveType)
+
+		if left.Type.IsMatrix() and right.Type.IsMatrix():
+			# M <op> M, needs to get lowered per row
+			operation = be.GetOperation()
+			if operation == op.Operation.MUL:
+				# matrix-matrix multiply
+				pass
+			else:
+				assert operation != op.Operation.DIV
+				# ADD, SUB, or CMP -- these can be executed per row, and then
+				# combined back into a matrix result
+				leftType = left.Type
+				leftRowType = self.__GetMatrixRowType(leftType)
+				
+				rightType = left.Type
+				rightRowType = self.__GetMatrixRowType(rightType)
+
+				resultType = be.GetType()
+				resultRowType = self.__GetMatrixRowType(resultType)
+				rows = []
+				for row in range(leftType.GetRowCount()):
+					index = ctx.Function.CreateConstant(types.Integer(), row)
+					leftRow = LinearIR.ArrayAccessInstruction(
+						leftRowType, left, index)
+					ctx.BasicBlock.AddInstruction(leftRow)
+
+					rightRow = LinearIR.ArrayAccessInstruction(
+						rightRowType, right, index)
+					ctx.BasicBlock.AddInstruction(rightRow)
+
+					newRow = LinearIR.BinaryInstruction.FromOperation (operation,
+						resultRowType, leftRow, rightRow)
+					ctx.BasicBlock.AddInstruction(newRow)
+					rows.append(newRow)
+
+				result = LinearIR.ConstructPrimitiveInstruction(resultType,
+					rows)
+				ctx.BasicBlock.AddInstruction(result)
+				return result
+		elif left.Type.IsMatrix () and right.Type.IsVector ():
+			# M <op> V, needs to get lowered to matrix-vector multiply
+			pass
+		elif left.Type.IsMatrix () and right.Type.IsScalar ():
+			# M <op> S, needs to get lowered to vector-scalar multiply or
+			# division
+			leftType = left.Type
+			leftRowType = self.__GetMatrixRowType(leftType)
+			
+			rightType = left.Type
+
+			resultType = be.GetType()
+			resultRowType = self.__GetMatrixRowType(resultType)
+			rows = []
+			for row in range(leftType.GetRowCount()):
+				leftRow = LinearIR.ArrayAccessInstruction(
+					leftRowType, left, ctx.Function.CreateConstant(
+						types.Integer(), row
+					)
+				)
+				ctx.BasicBlock.AddInstruction(leftRow)
+
+				newRow = LinearIR.BinaryInstruction.FromOperation (be.GetOperation(),
+					resultRowType, leftRow, right)
+				ctx.BasicBlock.AddInstruction(newRow)
+				rows.append(newRow)
+
+			result = LinearIR.ConstructPrimitiveInstruction(resultType,
+				rows)
+			ctx.BasicBlock.AddInstruction(result)
+			return result
 		
 		instruction = LinearIR.BinaryInstruction.FromOperation (be.GetOperation (),
 			be.GetType(), left, right)

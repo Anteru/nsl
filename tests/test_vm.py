@@ -334,3 +334,43 @@ def testVectorDividedByScalar():
 
     r = vm.Invoke('f', v=[2, 4, 6, 8], s = 2)
     assert r == [1, 2, 3, 4]
+
+def testMatrixScalarMultiply():
+    code = '''export function f(float4x4 m, float s) -> float4x4 {
+        return m * s;
+    }'''
+
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    m = [
+        [1, 2, 3, 4],
+        [5, 6, 7, 8],
+        [9, 10, 11, 12],
+        [13, 14, 15, 16]
+    ]
+    r = vm.Invoke('f', m=m, s=2)
+    assert r == [[i * 2 for i in r] for r in m]
+
+def testMatrixMatrixAdd():
+    code = '''export function f(float4x4 a, float4x4 b) -> float4x4 {
+        return a + b;
+    }'''
+
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+    assert result == True
+
+    vm = VM.VirtualMachine(ir)
+
+    m = [
+        [1, 2, 3, 4],
+        [5, 6, 7, 8],
+        [9, 10, 11, 12],
+        [13, 14, 15, 16]
+    ]
+    r = vm.Invoke('f', a=m, b=m)
+    assert r == [[i * 2 for i in r] for r in m]

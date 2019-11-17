@@ -48,6 +48,10 @@ export function mydot(float4 a, float4 b) -> float
     return result;
 }
 
+export function matrixMatrixAdd(float4x4 a, float4x4 b) -> float4x4 {
+	return a + b;
+}
+
 export function simpleLoop(float f, int l) -> float {
         for (int i = 0; i < l; ++i) {
             f *= f;
