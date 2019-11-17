@@ -37,17 +37,6 @@ export function branchIfElseIfElse(int a) -> int {
         if(a < 5) { return 0; } else if (a > 5) { return 1; } else { return -1; }
 }
 
-export function mydot(float4 a, float4 b) -> float
-{
-    float result = 0;
-
-    for (int i = 0; i < 4; ++i) {
-        result += a[i] * b[i];
-    }
-
-    return result;
-}
-
 export function matrixMatrixAdd(float4x4 a, float4x4 b) -> float4x4 {
 	return a + b;
 }
@@ -57,11 +46,11 @@ export function matrixMatrixMul(float4x4 a, float4x4 b) -> float4x4 {
 }
 
 export function simpleLoop(float f, int l) -> float {
-        for (int i = 0; i < l; ++i) {
-            f *= f;
-        }
+	for (int i = 0; i < l; ++i) {
+		f *= f;
+	}
 
-        return f;
+	return f;
 }
 
 export function assignSwizzleToFunctionArgument(float4 p) -> float4 {

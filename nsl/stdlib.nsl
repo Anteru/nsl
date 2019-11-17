@@ -8,3 +8,12 @@ function dot(float4 a, float4 b) -> float
 
     return result;
 }
+
+function mul(float4x4 a, float4 v) -> float4 {
+	return float4(
+		dot(a[0], v),
+		dot(a[1], v),
+		dot(a[2], v),
+		dot(a[3], v)
+	);
+}
