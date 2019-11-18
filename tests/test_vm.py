@@ -93,6 +93,13 @@ def testPrefixIncrement():
     r = vm.Invoke('f', a = 1)
     assert r == 2
 
+def testPostfixIncrement():
+    code = '''export function f(int a) -> int { return a++; }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f', a=1)
+    assert r == 1
+
 def testSimpleBranch():
     code = '''export function f(int a) -> int {
         if(a > 5) return 0; return 1; 

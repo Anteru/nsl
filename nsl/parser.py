@@ -195,8 +195,9 @@ class NslParser:
     def p_unary_expression_4(self, p):
         '''unary_expression : ID PLUSPLUS
                             | ID MINUSMINUS'''
-        p[2] = ast.PrimaryExpression (p[1])
-        p[2].SetLocation (self.__GetLocation (p, 1))
+
+        p[1] = ast.PrimaryExpression (p[1])
+        p[1].SetLocation (self.__GetLocation (p, 2))
         if p[2] == '++':
             p[0] = ast.AffixExpression(op.Operation.ADD, p[1], ast.Affix.POST)
         elif p[2] == '--':
