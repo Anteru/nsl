@@ -1,4 +1,4 @@
-from typing import List, Optional, Set
+from typing import List, Dict, Iterable, Optional
 from . import op
 from enum import Enum
 import collections
@@ -79,9 +79,11 @@ class OpCode(Enum):
     SHUFFLE = 0x6_0010
     
 class Value(Node):
+    # A value consists of a type and a reference, which unique identifies the
+    # value within its function
     def __init__(self, valueType: types.Type):
         self.__type = valueType
-        self.__number = id(self)
+        self.__reference = -1
 
     @property
     def Type(self):
@@ -89,10 +91,10 @@ class Value(Node):
 
     @property
     def Reference(self):
-        return self.__number
+        return self.__reference
 
     def SetReference(self, number):
-        self.__number = number
+        self.__reference = number
 
 class ConstantValue(Value):
     def __init__(self, valueType: types.Type, constantValue):
@@ -110,10 +112,14 @@ class ValueUser(Value):
     def __init__(self, valueType: types.Type):
         super().__init__(valueType)
 
-    # Return a list of all references this value user is referencing
     @property
-    def Uses(self) -> Set[int]:
-        return set()
+    def Uses(self) -> Iterable[int]:
+        # Return a list of all references this value user is referencing
+        return []
+
+    def ReplaceUses(self, ref: int, newValue: Value):
+        # Replace all uses referencing ``ref`` with the new value
+        pass
 
 class Instruction(ValueUser):
     def __init__(self, opCode: OpCode, returnType: types.Type):
@@ -135,10 +141,7 @@ class Instruction(ValueUser):
     def _SetOpCode(self, opcode):
         self.__opcode = opcode
 
-    def ReplaceUses(self, ref, newValue: Value):
-        pass
-
-    def _ReplaceUsesInList(self, valueList, ref, newValue):
+    def _ReplaceUsesInList(self, valueList: List[Value], ref: int, newValue: Value):
         for i in range(len(valueList)):
             if valueList[i].Reference == ref:
                 valueList[i] = newValue
@@ -160,13 +163,16 @@ class BasicBlock(Value):
         self.__uses = defaultdict(list)
 
         for i in self.__instructions:
-            for use in i.Uses:
+            # We call set here to remove duplicates. It should not make any
+            # functional difference though to just iterate the uses, but there
+            # may be duplicates
+            for use in set(i.Uses):
                 self.__uses[use].append(i)
 
     # Dictionary containing a reference as the key, and a list of instructions
     # referencing it as the value. Only valid after UpdateUses()
     @property
-    def Uses(self):
+    def Uses(self) -> Dict[int, Value]:
         return self.__uses
 
     @property
@@ -186,6 +192,9 @@ class BasicBlock(Value):
             # executed immediately, we record them and then apply them here
             self.__Replace()
 
+            # Our uses may have changed, so we need to update them
+            self.UpdateUses()
+
             # We need to update all uses of a replaced instruction as well, as we
             # reference instructions directly and otherwise the references would
             # remain pointing to old instructions
@@ -203,6 +212,11 @@ class BasicBlock(Value):
         self.__replacements[oldInstruction.Reference] = newInstruction
 
     def __Replace(self):
+        # We search all instructions, check if they're marked for replacement,
+        # and if so, plug in the new instruction right there with the same
+        # reference. Afterwards, we purge empty slots
+        # Other uses of the old instruction need to be updated using
+        # ReplaceUses()
         for index in range(len(self.__instructions)):
             instruction = self.__instructions[index]
             if instruction.Reference in self.__replacements:
@@ -233,6 +247,7 @@ class Function(Value):
         return bb
 
     def UpdateUses(self):
+        # Update the uses of all basic blocks and the function itself
         self.__uses = defaultdict(list)
 
         for bb in self.BasicBlocks:
@@ -242,6 +257,13 @@ class Function(Value):
     @property
     def BasicBlocks(self):
         return self.__basicBlocks
+
+    @property
+    def Instructions(self):
+        result = []
+        for bb in self.BasicBlocks:
+            result.extend(bb.Instructions)
+        return result
 
     def _Traverse(self, function):
         self.__basicBlocks = function(self.__basicBlocks)
@@ -276,6 +298,8 @@ class Function(Value):
             for instruction in self.__uses[ref]:
                 instruction.ReplaceUses(ref, new)
 
+        # We have replaced uses across several basic blocks, we need to let them
+        # know that their uses are no longer valid
         self.UpdateUses()
 
 class Program(Node):
@@ -478,6 +502,8 @@ class ReturnInstruction(Instruction):
     def Uses(self):
         if self.__value:
             yield self.__value.Reference
+        else:
+            return []
 
 class VariableAccessScope(Enum):
     GLOBAL = 0
@@ -608,6 +634,8 @@ class VariableAccessInstruction(Instruction):
     def Uses(self):
         if self.__store:
             yield self.__store.Reference
+        else:
+            return []
 
 class CallInstruction(Instruction):
     def __init__(self, returnType: types.Type, functionName: str,

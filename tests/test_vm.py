@@ -1,5 +1,6 @@
 from nsl import (
     Compiler,
+    LinearIR,
     VM
 )
 
@@ -371,3 +372,14 @@ def testMatrixRowAccess():
     
     r = vm.Invoke('f', m=a, i=2)
     assert r == [4, 1, 0, 1]
+
+def testConstantantCastIsOptimized():
+    code = '''export function f() -> float {
+        return float(1);
+    }'''
+
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code)
+
+    for i in ir.Functions['f'].Instructions:
+        assert not isinstance(i, LinearIR.CastInstruction)

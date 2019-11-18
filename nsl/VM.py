@@ -252,3 +252,4 @@ class VirtualMachine:
 
     def Invoke(self, functionName, **args):
         return self.__ctx.Invoke(functionName, **args)
+        
