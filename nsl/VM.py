@@ -117,18 +117,20 @@ class ExecutionContext:
                     localScope[ref] = op1 / op2
                 elif operation == LinearIR.OpCode.MUL:
                     localScope[ref] = op1 * op2
+                elif operation == LinearIR.OpCode.MOD:
+                    localScope[ref] = op1 % op2
                 elif operation == LinearIR.OpCode.CMP_GT:
-                    localScope[ref] = op1 > op2
+                    localScope[ref] = 1 if op1 > op2 else 0
                 elif operation == LinearIR.OpCode.CMP_GE:
-                    localScope[ref] = op1 >= op2
+                    localScope[ref] = 1 if op1 >= op2 else 0
                 elif operation == LinearIR.OpCode.CMP_LT:
-                    localScope[ref] = op1 < op2
+                    localScope[ref] = 1 if op1 < op2 else 0
                 elif operation == LinearIR.OpCode.CMP_LE:
-                    localScope[ref] = op1 <= op2
+                    localScope[ref] = 1 if op1 <= op2 else 0
                 elif operation == LinearIR.OpCode.CMP_EQ:
-                    localScope[ref] = op1 == op2
+                    localScope[ref] = 1 if op1 == op2 else 0
                 elif operation == LinearIR.OpCode.CMP_NE:
-                    localScope[ref] = op1 != op2
+                    localScope[ref] = 1 if op1 != op2 else 0
                 elif operation == LinearIR.OpCode.VECTOR_ADD:
                     localScope[ref] = [x + y for x, y in zip(op1, op2)]
                 elif operation == LinearIR.OpCode.VECTOR_SUB:

@@ -268,6 +268,7 @@ class BinaryInstruction(Instruction):
                 op.Operation.MUL: OpCode.MUL,
                 op.Operation.SUB: OpCode.SUB,
                 op.Operation.DIV: OpCode.DIV,
+                op.Operation.MOD: OpCode.MOD,
                 
                 op.Operation.CMP_GT: OpCode.CMP_GT,
                 op.Operation.CMP_GE: OpCode.CMP_GE,
@@ -318,7 +319,7 @@ class CompareInstruction(Instruction):
         self.__values = [v1, v2]
 
 class BranchInstruction(Instruction):
-    def __init__(self, trueBlock: BasicBlock,
+    def __init__(self, trueBlock: Optional[BasicBlock],
         falseBlock: BasicBlock = None,
         predicate: Value = None):
         super().__init__(OpCode.BRANCH, types.Void())
