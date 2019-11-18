@@ -58,9 +58,9 @@ export function assignSwizzleToFunctionArgument(float4 p) -> float4 {
         return p;
 }
 
-function CreateFloat4 (float2 a, float b, float c) -> float4
+function CreateFloat4 (float2 a, float b) -> float4
 {
-	return float4(a, b, c);
+	return float4(a, b, 1);
 }
 
 function TransformPoint(float4 p, TransformationMatrices m) -> float4

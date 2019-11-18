@@ -47,6 +47,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			self.__startNewBlock = True
 
 		def OnLeaveFunction(self):
+			self.__function.UpdateUses()
 			self.__functions.append(self.__function)
 			self.__function = None
 

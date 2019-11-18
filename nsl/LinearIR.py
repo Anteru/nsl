@@ -1,9 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Set
 from . import op
 from enum import Enum
 import collections
 from . import Errors, types
 from .Visitor import Node, Visitor
+from collections import defaultdict
 
 
 class OpCode(Enum):
@@ -88,7 +89,7 @@ class Value(Node):
 
     @property
     def Reference(self):
-        return f'{self.__number}'
+        return self.__number
 
     def SetReference(self, number):
         self.__number = number
@@ -108,6 +109,11 @@ class ConstantValue(Value):
 class ValueUser(Value):
     def __init__(self, valueType: types.Type):
         super().__init__(valueType)
+
+    # Return a list of all references this value user is referencing
+    @property
+    def Uses(self) -> Set[int]:
+        return set()
 
 class Instruction(ValueUser):
     def __init__(self, opCode: OpCode, returnType: types.Type):
@@ -129,6 +135,14 @@ class Instruction(ValueUser):
     def _SetOpCode(self, opcode):
         self.__opcode = opcode
 
+    def ReplaceUses(self, ref, newValue: Value):
+        pass
+
+    def _ReplaceUsesInList(self, valueList, ref, newValue):
+        for i in range(len(valueList)):
+            if valueList[i].Reference == ref:
+                valueList[i] = newValue
+
 class BasicBlock(Value):
     def __init__(self, function):
         super().__init__(types.Void())
@@ -137,6 +151,23 @@ class BasicBlock(Value):
         self.__successors = []
         self.__function = function
         self.__replacements = {}
+        # Link between reference and instruction using it. This makes replacing
+        # very fast, as we can find all instructions that reference a given
+        # instruction directly
+        self.__uses = defaultdict(list)
+
+    def UpdateUses(self):
+        self.__uses = defaultdict(list)
+
+        for i in self.__instructions:
+            for use in i.Uses:
+                self.__uses[use].append(i)
+
+    # Dictionary containing a reference as the key, and a list of instructions
+    # referencing it as the value. Only valid after UpdateUses()
+    @property
+    def Uses(self):
+        return self.__uses
 
     @property
     def Parent(self):
@@ -149,9 +180,18 @@ class BasicBlock(Value):
     def _Traverse(self, function):
         self.__replacements = {}
         self.__instructions = function(self.__instructions)
-        # During traversal, we can register replacements which cannot be
-        # executed immediately, we record them and then apply them here
-        self.__Replace()
+
+        if self.__replacements:
+            # During traversal, we can register replacements which cannot be
+            # executed immediately, we record them and then apply them here
+            self.__Replace()
+
+            # We need to update all uses of a replaced instruction as well, as we
+            # reference instructions directly and otherwise the references would
+            # remain pointing to old instructions
+            self.Parent.ReplaceUses(self.__replacements)
+
+        self.__replacements = {}
 
     def AddInstruction(self, instruction: Instruction):
         instruction.SetParent(self)
@@ -160,13 +200,13 @@ class BasicBlock(Value):
         return instruction
 
     def Replace(self, oldInstruction: Instruction, newInstruction: Optional[Value]):
-        self.__replacements[oldInstruction] = newInstruction
+        self.__replacements[oldInstruction.Reference] = newInstruction
 
     def __Replace(self):
         for index in range(len(self.__instructions)):
             instruction = self.__instructions[index]
-            if instruction in self.__replacements:
-                newInstruction = self.__replacements[instruction]
+            if instruction.Reference in self.__replacements:
+                newInstruction = self.__replacements[instruction.Reference]
                 newInstruction.SetReference(instruction.Reference)
                 if isinstance(newInstruction, Instruction):
                     self.__instructions[index] = newInstruction
@@ -184,12 +224,20 @@ class Function(Value):
         self.__name = name
         self.__values = []
         self.__constants = {}
+        self.__uses = defaultdict(list)
 
     def CreateBasicBlock(self):
         bb = BasicBlock (self)
         self.RegisterValue(bb)
         self.__basicBlocks.append (bb)
         return bb
+
+    def UpdateUses(self):
+        self.__uses = defaultdict(list)
+
+        for bb in self.BasicBlocks:
+            bb.UpdateUses()
+            self.__uses.update (bb.Uses)
     
     @property
     def BasicBlocks(self):
@@ -223,6 +271,13 @@ class Function(Value):
     def Name(self):
         return self.__name
 
+    def ReplaceUses(self, uses):
+        for ref, new in uses.items():
+            for instruction in self.__uses[ref]:
+                instruction.ReplaceUses(ref, new)
+
+        self.UpdateUses()
+
 class Program(Node):
     def __init__(self):
         self.__functions = collections.OrderedDict()
@@ -252,6 +307,13 @@ class BinaryInstruction(Instruction):
         v1: Value, v2: Value):
         super().__init__(operation, returnType)
         self.__values = [v1, v2]
+
+    def ReplaceUses(self, ref, newValue):
+        self._ReplaceUsesInList(self.__values, ref, newValue)
+
+    @property
+    def Uses(self):
+        return [v.Reference for v in self.__values]
 
     @staticmethod
     def FromOperation(operation: op.Operation, returnType: types.Type,
@@ -318,6 +380,13 @@ class CompareInstruction(Instruction):
         self.__predicate = predicate
         self.__values = [v1, v2]
 
+    def ReplaceUses(self, ref, newValue):
+        self._ReplaceUsesInList(self.__values, ref, newValue)
+
+    @property
+    def Uses(self):
+        return [v.Reference for v in self.__values]
+
 class BranchInstruction(Instruction):
     def __init__(self, trueBlock: Optional[BasicBlock],
         falseBlock: BasicBlock = None,
@@ -326,6 +395,28 @@ class BranchInstruction(Instruction):
         self.__trueBlock = trueBlock
         self.__falseBlock = falseBlock
         self.__predicate = predicate
+
+    def ReplaceUses(self, ref, newValue):
+        assert self.__trueBlock is not None
+
+        if self.__trueBlock.Reference == ref:
+            self.__trueBlock = newValue
+
+        if self.__falseBlock and self.__falseBlock.Reference == ref:
+            self.__falseBlock = ref
+
+        if self.__predicate and self.__predicate.Reference == ref:
+            self.__predicate = ref
+
+    @property
+    def Uses(self):
+        yield self.__trueBlock
+
+        if self.__falseBlock:
+            yield self.__falseBlock
+
+        if self.__predicate:
+            yield self.__predicate
 
     def SetTrueBlock(self, trueBlock: BasicBlock):
         self.__trueBlock = trueBlock
@@ -355,6 +446,14 @@ class UnaryInstruction(Instruction):
     def Value(self):
         return self.__value
 
+    def ReplaceUses(self, ref, newValue: Value):
+        if self.__value.Reference == ref:
+            self.__value = newValue
+
+    @property
+    def Uses(self):
+        yield self.__value.Reference
+
 class CastInstruction(UnaryInstruction):
     def __init__(self, value: Value, targetType: types.Type):
         super().__init__(OpCode.CAST, targetType, value)
@@ -371,6 +470,15 @@ class ReturnInstruction(Instruction):
     def Value(self):
         return self.__value
 
+    def ReplaceUses(self, ref, newValue):
+        if self.__value and self.__value.Reference == ref:
+            self.__value = newValue
+
+    @property
+    def Uses(self):
+        if self.__value:
+            yield self.__value.Reference
+
 class VariableAccessScope(Enum):
     GLOBAL = 0
     FUNCTION_ARGUMENT = 1
@@ -386,8 +494,15 @@ class ConstructPrimitiveInstruction(Instruction):
     def Values(self):
         return self.__values
 
+    def ReplaceUses(self, ref, newValue):
+        self._ReplaceUsesInList(self.__values, ref, newValue)
+
+    @property
+    def Uses(self):
+        return [v.Reference for v in self.__values]
+
 class MemberAccessInstruction(Instruction):
-    def __init__(self, memberType, variable, member,
+    def __init__(self, memberType, variable: Value, member: str,
         accessScope: VariableAccessScope = VariableAccessScope.FUNCTION_LOCAL):
         super().__init__(OpCode.INVALID, memberType)
         self.__parent = variable
@@ -414,6 +529,19 @@ class MemberAccessInstruction(Instruction):
     def Store(self):
         return self.__store
 
+    def ReplaceUses(self, ref, newValue):
+        if self.__parent.Reference == ref:
+            self.__parent = newValue
+
+        if self.__store and self.__store.Reference == newValue:
+            self.__store == newValue
+
+    @property
+    def Uses(self):
+        yield self.__parent.Reference
+        if self.__store:
+            yield self.__store.Reference
+
 class ShuffleInstruction(Instruction):
     def __init__(self, returnType: types.VectorType,
         first: Value,
@@ -435,6 +563,18 @@ class ShuffleInstruction(Instruction):
     @property
     def Indices(self):
         return self.__indices
+
+    def ReplaceUses(self, ref, newValue):
+        if self.__first.Reference == ref:
+            self.__first = newValue
+        
+        if self.__second.Reference == ref:
+            self.__second = newValue
+
+    @property
+    def Uses(self):
+        yield self.__first.Reference
+        yield self.__second.Reference
 
 class VariableAccessInstruction(Instruction):
     def __init__(self, returnType: types.Type, variableName,
@@ -460,6 +600,15 @@ class VariableAccessInstruction(Instruction):
     def Scope(self):
         return self.__scope
 
+    def ReplaceUses(self, ref, newValue):
+        if self.__store and self.__store.Reference == ref:
+            self.__store = newValue
+
+    @property
+    def Uses(self):
+        if self.__store:
+            yield self.__store.Reference
+
 class CallInstruction(Instruction):
     def __init__(self, returnType: types.Type, functionName: str,
         arguments = []):
@@ -474,6 +623,13 @@ class CallInstruction(Instruction):
     @property
     def Function(self):
         return self.__function
+
+    def ReplaceUses(self, ref, newValue):
+        self._ReplaceUsesInList(self.__arguments, ref, newValue)
+
+    @property
+    def Uses(self):
+        return [a.Reference for a in self.__arguments]
 
 class ArrayAccessInstruction(Instruction):
     def __init__(self, returnType: types.Type, array, index):
@@ -497,6 +653,24 @@ class ArrayAccessInstruction(Instruction):
     @property
     def Store(self):
         return self.__store
+
+    def ReplaceUses(self, ref, newValue):
+        if self.__array.Reference == ref:
+            self.__array = newValue
+
+        if self.__index.Reference == ref:
+            self.__index = newValue
+
+        if self.__store and self.__store.Reference == ref:
+            self.__store = newValue
+
+    @property
+    def Uses(self):
+        yield self.__array.Reference
+        yield self.__index.Reference
+
+        if self.__store:
+            yield self.__store.Reference
 
 class DeclareVariableInstruction(Instruction):
     def __init__(self, variableType, name = None,
