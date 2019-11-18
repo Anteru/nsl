@@ -33,6 +33,14 @@ export function AddToGlobalArray (int a, int index) -> int
 	return a + global_array[index];
 }
 
+export function AddToArgumentArray (int a, int i, int arr[2]) -> void {
+	arr [i] += a;
+}
+
+export function PostfixAdd(int a) -> int {
+	return a++;
+}
+
 export function branchIfElseIfElse(int a) -> int {
         if(a < 5) { return 0; } else if (a > 5) { return 1; } else { return -1; }
 }

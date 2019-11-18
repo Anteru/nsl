@@ -52,6 +52,18 @@ def testSimpleWriteToGlobal():
     g = vm.GetGlobal('g')
     assert g == 5
 
+def testSimpleWriteToGlobalArray():
+    code = '''int g[5];
+
+    export function f(int i, int v) -> void { g[i] = v; }'''
+
+    vm = _compile(code)
+    g = [0, 1, 2, 3, 4, 5]
+    vm.SetGlobal('g', g)
+
+    r = vm.Invoke('f', i=3, v=1337)
+    assert g [3] == 1337
+
 def testSimpleFunctionCall():
     code = '''
     function f(int v) -> int { return v; }
@@ -390,3 +402,13 @@ def testConstantantCastIsOptimized():
 
     for i in ir.Functions['f'].Instructions:
         assert not isinstance(i, LinearIR.CastInstruction)
+
+def testAddToArrayArgument():
+    code = '''export function f(int i, int v, int arr[2]) -> void {
+        arr[i] += v;
+    }'''
+    vm = _compile(code)
+
+    array = [0, 1]
+    vm.Invoke('f', i=1, v=3, arr=array)
+    assert array[1]== 4

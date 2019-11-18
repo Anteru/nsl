@@ -557,9 +557,13 @@ class ArgumentModifier(Enum):
 class Argument(Node):
     '''Function argument. Captures the type (potentially a Type or
     UnresolvedType) and the name of the argument.'''
-    def __init__(self, argumentType, name = None, modifiers = set()):
+    def __init__(self, argumentType, name = None, modifiers = set(),
+        arraySize = None):
         super().__init__()
-        self.__type = argumentType
+        if arraySize:
+            self.__type = types.ArrayType(argumentType, arraySize)
+        else:
+            self.__type = argumentType
         self.__name = name
         self.__modifiers = modifiers
 

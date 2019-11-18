@@ -98,8 +98,6 @@ class ExecutionContext:
                 ref = instruction.Reference
                 var = localScope[instruction.Store.Reference]
                 array = instruction.Array.Reference
-                if instruction.Array.Name:
-                    array = instruction.Array.Name
                 localScope[array][
                     localScope[instruction.Index.Reference]
                 ] = var

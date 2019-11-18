@@ -50,12 +50,12 @@ class NslParser:
     def p_program_2(self, p):
         '''program : declaration_statement'''
         p[0] = ast.Program ()
-        p[0].AddDeclaration (p [1])
+        p[0].AddDeclaration (p[1])
 
     def p_program_3(self, p):
         '''program : program declaration_statement'''
-        p [0] = p [1]
-        p[0].AddDeclaration (p [2])
+        p[0] = p[1]
+        p[0].AddDeclaration (p[2])
 
     def p_program_4(self, p):
         '''program : type_definition'''
@@ -77,24 +77,37 @@ class NslParser:
         p[0] = p[1]
 
     def p_argument_1(self, p):
-        '''argument : type ID'''
-        p [0] = ast.Argument (p [1], p[2])
+        '''argument : arg_mod_opt type ID array_size_declaration_list'''
+        if not p[4]:
+            arraySize = None
+        
+        if p[1]:
+            p[1] = set(p[1])
+        else:
+            p[1] = set()
+
+        p[0] = ast.Argument (p[2], p[3], modifiers=p[1], arraySize = p[4])
 
     def p_argument_2(self, p):
-        '''argument : type'''
-        p [0] = ast.Argument (p[1])
+        '''argument : arg_mod_opt type array_size_declaration_list'''
+        if not p[3]:
+            arraySize = None
+        
+        if p[1]:
+            p[1] = set(p[1])
+        else:
+            p[1] = set()
 
-    def p_argument_3 (self, p):
-        '''argument : arg_mod type ID'''
-        p [0] = ast.Argument (p[2], p[3], modifiers = set ([p[1]]))
-
-    def p_argument_4 (self, p):
-        '''argument : arg_mod type'''
-        p [0] = ast.Argument (p[2], modifiers = set ([p[1]]))
+        p[0] = ast.Argument (p[2], modifiers=p[1], arraySize = p[3])
 
     def p_arg_mod (self, p):
         '''arg_mod : __OPTIONAL'''
-        p [0] = ast.ArgumentModifier.Optional
+        p[0] = ast.ArgumentModifier.Optional
+
+    def p_arg_mod_opt (self, p):
+        '''arg_mod_opt : arg_mod
+                       | empty'''
+        p[0] = p[1]
 
     def p_arg_list_1(self, p):
         '''arg_list : arg_list ',' argument'''
@@ -244,11 +257,11 @@ class NslParser:
 
     def p_array_expression_1(self, p):
         '''array_expression : ID '[' expression ']' '''
-        p [0] = ast.ArrayExpression (ast.PrimaryExpression(p[1]), p[3])
+        p[0] = ast.ArrayExpression (ast.PrimaryExpression(p[1]), p[3])
 
     def p_array_expression_2(self, p):
         '''array_expression : access_expression '[' expression ']' '''
-        p [0] = ast.ArrayExpression (p[1], p[3])
+        p[0] = ast.ArrayExpression (p[1], p[3])
 
     def p_member_access_expression_1(self, p):
         '''member_access_expression : ID '.' ID '''
@@ -257,14 +270,14 @@ class NslParser:
         member = ast.PrimaryExpression (p[3])
         member.SetLocation(self.__GetLocation(p, 3))
         
-        p [0] = ast.MemberAccessExpression (parent, member)
+        p[0] = ast.MemberAccessExpression (parent, member)
 
     def p_member_access_expression_2(self, p):
         '''member_access_expression : access_expression '.' ID '''
         member = ast.PrimaryExpression (p[3])
         member.SetLocation(self.__GetLocation(p, 3))
         
-        p [0] = ast.MemberAccessExpression (p[1], member)
+        p[0] = ast.MemberAccessExpression (p[1], member)
 
     def p_assignment_op(self, p):
         '''assignment_op : EQUALS 
@@ -272,14 +285,11 @@ class NslParser:
         | MINUSEQUAL 
         | DIVEQUAL 
         | TIMESEQUAL'''
-        p [0] = op.StrToOp (p[1])
+        p[0] = op.StrToOp (p[1])
 
     def p_assignment_expression(self, p):
         '''assignment_expression : unary_expression assignment_op expression'''
-        p [0] = ast.AssignmentExpression (p[1], p[3], operation=p[2])
-
-    def p_argument(self, p):
-        '''argument : var_decl'''
+        p[0] = ast.AssignmentExpression (p[1], p[3], operation=p[2])
 
     def p_function_attr(self, p):
         '''function_attr : EXPORT'''
@@ -333,23 +343,6 @@ class NslParser:
         for annotation in p[1]:
             p[0].AddAnnotation (annotation)
     
-    def p_function_list_1 (self, p):
-        '''function_list : empty'''
-        p[0] = []
-
-    def p_function_list_2 (self, p):
-        '''function_list : function'''
-        p[0] = [p[1]]
-
-    def p_function_list_3 (self, p):
-        '''function_list : function_list function'''
-        p[0] = p[1] + [p[2]]
-
-    def p_declaration (self, p):
-        '''declaration : function_decl
-        | var_decl'''
-        p[0] = None
-
     def p_var_decl_list_1(self, p):
         '''var_decl_list : var_decl ';' '''
         p[0] = [p[1]]
