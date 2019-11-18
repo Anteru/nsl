@@ -20,6 +20,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			self.__locals = {}
 			self.__variables = {}
 			self.__assignmentValue = []
+			self.__loops = []
 
 		def OnEnterProgram(self, program):
 			for g in program.GetDeclarations():
@@ -66,6 +67,18 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
 		def EndAssignment(self):
 			self.__assignmentValue.pop()
+
+		def BeginLoop(self):
+			self.__loops.append({'break': [], 'continue': []})
+
+		def EndLoop(self):
+			return self.__loops.pop()
+
+		def RegisterLoopContinue(self, branch: LinearIR.BranchInstruction):
+			self.__loops[-1]['continue'].append(branch)
+
+		def RegisterLoopBreak(self, branch: LinearIR.BranchInstruction):
+			self.__loops[-1]['break'].append(branch)
 
 		@property
 		def InAssignment(self):
@@ -179,9 +192,15 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
 		# Basic block containing the body
 		bodyBB = ctx.CreateBasicBlock ()
+		
+		# We start our loop here, so we can use break/continue inside the body.
+		# Those will get fixed up later
+		ctx.BeginLoop()
 		self.v_Visit(expr.GetBody(), ctx)
+		breakContinueInstructions = ctx.EndLoop()
 
 		# Increment operation
+		incrementBB = ctx.CreateBasicBlock ()
 		self.v_Visit(expr.GetNext (), ctx)
 
 		# Unconditional branch back to the conditional test
@@ -192,6 +211,26 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		# Fix up the condition to either continue with the body, or exit
 		condBranch.SetTrueBlock(bodyBB)
 		condBranch.SetFalseBlock(exitBB)
+
+		for breakInstruction in breakContinueInstructions['break']:
+			breakInstruction.SetTrueBlock(exitBB)
+		
+		for continueInstruction in breakContinueInstructions['continue']:
+			continueInstruction.SetTrueBlock(incrementBB)
+
+	def v_ContinueStatement(self, expr, ctx):
+		branch = LinearIR.BranchInstruction(None)
+		ctx.BasicBlock.AddInstruction(branch)
+		ctx.RegisterLoopContinue(branch)
+
+		return branch
+
+	def v_BreakStatement(self, expr, ctx):
+		branch = LinearIR.BranchInstruction(None)
+		ctx.BasicBlock.AddInstruction(branch)
+		ctx.RegisterLoopBreak(branch)
+
+		return branch
 
 	def v_IfStatement(self, expr, ctx):
 		# Evaluate condition

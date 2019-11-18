@@ -176,6 +176,42 @@ def testRunSimpleLoop():
     r = vm.Invoke('f', f = 2, l = 4)
     assert r == 2**16
 
+def testRunSimpleLoopWithBreak():
+    code = '''export function f(int l) -> int {
+        int result = 0;
+        for (int i = 0; i < l; ++i) {
+            result += i;
+
+            if (result > 10) {
+                break;
+            }
+        }
+
+        return result;
+    }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f', l = 10)
+    assert r == 15
+
+def testRunSimpleLoopWithContinue():
+    code = '''export function f(int l) -> int {
+        int result = 0;
+        for (int i = 0; i < l; ++i) {
+            if ((i % 2) == 0) {
+                continue;
+            }
+
+            result += i;
+        }
+
+        return result;
+    }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f', l = 10)
+    assert r == sum([i for i in range(10) if i % 2 != 0])
+
 def testRunSimpleSwizzleRead():
     code = '''export function f(float4 p) -> float2 {
         return p.xz;
