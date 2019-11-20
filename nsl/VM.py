@@ -76,7 +76,7 @@ class ExecutionContext:
                     args[instruction.Variable] = localScope[instruction.Store.Reference]
                 else:
                     localScope[instruction.Variable] = localScope[instruction.Store.Reference]
-            elif opCode == LinearIR.OpCode.LOAD_ARRAY:
+            elif opCode == LinearIR.OpCode.LOAD_ARRAY or opCode == LinearIR.OpCode.VECTOR_GET:
                 ref = instruction.Reference
                 var = localScope[instruction.Array.Reference][
                     localScope[instruction.Index.Reference]
@@ -233,6 +233,13 @@ class ExecutionContext:
                     Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise(
                         f'Cannot construct primitive of type: {instruction.Type}'
                     )
+            elif opCode == LinearIR.OpCode.VECTOR_SET:
+                ref = instruction.Reference
+                var = localScope[instruction.Store.Reference]
+                array = instruction.Array.Reference
+                copy = list(localScope[array])
+                copy [localScope[instruction.Index.Reference]] = var
+                localScope[ref] = copy
             else:
                 raise Exception(f"Unhandled opcode: {opCode}")
 

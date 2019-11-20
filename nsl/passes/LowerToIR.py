@@ -513,13 +513,39 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 	def v_ArrayExpression(self, expr, ctx):
 		array = self.v_Visit(expr.GetParent(), ctx)
 		index = self.v_Visit(expr.GetExpression(), ctx)
-		ai = LinearIR.ArrayAccessInstruction(expr.GetType(), array, index)
 
-		if ctx.InAssignment:
-			ai.SetStore(ctx.AssignmentValue)
+		isPrimitive = array.Type.IsPrimitive()
+		if isPrimitive:
+			isVector = array.Type.IsVector()
+		else:
+			isVector = False
 
-		ctx.BasicBlock.AddInstruction(ai)
-		return ai
+		if isVector:
+			arrayType = array.Type
+			if arrayType.IsVector():
+				cai = LinearIR.ComponentAccessInstruction(expr.GetType(),
+					array, index)
+				ctx.BasicBlock.AddInstruction(cai)
+
+				if ctx.InAssignment:
+					cai.SetStore(ctx.AssignmentValue)
+
+				ctx.BeginAssignment(cai)
+				result = self.v_Visit(expr.GetParent(), ctx)
+				ctx.EndAssignment()
+				
+				if ctx.InAssignment:
+					return result
+				else:
+					return self.v_Visit(expr.GetParent(), ctx)
+		else:
+			ai = LinearIR.ArrayAccessInstruction(expr.GetType(), array, index)
+
+			if ctx.InAssignment:
+				ai.SetStore(ctx.AssignmentValue)
+
+			ctx.BasicBlock.AddInstruction(ai)
+			return ai
 
 	def OnEnter(self, _, ctx):
 		ctx.OnEnterNode()

@@ -412,3 +412,15 @@ def testAddToArrayArgument():
     array = [0, 1]
     vm.Invoke('f', i=1, v=3, arr=array)
     assert array[1]== 4
+
+def testAssignToCopyDoesCopy():
+    code = '''export function f(float f) -> float4 {
+        float4 t = float4(1,2,3,4);
+        float4 u = t;
+        u[2] = f;
+        return t[2];
+    }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f', f=1337)
+    assert r == 3

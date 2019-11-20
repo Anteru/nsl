@@ -73,8 +73,11 @@ class OpCode(Enum):
     LOAD_ARRAY = 0x6_0002
     STORE_ARRAY = 0x6_1002
 
-    LOAD_MEMBER = 0x6_0004
-    STORE_MEMBER = 0x6_1004
+    LOAD_MEMBER = 0x6_0003
+    STORE_MEMBER = 0x6_1003
+
+    VECTOR_GET = 0x6_0004
+    VECTOR_SET = 0x6_1004
 
     SHUFFLE = 0x6_0010
     
@@ -659,9 +662,11 @@ class CallInstruction(Instruction):
     def Uses(self):
         return [a.Reference for a in self.__arguments]
 
-class ArrayAccessInstruction(Instruction):
-    def __init__(self, returnType: types.Type, array, index):
-        super().__init__(OpCode.LOAD_ARRAY, returnType)
+class _IndexedAccessBase(Instruction):
+    def __init__(self, returnType: types.Type, array, index,
+        opCodes = (None, None)):
+        super().__init__(opCodes[0], returnType)
+        self.__opCodes = opCodes
         self.__array = array
         self.__index = index
         self.__store = None
@@ -676,7 +681,7 @@ class ArrayAccessInstruction(Instruction):
 
     def SetStore(self, destination):
         self.__store = destination
-        self._SetOpCode(OpCode.STORE_ARRAY)
+        self._SetOpCode(self.__opCodes[1])
 
     @property
     def Store(self):
@@ -699,6 +704,16 @@ class ArrayAccessInstruction(Instruction):
 
         if self.__store:
             yield self.__store.Reference
+
+class ArrayAccessInstruction(_IndexedAccessBase):
+    def __init__(self, returnType: types.Type, array: Value, index: Value):
+        super().__init__(returnType, array, index,
+            (OpCode.LOAD_ARRAY, OpCode.STORE_ARRAY))
+
+class ComponentAccessInstruction(_IndexedAccessBase):
+    def __init__(self, returnType: types.Type, array: Value, index: Value):
+        super().__init__(returnType, array, index,
+            (OpCode.VECTOR_GET, OpCode.VECTOR_SET))
 
 class DeclareVariableInstruction(Instruction):
     def __init__(self, variableType, name = None,
@@ -810,6 +825,21 @@ class InstructionPrinter(Visitor):
         else:
             self.__Print(self.__FormatReference(aai), '=',
                 f'load',
+                self.__FormatType(aai.Type),
+                self.__FormatReference(aai.Array),
+                self.__FormatReference(aai.Index))
+
+    def v_ComponentAccessInstruction(self, aai, ctx=None):
+        if aai.Store:
+            self.__Print(
+                self.__FormatReference(aai), '=',
+                f'vectorset',
+                self.__FormatReference(aai.Array),
+                self.__FormatReference(aai.Index),
+                self.__FormatReference(aai.Store))
+        else:
+            self.__Print(self.__FormatReference(aai), '=',
+                f'vectorget',
                 self.__FormatType(aai.Type),
                 self.__FormatReference(aai.Array),
                 self.__FormatReference(aai.Index))

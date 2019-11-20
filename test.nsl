@@ -41,6 +41,19 @@ export function PostfixAdd(int a) -> int {
 	return a++;
 }
 
+export function AssignToVectorUsingArrayAccess(float4 v, int i, float f) -> float4 {
+	v[i] = f;
+	return v;
+}
+
+export function vectorAccessUsingIndex(float4 v, int i) -> float {
+	return v[i];
+}
+
+export function vectorAccessUsingSwizzle(float4 v) -> float {
+	return v.y;
+}
+
 export function branchIfElseIfElse(int a) -> int {
         if(a < 5) { return 0; } else if (a > 5) { return 1; } else { return -1; }
 }
