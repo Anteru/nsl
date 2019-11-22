@@ -257,7 +257,9 @@ class NslParser:
 
     def p_array_expression_1(self, p):
         '''array_expression : ID '[' expression ']' '''
-        p[0] = ast.ArrayExpression (ast.PrimaryExpression(p[1]), p[3])
+        pe = ast.PrimaryExpression(p[1])
+        pe.SetLocation(self.__GetLocation(p, 1))
+        p[0] = ast.ArrayExpression (pe, p[3])
 
     def p_array_expression_2(self, p):
         '''array_expression : access_expression '[' expression ']' '''
