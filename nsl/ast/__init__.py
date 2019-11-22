@@ -47,9 +47,13 @@ class Location:
     
     def GetEnd(self):
         return self.__span [1]
+
+    @property
+    def IsUnknown(self):
+        return self.__span == (-1, -1)
     
     def __str__(self):
-        if self.__span == (-1, -1):
+        if self.IsUnknown:
             return '<unknown>'
 
         if self.__sourceMapping:

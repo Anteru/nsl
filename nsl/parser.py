@@ -87,6 +87,7 @@ class NslParser:
             p[1] = set()
 
         p[0] = ast.Argument (p[2], p[3], modifiers=p[1], arraySize = p[4])
+        p[0].SetLocation(self.__GetLocation(p, 3))
 
     def p_argument_2(self, p):
         '''argument : arg_mod_opt type array_size_declaration_list'''
@@ -448,9 +449,12 @@ class NslParser:
         else:
             p[0] = ast.VariableDeclaration (p[1], p[2], p[4])
 
+        p[0].SetLocation(self.__GetLocation(p, 2))
+
     def p_var_decl_2(self, p):
         '''var_decl : type ID EQUALS expression'''
         p[0] = ast.VariableDeclaration(p[1], p[2], None, p[4])
+        p[0].SetLocation(self.__GetLocation(p, 2))
 
     def p_array_size_declaration (self, p):
         '''array_size_declaration : '[' constant_integer_expression ']' '''
