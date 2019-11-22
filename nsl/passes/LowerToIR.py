@@ -398,11 +398,11 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 				rows = []
 				for row in range(leftType.GetRowCount()):
 					index = ctx.Function.CreateConstant(types.Integer(), row)
-					leftRow = LinearIR.ArrayAccessInstruction(
+					leftRow = LinearIR.MatrixAccessInstruction(
 						leftRowType, left, index)
 					ctx.BasicBlock.AddInstruction(leftRow)
 
-					rightRow = LinearIR.ArrayAccessInstruction(
+					rightRow = LinearIR.MatrixAccessInstruction(
 						rightRowType, right, index)
 					ctx.BasicBlock.AddInstruction(rightRow)
 
@@ -430,7 +430,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			resultRowType = self.__GetMatrixRowType(resultType)
 			rows = []
 			for row in range(leftType.GetRowCount()):
-				leftRow = LinearIR.ArrayAccessInstruction(
+				leftRow = LinearIR.MatrixAccessInstruction(
 					leftRowType, left, ctx.Function.CreateConstant(
 						types.Integer(), row
 					)
@@ -517,27 +517,41 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		isPrimitive = array.Type.IsPrimitive()
 		if isPrimitive:
 			isVector = array.Type.IsVector()
+			isMatrix = array.Type.IsMatrix()
 		else:
 			isVector = False
+			isMatrix = False
 
 		if isVector:
-			arrayType = array.Type
-			if arrayType.IsVector():
-				cai = LinearIR.ComponentAccessInstruction(expr.GetType(),
-					array, index)
-				ctx.BasicBlock.AddInstruction(cai)
+			cai = LinearIR.VectorAccessInstruction(expr.GetType(),
+				array, index)
+			ctx.BasicBlock.AddInstruction(cai)
 
-				if ctx.InAssignment:
-					cai.SetStore(ctx.AssignmentValue)
+			if ctx.InAssignment:
+				cai.SetStore(ctx.AssignmentValue)
 
 				ctx.BeginAssignment(cai)
 				result = self.v_Visit(expr.GetParent(), ctx)
 				ctx.EndAssignment()
-				
-				if ctx.InAssignment:
-					return result
-				else:
-					return self.v_Visit(expr.GetParent(), ctx)
+			
+				return result
+			else:
+				return cai
+		elif isMatrix:
+			cai = LinearIR.MatrixAccessInstruction(expr.GetType(),
+				array, index)
+			ctx.BasicBlock.AddInstruction(cai)
+
+			if ctx.InAssignment:
+				cai.SetStore(ctx.AssignmentValue)
+							
+				ctx.BeginAssignment(cai)
+				result = self.v_Visit(expr.GetParent(), ctx)
+				ctx.EndAssignment()
+
+				return result
+			else:
+				return cai
 		else:
 			ai = LinearIR.ArrayAccessInstruction(expr.GetType(), array, index)
 

@@ -79,10 +79,13 @@ class OpCode(Enum):
     VECTOR_GET = 0x6_0004
     VECTOR_SET = 0x6_1004
 
+    MATRIX_GET = 0x6_0005
+    MATRIX_SET = 0x6_1005
+
     SHUFFLE = 0x6_0010
     
 class Value(Node):
-    # A value consists of a type and a reference, which unique identifies the
+    # A value consists of a type and a reference, which uniquely identifies the
     # value within its function
     def __init__(self, valueType: types.Type):
         self.__type = valueType
@@ -663,9 +666,12 @@ class CallInstruction(Instruction):
         return [a.Reference for a in self.__arguments]
 
 class _IndexedAccessBase(Instruction):
-    def __init__(self, returnType: types.Type, array, index,
+    def __init__(self, returnType: types.Type, array: Value, index: Value,
         opCodes = (None, None)):
         super().__init__(opCodes[0], returnType)
+
+        assert isinstance(index.Type, types.PrimitiveType)
+
         self.__opCodes = opCodes
         self.__array = array
         self.__index = index
@@ -679,8 +685,10 @@ class _IndexedAccessBase(Instruction):
     def Index(self):
         return self.__index
 
-    def SetStore(self, destination):
-        self.__store = destination
+    def SetStore(self, value):
+        assert value is not None
+
+        self.__store = value
         self._SetOpCode(self.__opCodes[1])
 
     @property
@@ -709,11 +717,19 @@ class ArrayAccessInstruction(_IndexedAccessBase):
     def __init__(self, returnType: types.Type, array: Value, index: Value):
         super().__init__(returnType, array, index,
             (OpCode.LOAD_ARRAY, OpCode.STORE_ARRAY))
+        assert isinstance(array.Type, types.ArrayType)
 
-class ComponentAccessInstruction(_IndexedAccessBase):
-    def __init__(self, returnType: types.Type, array: Value, index: Value):
-        super().__init__(returnType, array, index,
+class VectorAccessInstruction(_IndexedAccessBase):
+    def __init__(self, returnType: types.Type, vector: Value, index: Value):
+        super().__init__(returnType, vector, index,
             (OpCode.VECTOR_GET, OpCode.VECTOR_SET))
+        assert isinstance(vector.Type, types.VectorType)
+
+class MatrixAccessInstruction(_IndexedAccessBase):
+    def __init__(self, returnType: types.Type, matrix: Value, index: Value):
+        super().__init__(returnType, matrix, index,
+            (OpCode.MATRIX_GET, OpCode.MATRIX_SET))
+        assert isinstance(matrix.Type, types.MatrixType)
 
 class DeclareVariableInstruction(Instruction):
     def __init__(self, variableType, name = None,
@@ -829,20 +845,30 @@ class InstructionPrinter(Visitor):
                 self.__FormatReference(aai.Array),
                 self.__FormatReference(aai.Index))
 
-    def v_ComponentAccessInstruction(self, aai, ctx=None):
-        if aai.Store:
+    def __printAccessInstruction(self, read: str, write: str,
+        instruction: _IndexedAccessBase, ctx=None):
+        if instruction.Store:
             self.__Print(
-                self.__FormatReference(aai), '=',
-                f'vectorset',
-                self.__FormatReference(aai.Array),
-                self.__FormatReference(aai.Index),
-                self.__FormatReference(aai.Store))
+                self.__FormatReference(instruction), '=',
+                write,
+                self.__FormatReference(instruction.Array),
+                self.__FormatReference(instruction.Index),
+                self.__FormatReference(instruction.Store))
         else:
-            self.__Print(self.__FormatReference(aai), '=',
-                f'vectorget',
-                self.__FormatType(aai.Type),
-                self.__FormatReference(aai.Array),
-                self.__FormatReference(aai.Index))
+            self.__Print(self.__FormatReference(instruction), '=',
+                read,
+                self.__FormatType(instruction.Type),
+                self.__FormatReference(instruction.Array),
+                self.__FormatReference(instruction.Index))
+
+
+    def v_VectorAccessInstruction(self, vai, ctx=None):
+        self.__printAccessInstruction('vectorget', 'vectorset',
+            vai, ctx)
+
+    def v_MatrixAccessInstruction(self, mai, ctx=None):
+        self.__printAccessInstruction('matrixget', 'matrixset',
+            mai, ctx)
 
     def v_MemberAccessInstruction(self, mai, ctx=None):
         if mai.Store:

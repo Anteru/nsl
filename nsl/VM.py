@@ -76,7 +76,9 @@ class ExecutionContext:
                     args[instruction.Variable] = localScope[instruction.Store.Reference]
                 else:
                     localScope[instruction.Variable] = localScope[instruction.Store.Reference]
-            elif opCode == LinearIR.OpCode.LOAD_ARRAY or opCode == LinearIR.OpCode.VECTOR_GET:
+            elif opCode == LinearIR.OpCode.LOAD_ARRAY \
+              or opCode == LinearIR.OpCode.VECTOR_GET \
+              or opCode == LinearIR.OpCode.MATRIX_GET:
                 ref = instruction.Reference
                 var = localScope[instruction.Array.Reference][
                     localScope[instruction.Index.Reference]
@@ -238,6 +240,13 @@ class ExecutionContext:
                 var = localScope[instruction.Store.Reference]
                 array = instruction.Array.Reference
                 copy = list(localScope[array])
+                copy [localScope[instruction.Index.Reference]] = var
+                localScope[ref] = copy
+            elif opCode == LinearIR.OpCode.MATRIX_SET:
+                ref = instruction.Reference
+                var = localScope[instruction.Store.Reference]
+                array = instruction.Array.Reference
+                copy = list([list(row) for row in localScope[array]])
                 copy [localScope[instruction.Index.Reference]] = var
                 localScope[ref] = copy
             else:

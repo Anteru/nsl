@@ -413,7 +413,7 @@ def testAddToArrayArgument():
     vm.Invoke('f', i=1, v=3, arr=array)
     assert array[1]== 4
 
-def testAssignToCopyDoesCopy():
+def testAssignToVectorCopy():
     code = '''export function f(float f) -> float4 {
         float4 t = float4(1,2,3,4);
         float4 u = t;
@@ -424,3 +424,38 @@ def testAssignToCopyDoesCopy():
 
     r = vm.Invoke('f', f=1337)
     assert r == 3
+
+def testAssignToMatrixCopyVector():
+    code = '''export function f(float4x4 f) -> float4x4 {
+        float4x4 m = float4x4(
+            float4(1, 2, 3, 4),
+            float4(5, 6, 7, 8),
+            float4(9, 10, 11, 12),
+            float4(13, 14, 15, 16)
+        );
+        float4x4 c = m;
+        c[1] = f;
+        return m;
+    }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f', f=[4711, 1337, 90210, 42])
+    assert r[1] == [5, 6, 7, 8]
+
+
+def testAssignToMatrixCopyScalar():
+    code = '''export function f(float f) -> float4x4 {
+        float4x4 m = float4x4(
+            float4(1, 2, 3, 4),
+            float4(5, 6, 7, 8),
+            float4(9, 10, 11, 12),
+            float4(13, 14, 15, 16)
+        );
+        float4x4 c = m;
+        c[1][1] = f;
+        return m;
+    }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f', f=1337)
+    assert r[1][1] == 6
