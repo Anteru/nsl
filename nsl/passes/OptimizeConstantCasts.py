@@ -22,4 +22,5 @@ class OptimizeConstantCastVisitor (Visitor.DefaultVisitor):
 def GetPass():
 	import nsl.Pass
 	return nsl.Pass.MakePassFromVisitor(OptimizeConstantCastVisitor (),
-        'optimize-constant-cast')
+        'optimize-constant-cast',
+        flags = nsl.Pass.PassFlags.IsOptimization)

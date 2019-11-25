@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
 from nsl.Compiler import Compiler
 from nsl.VM import VirtualMachine
-import click
-import sys
+import argparse
 
-@click.command()
-@click.option('--debug-parsing', default=False, type=bool)
-@click.option('--debug-passes', default=True, type=bool)
-@click.argument('input_file', type=click.File('r'))
-def Compile(input_file, debug_parsing, debug_passes):
+def Compile(args):
     c = Compiler ()
-    ok, ir = c.Compile (input_file.read(),
+    ok, ir = c.Compile (args.FILE.read(),
         options={
-                 'debug-parsing' : debug_parsing,
-                 'debug-passes' : debug_passes})
+                 'debug-parsing' : args.debug_parsing,
+                 'debug-passes' : args.debug_passes,
+                 'optimize': args.opt_level > 0})
 
     vm = VirtualMachine(ir)
     result = vm.Invoke('AddTwoIntegers', a=2, b=3)
@@ -24,4 +20,18 @@ def Compile(input_file, debug_parsing, debug_passes):
     print(result)
 
 if __name__=='__main__':
-    Compile()
+    parser = argparse.ArgumentParser('nslc')
+    parser.add_argument('--debug-parsing', action='store_true',
+        default=False,
+        help='Print output information about the parsing stage')
+    parser.add_argument('--debug-passes', action='store_true',
+        help='Write debug output about the passes')
+    parser.add_argument('-O,--optimization-level',
+        type=int, choices=[0, 1],
+        default=0,
+        dest='opt_level')
+    parser.add_argument('FILE', type=argparse.FileType('r'),
+        metavar='INPUT')
+    args = parser.parse_args()
+
+    Compile(args)

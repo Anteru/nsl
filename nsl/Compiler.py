@@ -56,7 +56,7 @@ class Compiler:
 			return False
 
 		if debug and buffer.getvalue ():
-			outputFilename = f'{kind.lower()}-pass-{passIndex}-{p.GetName()}.txt'
+			outputFilename = f'{kind.lower()}-pass-{passIndex}-{p.Name}.txt'
 			with open(outputFilename, 'w') as outputFile:
 				outputFile.write (buffer.getvalue ())
 
@@ -64,8 +64,10 @@ class Compiler:
 
 
 	def Compile (self, source, options = {}):
+		from nsl.Pass import PassFlags
 		debugParsing = options.get('debug-parsing', False)
 		debugPasses = options.get('debug-passes', False)
+		optimizations = options.get('optimize', False)
 
 		ast = self.parser.Parse (source, debug = debugParsing)
 		for i,p in enumerate (self.astPasses):
@@ -78,9 +80,12 @@ class Compiler:
 			print (f'Failed to lower AST to IR')
 			return (False, None)
 
-		ir = lowerPass.visitor.Program
+		ir = lowerPass.Visitor.Program
 
 		for i, p in enumerate(self.irPasses):
+			if not optimizations and p.Flags & PassFlags.IsOptimization:
+				continue
+
 			if not self.__RunPass(ir, i, p, 'IR', debugPasses):
 				return (False, None)
 
