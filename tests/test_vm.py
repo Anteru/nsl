@@ -509,3 +509,25 @@ def testNewIntScalarIsDefaultInitializedToZero():
     vm = _compile(code)
 
     assert vm.Invoke('f') == 0
+
+def testBooleanAnd():
+    code = '''export function f(int a, int b) -> int {
+        return (a == 0) && (b == 1);
+    }'''
+    vm = _compile(code)
+
+    assert vm.Invoke('f', a = 0, b = 0) == 0
+    assert vm.Invoke('f', a = 0, b = 1) == 1
+    assert vm.Invoke('f', a = 1, b = 0) == 0
+    assert vm.Invoke('f', a = 1, b = 1) == 0    
+
+def testBooleanOr():
+    code = '''export function f(int a, int b) -> int {
+        return (a == 0) || (b == 1);
+    }'''
+    vm = _compile(code)
+
+    assert vm.Invoke('f', a = 0, b = 0) == 1
+    assert vm.Invoke('f', a = 0, b = 1) == 1
+    assert vm.Invoke('f', a = 1, b = 0) == 0
+    assert vm.Invoke('f', a = 1, b = 1) == 1

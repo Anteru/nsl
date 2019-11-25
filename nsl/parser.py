@@ -14,7 +14,7 @@ class NslParser:
         self.tokens = self.lexer.tokens
         
         self.parser = ply.yacc.yacc(module=self, 
-            start=parseEntryPoint.value,
+            start=parseEntryPoint.value
             # errorlog=ply.yacc.NullLogger())
         )
 
@@ -248,7 +248,9 @@ class NslParser:
         | GE
         | LE
         | EQ
-        | NE'''
+        | NE
+        | LAND
+        | LOR'''
         p[0] = p[1]
 
     def p_access_expression(self, p):

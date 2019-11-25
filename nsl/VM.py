@@ -130,6 +130,10 @@ class ExecutionContext:
                     localScope[ref] = op1 * op2
                 elif operation == LinearIR.OpCode.MOD:
                     localScope[ref] = op1 % op2
+                elif operation == LinearIR.OpCode.LG_AND:
+                    localScope[ref] = 1 if op1 and op2 else 0
+                elif operation == LinearIR.OpCode.LG_OR:
+                    localScope[ref] = 1 if op1 or op2 else 0
                 elif operation == LinearIR.OpCode.CMP_GT:
                     localScope[ref] = 1 if op1 > op2 else 0
                 elif operation == LinearIR.OpCode.CMP_GE:

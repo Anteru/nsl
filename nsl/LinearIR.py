@@ -53,19 +53,19 @@ class OpCode(Enum):
     VECTOR_CMP_NE = 0x1_1104
     VECTOR_CMP_EQ = 0x1_1105
 
+    # logic
+    LG_OR   = 0x1_0300
+    LG_AND  = 0x1_0301
+    LG_NOT  = 0x1_0302
+
+    BIT_OR  = 0x1_0400
+    BIT_AND = 0x1_0401
+    BIT_NOT = 0x1_0402
+    BIT_XOR = 0x1_0403
+
     # Unary
     UA_ADD = 0x2_0120
     UA_SUB = 0x2_0121
-
-    # logic
-    LG_OR   = 0x4_0300
-    LG_AND  = 0x4_0301
-    LG_NOT  = 0x4_0302
-
-    BIT_OR  = 0x5_0400
-    BIT_AND = 0x5_0401
-    BIT_NOT = 0x5_0402
-    BIT_XOR = 0x5_0403
 
     LOAD = 0x6_0001
     STORE = 0x6_1001
@@ -391,6 +391,9 @@ class BinaryInstruction(Instruction):
                 op.Operation.SUB: OpCode.SUB,
                 op.Operation.DIV: OpCode.DIV,
                 op.Operation.MOD: OpCode.MOD,
+
+                op.Operation.LG_AND: OpCode.LG_AND,
+                op.Operation.LG_OR: OpCode.LG_OR,
                 
                 op.Operation.CMP_GT: OpCode.CMP_GT,
                 op.Operation.CMP_GE: OpCode.CMP_GE,
