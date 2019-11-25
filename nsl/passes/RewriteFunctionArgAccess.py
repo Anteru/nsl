@@ -20,6 +20,8 @@ class RewriteFunctionArgAccessVisitor (Visitor.DefaultVisitor):
 
             # Copy remaining fields over
             instruction.SetReference (vai.Reference)
+            instruction.SetParent (vai.Parent)
+            
             if vai.Store:
                 instruction.SetStore(vai.Store)
             return instruction

@@ -1,4 +1,4 @@
-from typing import List, Dict, Iterable, Optional
+from typing import List, Dict, Iterable, Optional, Union
 from . import op
 from enum import Enum
 import collections
@@ -159,6 +159,7 @@ class BasicBlock(Value):
         self.__predecessors = []
         self.__successors = []
         self.__function = function
+        self.__replaceUses = {}
         self.__replacements = {}
         # Link between reference and instruction using it. This makes replacing
         # very fast, as we can find all instructions that reference a given
@@ -186,12 +187,32 @@ class BasicBlock(Value):
         return self.__function
 
     @property
-    def Instructions(self):
+    def Instructions(self) -> List[Instruction]:
         return self.__instructions
+
+    def GetPreviousInstruction(self, i) -> Optional[Instruction]:
+        for index, instruction in enumerate(self.__instructions):
+            if instruction == i:
+                if index > 0:
+                    return self.__instructions[index - 1]
+                else:
+                    break
+        return None
 
     def _Traverse(self, function):
         self.__replacements = {}
+        self.__replaceUses = {}
         self.__instructions = function(self.__instructions)
+
+        if self.__replaceUses:
+            # We replace uses first: Otherwise, we could remove an instruction
+            # and all references to it, and there is no way to fix this
+            # once the reference to the instruction has been removed
+            # For instance, if we have ``ret %7``, and we remove the instruction
+            # producing %7, then we'll have ``ret None``, and if we want to
+            # replace that with a new reference, we can't any more as there is
+            # nothing referencing ``%7`` any more.
+            self.Parent.ReplaceUses(self.__replaceUses)
 
         if self.__replacements:
             # During traversal, we can register replacements which cannot be
@@ -207,6 +228,7 @@ class BasicBlock(Value):
             self.Parent.ReplaceUses(self.__replacements)
 
         self.__replacements = {}
+        self.__replaceUses = {}
 
     def AddInstruction(self, instruction: Instruction):
         instruction.SetParent(self)
@@ -214,8 +236,17 @@ class BasicBlock(Value):
         self.__instructions.append(instruction)
         return instruction
 
-    def Replace(self, oldInstruction: Instruction, newInstruction: Optional[Value]):
-        self.__replacements[oldInstruction.Reference] = newInstruction
+    def Replace(self, old: Union[int, Value], new: Optional[Value]):
+        if isinstance(old, Value):
+            self.__replacements[old.Reference] = new
+        else:
+            self.__replacements[old] = new
+
+    def ReplaceUses(self, old: Union[int, Value], new: Optional[Value]):
+        if isinstance(old, Value):
+            self.__replaceUses[old.Reference] = new
+        else:
+            self.__replaceUses[old] = new
 
     def __Replace(self):
         # We search all instructions, check if they're marked for replacement,
@@ -227,15 +258,14 @@ class BasicBlock(Value):
             instruction = self.__instructions[index]
             if instruction.Reference in self.__replacements:
                 newInstruction = self.__replacements[instruction.Reference]
-                newInstruction.SetReference(instruction.Reference)
                 if isinstance(newInstruction, Instruction):
+                    newInstruction.SetReference(instruction.Reference)
                     self.__instructions[index] = newInstruction
                 else:
                     # Constant value or something like that
                     self.__instructions[index] = None
 
         self.__instructions = [i for i in self.__instructions if i]
-
 
 class Function(Value):
     def __init__(self, name, functionType: types.Function):
@@ -537,14 +567,14 @@ class MemberAccessInstruction(Instruction):
     def __init__(self, memberType, variable: Value, member: str,
         accessScope: VariableAccessScope = VariableAccessScope.FUNCTION_LOCAL):
         super().__init__(OpCode.INVALID, memberType)
-        self.__parent = variable
+        self.__variable = variable
         self.__member = member
         self.__store = None
         self.__scope = accessScope
 
     @property
-    def Parent(self):
-        return self.__parent
+    def Variable(self):
+        return self.__variable
 
     @property
     def Member(self):
@@ -570,7 +600,7 @@ class MemberAccessInstruction(Instruction):
 
     @property
     def Uses(self):
-        yield self.__parent.Reference
+        yield self.__variable.Reference
         if self.__store:
             yield self.__store.Reference
 

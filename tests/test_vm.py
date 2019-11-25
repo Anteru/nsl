@@ -4,8 +4,6 @@ from nsl import (
     VM
 )
 
-import pytest
-
 def _compile(code):
     c = Compiler.Compiler()
     result, ir = c.Compile(code)
@@ -398,7 +396,7 @@ def testConstantantCastIsOptimized():
     }'''
 
     c = Compiler.Compiler()
-    result, ir = c.Compile(code)
+    result, ir = c.Compile(code, {'optimize': True})
 
     for i in ir.Functions['f'].Instructions:
         assert not isinstance(i, LinearIR.CastInstruction)
@@ -459,3 +457,22 @@ def testAssignToMatrixCopyScalar():
 
     r = vm.Invoke('f', f=1337)
     assert r[1][1] == 6
+
+def testAssignToArgAndReturnIsOptimizedAway():
+    code = '''export function f(float f, float a) -> float {
+        f = a;
+        return f;
+    }'''
+    
+    c = Compiler.Compiler()
+    result, ir = c.Compile(code, {'optimize': True})
+
+    # We should never load from f
+    # %1 = load a
+    # store f, %1
+    # %2 = load f <-- This will get removed
+    # return %2   <-- This will return %1 directly
+    for i in ir.Functions['f'].Instructions:
+        if isinstance(i, LinearIR.VariableAccessInstruction):
+            if i.Variable == 'f':
+                assert i.Store is None

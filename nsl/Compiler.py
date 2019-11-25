@@ -17,6 +17,7 @@ from nsl.passes import (
 	PrintLinearIR,
 	RewriteFunctionArgAccess,
 	OptimizeConstantCasts,
+	OptimizeLoadAfterStore,
 )
 from io import StringIO
 
@@ -46,6 +47,7 @@ class Compiler:
 		self.irPasses = [
 			RewriteFunctionArgAccess.GetPass (),
 			OptimizeConstantCasts.GetPass (),
+			OptimizeLoadAfterStore.GetPass (),
 			PrintLinearIR.GetPass ()
 		]
 
