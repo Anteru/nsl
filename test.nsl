@@ -63,6 +63,17 @@ export function matrixAccessUsingArrayAccess(float4x4 f, int i, int j) -> float 
 	return f[i][j];
 }
 
+struct test_struct
+{
+	int a;
+	int b;
+}
+
+export function assignToStructMember(test_struct s, int i) -> test_struct {
+	s.a = i;
+	return s;
+}
+
 export function branchIfElseIfElse(int a) -> int {
         if(a < 5) { return 0; } else if (a > 5) { return 1; } else { return -1; }
 }

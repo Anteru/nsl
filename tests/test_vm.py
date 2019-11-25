@@ -476,3 +476,36 @@ def testAssignToArgAndReturnIsOptimizedAway():
         if isinstance(i, LinearIR.VariableAccessInstruction):
             if i.Variable == 'f':
                 assert i.Store is None
+
+def testAssignToGlobalStructure():
+    code = '''struct struct_type { int a; }
+    struct_type s;
+    export function f(int a) -> void {
+        s.a = a;
+    }'''
+    vm = _compile(code)
+
+    s = {'a': 23}
+    vm.SetGlobal('s', s)
+    vm.Invoke('f', a = 1337)
+    s = vm.GetGlobal('s')
+
+    assert s['a'] == 1337
+
+def testNewFloatScalarIsDefaultInitializedToZero():
+    code = '''export function f() -> float {
+        float t;
+        return t;
+    }'''
+    vm = _compile(code)
+
+    assert vm.Invoke('f') == 0.0
+
+def testNewIntScalarIsDefaultInitializedToZero():
+    code = '''export function f() -> int {
+        int t;
+        return t;
+    }'''
+    vm = _compile(code)
+
+    assert vm.Invoke('f') == 0

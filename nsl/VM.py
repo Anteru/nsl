@@ -84,6 +84,17 @@ class ExecutionContext:
                     localScope[instruction.Index.Reference]
                 ]
                 localScope[ref] = var
+            elif opCode == LinearIR.OpCode.LOAD_MEMBER:
+                ref = instruction.Reference
+                var = localScope[instruction.Variable.Reference][
+                    instruction.Member
+                ]
+                localScope[ref] = var
+            elif opCode == LinearIR.OpCode.STORE_MEMBER:
+                ref = instruction.Reference
+                localScope[instruction.Variable.Reference][
+                    instruction.Member
+                ] = localScope[instruction.Store.Reference]
             elif opCode == LinearIR.OpCode.SHUFFLE:
                 ref = instruction.Reference
                 indices = instruction.Indices

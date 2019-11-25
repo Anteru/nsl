@@ -43,6 +43,11 @@ class ValidateVariableNamesVisitor(Visitor.DefaultVisitor):
         return self.__context
 
     # List all nodes here which create new scopes.
+    def v_StructureDefinition(self, sd, ctx=None):
+        ctx = self.Context()
+        with Errors.CompileExceptionToErrorHandler(self.errorHandler,
+            self.__onError):
+            sd.AcceptVisitor(self, ctx)
 
     def v_Function(self, func, ctx=None):
         ctx = self.Context(ctx)

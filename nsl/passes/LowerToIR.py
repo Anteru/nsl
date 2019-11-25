@@ -1,6 +1,7 @@
 from math import e
 from nsl import ast, LinearIR, op, types, Errors, Visitor
 import collections
+from typing import Optional
 
 class LowerToIRVisitor(Visitor.DefaultVisitor):
 	def __init__(self, ctx):
@@ -63,7 +64,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		def OnLeaveNode(self):
 			self.__assignmentValue.pop ()
 
-		def BeginAssignment(self, value):
+		def BeginAssignment(self, value: LinearIR.Value):
 			self.__assignmentValue.append(value)
 
 		def EndAssignment(self):
@@ -82,11 +83,11 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			self.__loops[-1]['break'].append(branch)
 
 		@property
-		def InAssignment(self):
+		def InAssignment(self) -> bool:
 			return len(self.__assignmentValue) >= 2 and self.__assignmentValue[-2] is not None
 
 		@property
-		def AssignmentValue(self):
+		def AssignmentValue(self) -> Optional[LinearIR.Value]:
 			return self.__assignmentValue[-2]
 
 		@property
@@ -284,8 +285,10 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		if parent:
 			value = self.v_Visit(parent, ctx)
 		else:
-			# ICE
+			Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise('Invalid member access')
 			return
+
+		assert isinstance(value, LinearIR.Value)
 
 		if expr.isSwizzle:
 			last = value
@@ -336,9 +339,14 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
 				return result
 		else:
+			assert isinstance(member, ast.PrimaryExpression)
+			
 			mai = LinearIR.MemberAccessInstruction(member.GetType (),
-				value, member)
+				value, member.GetName())
 			ctx.BasicBlock.AddInstruction(mai)
+
+			if ctx.InAssignment:
+				mai.SetStore(ctx.AssignmentValue)
 			return mai
 
 	def v_PrimaryExpression(self, expr, ctx):

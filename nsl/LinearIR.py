@@ -566,7 +566,7 @@ class ConstructPrimitiveInstruction(Instruction):
 class MemberAccessInstruction(Instruction):
     def __init__(self, memberType, variable: Value, member: str,
         accessScope: VariableAccessScope = VariableAccessScope.FUNCTION_LOCAL):
-        super().__init__(OpCode.INVALID, memberType)
+        super().__init__(OpCode.LOAD_MEMBER, memberType)
         self.__variable = variable
         self.__member = member
         self.__store = None
@@ -585,6 +585,7 @@ class MemberAccessInstruction(Instruction):
         return self.__scope
 
     def SetStore(self, destination: Value):
+        self._SetOpCode (OpCode.STORE_MEMBER)
         self.__store = destination
 
     @property
@@ -902,14 +903,14 @@ class InstructionPrinter(Visitor):
 
     def v_MemberAccessInstruction(self, mai, ctx=None):
         if mai.Store:
-            self.__Print(self.__FormatReference(mai), '=',
-                f'setmember',
+            self.__Print(
+                f'fieldset',
                 self.__FormatReference(mai.Parent),
                 mai.Member,
                 self.__FormatReference(mai.Store))
         else:
             self.__Print(self.__FormatReference(mai), '=',
-                f'getmember',
+                f'fieldget',
                 self.__FormatType(mai.Type),
                 self.__FormatReference(mai.Parent),
                 mai.Member)
