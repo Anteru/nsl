@@ -411,6 +411,36 @@ def testAddToArrayArgument():
     vm.Invoke('f', i=1, v=3, arr=array)
     assert array[1]== 4
 
+def testAssignToVectorElement():
+    code = '''export function f(float4 a, float b) -> float4 {
+        a.x = b;
+        return a;
+    }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f', a=[1, 2, 3, 4], b=23)
+    assert r == [23, 2, 3, 4]
+
+def testAssignToMatrixElement():
+    code = '''export function f(float4x4 a, float b) -> float4x4 {
+        a[1][1] = b;
+        return a;
+    }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f', a=[
+        [1, 1, 1, 1],
+        [1, 1, 1, 1],
+        [1, 1, 1, 1],
+        [1, 1, 1, 1]
+    ], b=23)
+    assert r == [
+        [1, 1, 1, 1],
+        [1, 23, 1, 1],
+        [1, 1, 1, 1],
+        [1, 1, 1, 1]
+    ]
+
 def testAssignToVectorCopy():
     code = '''export function f(float f) -> float4 {
         float4 t = float4(1,2,3,4);

@@ -1,9 +1,10 @@
+from typing import Dict, Any
 from . import (LinearIR, Errors, types)
-import collections
 import math
+import copy
 
 class ExecutionContext:
-    def __init__(self, functions, globalScope: dict()):
+    def __init__(self, functions, globalScope: Dict[str, Any]):
         self.__globalScope = globalScope
         self.__functions = functions
 
@@ -254,16 +255,16 @@ class ExecutionContext:
                 ref = instruction.Reference
                 var = localScope[instruction.Store.Reference]
                 array = instruction.Array.Reference
-                copy = list(localScope[array])
-                copy [localScope[instruction.Index.Reference]] = var
-                localScope[ref] = copy
+                result = copy.deepcopy(localScope[array])
+                result [localScope[instruction.Index.Reference]] = var
+                localScope[ref] = result
             elif opCode == LinearIR.OpCode.MATRIX_SET:
                 ref = instruction.Reference
                 var = localScope[instruction.Store.Reference]
                 array = instruction.Array.Reference
-                copy = list([list(row) for row in localScope[array]])
-                copy [localScope[instruction.Index.Reference]] = var
-                localScope[ref] = copy
+                result = copy.deepcopy (localScope[array])
+                result [localScope[instruction.Index.Reference]] = var
+                localScope[ref] = result
             else:
                 raise Exception(f"Unhandled opcode: {opCode}")
 
