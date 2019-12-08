@@ -1,4 +1,4 @@
-from nsl import Errors, types, Visitor
+from nsl import Errors, Visitor
 from .. import LinearIR
 
 class OptimizeConstantCastVisitor (Visitor.DefaultVisitor):
@@ -8,7 +8,7 @@ class OptimizeConstantCastVisitor (Visitor.DefaultVisitor):
         value = ci.Value
         if isinstance(value, LinearIR.ConstantValue):
             constant = value.Value
-            if ci.Type == types.Float():
+            if isinstance(ci.Type, LinearIR.FloatType):
                 constant = float(constant)
             else:
                 Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise(

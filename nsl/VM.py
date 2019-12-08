@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from . import (LinearIR, Errors, types)
+from . import (LinearIR, Errors)
 import math
 import copy
 
@@ -173,7 +173,7 @@ class ExecutionContext:
                     localScope[ref] = [v / op2 for v in op1]
                 elif operation == LinearIR.OpCode.MATRIX_MUL_MATRIX:
                     localScope[ref] = self.__MatrixMatrixMultiply(
-                        instruction.Type.GetSize(), op1, op2)
+                        instruction.Type.Shape, op1, op2)
                 else:
                     Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise(
                         f'Unsupported binary operation: {operation}'
@@ -206,12 +206,12 @@ class ExecutionContext:
             elif opCode == LinearIR.OpCode.NEW_VARIABLE:
                 varType = instruction.Type
                 var = 0
-                if varType.IsVector():
-                    var = [0] * varType.GetComponentCount()
-                elif varType.IsMatrix():
+                if varType.Kind == LinearIR.TypeKind.Vector:
+                    var = [0] * varType.Size
+                elif varType.Kind == LinearIR.TypeKind.Matrix:
                     var = [
-                        [0] * varType.GetColumnCount ()
-                    ] * varType.GetRowCount ()
+                        [0] * varType.ColumnCount
+                    ] * varType.RowCount
                 else:
                     # structures not handled yet
                     pass
@@ -223,15 +223,23 @@ class ExecutionContext:
                 ref = instruction.Reference
                 var = localScope[instruction.Value.Reference]
 
-                if instruction.Type == types.Integer():
-                    var = math.floor(var)
-                elif instruction.Type == types.UnsignedInteger():
-                    var = abs(math.floor(var))
+                assert instruction.Type.IsScalar()
+
+                if isinstance(instruction.Type, LinearIR.IntegerType):
+                    if not instruction.Type.Unsigned:
+                        var = math.floor(var)
+                    else:
+                        var = abs(math.floor(var))
+                else:
+                    # Must be float
+                    assert isinstance(instruction.Type, LinearIR.FloatType)
+
+                    var = float(var)
                 
                 localScope[ref] = var
             elif opCode == LinearIR.OpCode.CONSTRUCT_PRIMITIVE:
                 ref = instruction.Reference
-                if instruction.Type.IsVector():
+                if instruction.Type.Kind == LinearIR.TypeKind.Vector:
                     var = []
                     for value in instruction.Values:
                         value = localScope[value.Reference]
@@ -240,7 +248,7 @@ class ExecutionContext:
                         else:
                             var.append(value)
                     localScope[ref] = var
-                elif instruction.Type.IsMatrix():
+                elif instruction.Type.Kind == LinearIR.TypeKind.Matrix:
                     var = []
                     for value in instruction.Values:
                         value = localScope[value.Reference]

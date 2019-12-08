@@ -83,11 +83,176 @@ class OpCode(Enum):
     MATRIX_SET = 0x6_1005
 
     SHUFFLE = 0x6_0010
+
+class TypeKind(Enum):
+    Scalar = 1
+    Vector = 2
+    Matrix = 3
+    Array = 4
+    Structure = 5
+    Void = 6
+    Function = 7
+    Unknown = -1
+
+class Type:
+    @property
+    def Kind(self) -> TypeKind:
+        return TypeKind.Unknown
+
+    def IsMatrix(self):
+        return self.Kind == TypeKind.Matrix
+
+    def IsVector(self):
+        return self.Kind == TypeKind.Vector
+
+    def IsScalar(self):
+        return self.Kind == TypeKind.Scalar
+
+    def IsArray(self):
+        return self.Kind == TypeKind.Array
+
+    def IsPrimitive(self):
+        return self.Kind in {TypeKind.Scalar, TypeKind.Vector, TypeKind.Matrix}
+
+class ScalarType(Type):
+    @property
+    def Kind(self):
+        return TypeKind.Scalar
+
+class IntegerType(ScalarType):
+    def __init__(self, *, unsigned = False):
+        self.__unsigned = unsigned
+
+    @property
+    def Unsigned(self) -> bool:
+        return self.__unsigned
+
+    def __str__(self):
+        if self.Unsigned:
+            return 'uint'
+        
+        return 'int'
+
+class FloatType(ScalarType):
+    pass
+
+    def __str__(self):
+        return 'float'
+
+class VoidType(Type):
+    @property
+    def Kind(self):
+        return TypeKind.Void
+
+    def __str__(self):
+        return 'void'
+
+class FunctionType(Type):
+    def __init__(self, returnType: Type, arguments: Dict[str, Type]):
+        self.__arguments = arguments
+        self.__returnType = returnType
+
+    @property
+    def Kind(self):
+        return TypeKind.Function
+
+    @property
+    def Arguments(self):
+        return self.__arguments
+
+    @property
+    def ReturnType(self):
+        return self.__returnType
+
+class VectorType(Type):
+    def __init__(self, elementType: ScalarType, size: int):
+        self.__elementType = elementType
+        self.__size = size
+
+    @property
+    def Kind(self):
+        return TypeKind.Vector
+
+    @property
+    def Size(self):
+        return self.__size
+
+    @property
+    def ElementType(self):
+        return self.__elementType
+
+    def __str__(self):
+        return f'<{self.ElementType} x {self.Size}>'
+
+class MatrixType(Type):
+    def __init__(self, rowType: VectorType, rowCount: int):
+        self.__rowType = rowType
+        self.__rowCount = rowCount
+        self.__columnCount = rowType.Size
     
+    @property
+    def Kind(self):
+        return TypeKind.Matrix
+
+    @property
+    def RowCount(self):
+        return self.__rowCount
+
+    @property
+    def ColumnCount(self):
+        return self.__columnCount
+
+    @property
+    def ElementType(self):
+        return self.__rowType.ElementType
+
+    @property
+    def RowType(self):
+        return self.__rowType
+
+    @property
+    def Shape(self):
+        return (self.__columnCount, self.__rowCount)
+
+    def __str__(self):
+        return f'<{self.RowType} x {self.RowCount}>'
+
+class StructureType(Type):
+    def __init__(self, fields: Dict[str, Type]):
+        self.__fields = fields
+
+    @property
+    def Fields(self):
+        return self.__fields
+    
+    @property
+    def Kind(self):
+        return TypeKind.Structure
+
+class ArrayType(Type):
+    def __init__(self, elementType: Type, size: int):
+        self.__elementType = elementType
+        self.__size = size
+
+    @property
+    def Kind(self):
+        return TypeKind.Array
+
+    @property
+    def Size(self):
+        return self.__size
+
+    @property
+    def ElementType(self):
+        return self.__elementType
+
+    def __str__(self):
+        return f'{self.ElementType}' + ''.join([f'[{s}]' for s in self.__size])
+
 class Value(Node):
     # A value consists of a type and a reference, which uniquely identifies the
     # value within its function
-    def __init__(self, valueType: types.Type):
+    def __init__(self, valueType: Type):
         self.__type = valueType
         self.__reference = -1
 
@@ -376,11 +541,11 @@ class BinaryInstruction(Instruction):
         return [v.Reference for v in self.__values]
 
     @staticmethod
-    def FromOperation(operation: op.Operation, returnType: types.Type,
+    def FromOperation(operation: op.Operation, returnType: Type,
         v1: Value, v2: Value):
-        assert isinstance(returnType, types.PrimitiveType)
-        assert isinstance(v1.Type, types.PrimitiveType)
-        assert isinstance(v2.Type, types.PrimitiveType)
+        assert returnType.IsPrimitive()
+        assert v1.Type.IsPrimitive()
+        assert v2.Type.IsPrimitive()
 
         if returnType.IsScalar():
             mapping = {
@@ -700,11 +865,11 @@ class CallInstruction(Instruction):
         return [a.Reference for a in self.__arguments]
 
 class _IndexedAccessBase(Instruction):
-    def __init__(self, returnType: types.Type, array: Value, index: Value,
+    def __init__(self, returnType: Type, array: Value, index: Value,
         opCodes = (None, None)):
         super().__init__(opCodes[0], returnType)
 
-        assert isinstance(index.Type, types.PrimitiveType)
+        assert index.Type.IsScalar()
 
         self.__opCodes = opCodes
         self.__array = array
@@ -751,19 +916,19 @@ class ArrayAccessInstruction(_IndexedAccessBase):
     def __init__(self, returnType: types.Type, array: Value, index: Value):
         super().__init__(returnType, array, index,
             (OpCode.LOAD_ARRAY, OpCode.STORE_ARRAY))
-        assert isinstance(array.Type, types.ArrayType)
+        assert array.Type.IsArray()
 
 class VectorAccessInstruction(_IndexedAccessBase):
     def __init__(self, returnType: types.Type, vector: Value, index: Value):
         super().__init__(returnType, vector, index,
             (OpCode.VECTOR_GET, OpCode.VECTOR_SET))
-        assert isinstance(vector.Type, types.VectorType)
+        assert vector.Type.IsVector()
 
 class MatrixAccessInstruction(_IndexedAccessBase):
     def __init__(self, returnType: types.Type, matrix: Value, index: Value):
         super().__init__(returnType, matrix, index,
             (OpCode.MATRIX_GET, OpCode.MATRIX_SET))
-        assert isinstance(matrix.Type, types.MatrixType)
+        assert matrix.Type.IsMatrix()
 
 class DeclareVariableInstruction(Instruction):
     def __init__(self, variableType, name = None,

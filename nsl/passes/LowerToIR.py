@@ -1,7 +1,51 @@
-from math import e
 from nsl import ast, LinearIR, op, types, Errors, Visitor
 import collections
 from typing import Optional
+
+def _CreateLinearIRType(t: types.Type):
+	if t.IsPrimitive():
+		if isinstance(t, types.Integer):
+			return LinearIR.IntegerType()
+		elif isinstance(t, types.UnsignedInteger):
+			return LinearIR.IntegerType (unsigned = True)
+		elif isinstance(t, types.Float):
+			return LinearIR.FloatType()
+		elif isinstance(t, types.Void):
+			return LinearIR.VoidType()
+		elif isinstance(t, types.VectorType):
+			return LinearIR.VectorType(
+				_CreateLinearIRType(t.GetComponentType()),
+				t.GetComponentCount()
+			)
+		elif isinstance(t, types.MatrixType):
+			return LinearIR.MatrixType(
+				LinearIR.VectorType(_CreateLinearIRType(
+					t.GetComponentType()
+				), t.GetColumnCount()),  t.GetRowCount()
+			)
+	elif isinstance(t, types.Function):
+		return LinearIR.FunctionType(
+			_CreateLinearIRType(f.GetReturnType()),
+			collections.OrderedDict([
+				(k, _CreateLinearIRType(t)) for k,t in 
+				f.GetArgumentTypes().items()
+			])
+		)
+	elif isinstance(t, types.ArrayType):
+		return LinearIR.ArrayType (
+			_CreateLinearIRType(t.GetComponentType()),
+			t.GetSize()
+		)
+	elif isinstance(t, types.StructType):
+		members = t.GetMembers()
+		return LinearIR.StructureType(
+			collections.OrderedDict([
+				(k, _CreateLinearIRType(members.GetFieldType(k))) 
+				for k in members.GetSymbolNames()
+			])
+		)
+
+	raise Exception("Unhandled type: ", t)
 
 class LowerToIRVisitor(Visitor.DefaultVisitor):
 	def __init__(self, ctx):
@@ -107,6 +151,9 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
 		def EndBasicBlock(self):
 			self.__startNewBlock = True
+
+		def AdaptType(self, t: types.Type) -> LinearIR.Type:
+			return _CreateLinearIRType(t)
 	
 	def GetContext(self):
 		return self.__ctx
@@ -131,7 +178,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			self.v_Visit(s, ctx)
 
 	def v_AffixExpression(self, expr, ctx):
-		constOne = ctx.Function.CreateConstant(expr.GetType(), 1)
+		constOne = ctx.Function.CreateConstant(
+			ctx.AdaptType (expr.GetType()), 1)
 		initialValue = self.v_Visit(expr.GetExpression(), ctx)
 		assert isinstance(initialValue, LinearIR.Value)
 
@@ -149,7 +197,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			# increment, save again
 			instruction = LinearIR.BinaryInstruction(
 				operation,
-				expr.GetType (),
+				ctx.AdaptType (expr.GetType ()),
 				initialValue,
 				constOne
 			)
@@ -160,7 +208,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			# increment, save again
 			instruction = LinearIR.BinaryInstruction(
 				operation,
-				expr.GetType (),
+				ctx.AdaptType (expr.GetType ()),
 				initialValue,
 				constOne
 			)
@@ -270,14 +318,17 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 	def v_ConstructPrimitiveExpression(self, expr, ctx):
 		values = [self.v_Visit(e, ctx) for e in expr]
 		
-		cpi = LinearIR.ConstructPrimitiveInstruction(expr.GetType(),
+		cpi = LinearIR.ConstructPrimitiveInstruction(
+			ctx.AdaptType (expr.GetType()),
 			values)
 		ctx.BasicBlock.AddInstruction(cpi)
 
 		return cpi
 
 	def v_LiteralExpression(self, expr, ctx):
-		return ctx.Function.CreateConstant(expr.GetType (), expr.GetValue())
+		return ctx.Function.CreateConstant(
+			ctx.AdaptType (expr.GetType ()),
+			expr.GetValue())
 
 	def v_MemberAccessExpression(self, expr, ctx):
 		parent = expr.GetParent ()
@@ -314,12 +365,13 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
 				assert isinstance(value, LinearIR.Value)
 
-				si = LinearIR.ShuffleInstruction(expr.GetType(),
+				si = LinearIR.ShuffleInstruction(
+					ctx.AdaptType (expr.GetType()),
 					value, value, indices)
 				ctx.BasicBlock.AddInstruction(si)
 				return si
 			else:
-				leftComponentCount = value.Type.GetComponentCount()
+				leftComponentCount = value.Type.Size
 				indices = list(range(leftComponentCount))
 
 				for i, c in enumerate(member.GetName()):
@@ -329,7 +381,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
 				assert isinstance(value, LinearIR.Value)
 
-				si = LinearIR.ShuffleInstruction(expr.GetType(),
+				si = LinearIR.ShuffleInstruction(
+					ctx.AdaptType (expr.GetType()),
 					value, ctx.AssignmentValue, indices)
 				ctx.BasicBlock.AddInstruction(si)
 
@@ -341,7 +394,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		else:
 			assert isinstance(member, ast.PrimaryExpression)
 			
-			mai = LinearIR.MemberAccessInstruction(member.GetType (),
+			mai = LinearIR.MemberAccessInstruction(
+				ctx.AdaptType (member.GetType ()),
 				value, member.GetName())
 			ctx.BasicBlock.AddInstruction(mai)
 
@@ -351,7 +405,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
 	def v_PrimaryExpression(self, expr, ctx):
 		accessScope = ctx.LookupVariableScope(expr.GetName())
-		li = LinearIR.VariableAccessInstruction(expr.GetType(),
+		li = LinearIR.VariableAccessInstruction(
+			ctx.AdaptType (expr.GetType()),
 			expr.GetName (),
 			accessScope)
 
@@ -366,29 +421,32 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
 		assert isinstance(castValue, LinearIR.Value)
 
-		instruction = LinearIR.CastInstruction(castValue, ce.GetType())
+		instruction = LinearIR.CastInstruction(castValue,
+			ctx.AdaptType (ce.GetType()))
 		ctx.BasicBlock.AddInstruction(instruction)
 		return instruction
 
-	def __GetMatrixRowType(self, m: types.MatrixType):
-		return types.VectorType(m.GetComponentType(), m.GetColumnCount())
+	def __GetMatrixRowType(self, m: LinearIR.MatrixType):
+		return LinearIR.VectorType(m.ElementType, m.RowCount)
 			
 	def v_BinaryExpression(self, be, ctx):
+		assert isinstance(be.GetLeft().GetType(), types.PrimitiveType)
+		assert isinstance(be.GetRight().GetType(), types.PrimitiveType)
+
 		left = self.v_Visit (be.GetLeft (), ctx)
 		right = self.v_Visit (be.GetRight (), ctx)
 
 		assert isinstance(left, LinearIR.Value)
 		assert isinstance(right, LinearIR.Value)
 
-		assert isinstance(left.Type, types.PrimitiveType)
-		assert isinstance(right.Type, types.PrimitiveType)
-
 		if left.Type.IsMatrix() and right.Type.IsMatrix():
 			# M <op> M, needs to get lowered per row
 			operation = be.GetOperation()
 			if operation == op.Operation.MUL:
-				mul = LinearIR.BinaryInstruction(LinearIR.OpCode.MATRIX_MUL_MATRIX,
-					be.GetType(), left, right)
+				mul = LinearIR.BinaryInstruction(
+					LinearIR.OpCode.MATRIX_MUL_MATRIX,
+					ctx.AdaptType (be.GetType()),
+					left, right)
 				ctx.BasicBlock.AddInstruction(mul)
 				return mul
 			else:
@@ -396,30 +454,35 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 				# ADD, SUB, or CMP -- these can be executed per row, and then
 				# combined back into a matrix result
 				leftType = left.Type
-				leftRowType = self.__GetMatrixRowType(leftType)
+				leftRowType = leftType.RowType
 				
-				rightType = left.Type
-				rightRowType = self.__GetMatrixRowType(rightType)
+				rightType = right.Type
+				rightRowType = rightType.RowType
 
-				resultType = be.GetType()
-				resultRowType = self.__GetMatrixRowType(resultType)
+				resultType = ctx.AdaptType (be.GetType())
+				resultRowType = resultType.RowType
 				rows = []
-				for row in range(leftType.GetRowCount()):
-					index = ctx.Function.CreateConstant(types.Integer(), row)
+				for row in range(leftType.RowCount):
+					index = ctx.Function.CreateConstant(
+						LinearIR.IntegerType(), row)
 					leftRow = LinearIR.MatrixAccessInstruction(
-						leftRowType, left, index)
+						leftRowType,
+						left, index)
 					ctx.BasicBlock.AddInstruction(leftRow)
 
 					rightRow = LinearIR.MatrixAccessInstruction(
-						rightRowType, right, index)
+						rightRowType,
+						right, index)
 					ctx.BasicBlock.AddInstruction(rightRow)
 
 					newRow = LinearIR.BinaryInstruction.FromOperation (operation,
-						resultRowType, leftRow, rightRow)
+						resultRowType,
+						leftRow, rightRow)
 					ctx.BasicBlock.AddInstruction(newRow)
 					rows.append(newRow)
 
-				result = LinearIR.ConstructPrimitiveInstruction(resultType,
+				result = LinearIR.ConstructPrimitiveInstruction(
+					resultType,
 					rows)
 				ctx.BasicBlock.AddInstruction(result)
 				return result
@@ -430,33 +493,38 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			# M <op> S, needs to get lowered to vector-scalar multiply or
 			# division
 			leftType = left.Type
-			leftRowType = self.__GetMatrixRowType(leftType)
+			leftRowType = leftType.RowType
 			
 			rightType = left.Type
 
-			resultType = be.GetType()
-			resultRowType = self.__GetMatrixRowType(resultType)
+			resultType = ctx.AdaptType (be.GetType())
+			resultRowType = resultType.RowType
 			rows = []
-			for row in range(leftType.GetRowCount()):
+			for row in range(leftType.RowCount):
 				leftRow = LinearIR.MatrixAccessInstruction(
-					leftRowType, left, ctx.Function.CreateConstant(
-						types.Integer(), row
+					leftRowType,
+					left, ctx.Function.CreateConstant(
+						LinearIR.IntegerType(), row
 					)
 				)
 				ctx.BasicBlock.AddInstruction(leftRow)
 
-				newRow = LinearIR.BinaryInstruction.FromOperation (be.GetOperation(),
-					resultRowType, leftRow, right)
+				newRow = LinearIR.BinaryInstruction.FromOperation (
+					be.GetOperation(),
+					resultRowType,
+					leftRow, right)
 				ctx.BasicBlock.AddInstruction(newRow)
 				rows.append(newRow)
 
-			result = LinearIR.ConstructPrimitiveInstruction(resultType,
+			result = LinearIR.ConstructPrimitiveInstruction(
+				resultType,
 				rows)
 			ctx.BasicBlock.AddInstruction(result)
 			return result
 		
-		instruction = LinearIR.BinaryInstruction.FromOperation (be.GetOperation (),
-			be.GetType(), left, right)
+		instruction = LinearIR.BinaryInstruction.FromOperation (
+			be.GetOperation (),
+			ctx.AdaptType (be.GetType()), left, right)
 		ctx.BasicBlock.AddInstruction(instruction)
 		return instruction
 					
@@ -473,13 +541,15 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
 	def v_VariableDeclaration(self, vd, ctx):
 		ctx.RegisterFunctionLocalVariable(vd.GetName())
-		dvi = LinearIR.DeclareVariableInstruction(vd.GetType (),
+		dvi = LinearIR.DeclareVariableInstruction(
+			ctx.AdaptType (vd.GetType ()),
 			vd.GetName(), LinearIR.VariableAccessScope.FUNCTION_LOCAL)
 		ctx.BasicBlock.AddInstruction(dvi)
 	
 		if vd.HasInitializerExpression():
 			initValue = self.v_Visit(vd.GetInitializerExpression(), ctx)
-			store = LinearIR.VariableAccessInstruction(vd.GetType (), vd.GetName(),
+			store = LinearIR.VariableAccessInstruction(
+				ctx.AdaptType (vd.GetType ()), vd.GetName(),
 				LinearIR.VariableAccessScope.FUNCTION_LOCAL)
 			ctx.BasicBlock.AddInstruction(store)
 			store.SetStore(initValue)
@@ -495,7 +565,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
 	def v_MethodCallExpression(self, expr, ctx):
 		args = [self.v_Visit(arg, ctx) for arg in expr]
-		ci = LinearIR.CallInstruction(expr.GetType(),
+		ci = LinearIR.CallInstruction(
+			ctx.AdaptType (expr.GetType()),
 			expr.GetMemberAccess().member.GetName(),
 			args)
 		ctx.BasicBlock.AddInstruction(ci)
@@ -504,7 +575,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 	def v_CallExpression(self, expr, ctx):
 		args = [self.v_Visit(arg, ctx) for arg in expr]
 		name = self.__GetFunctionName(expr.GetFunction())
-		ci = LinearIR.CallInstruction(expr.GetType(),
+		ci = LinearIR.CallInstruction(
+			ctx.AdaptType (expr.GetType()),
 			name,
 			args)
 		ctx.BasicBlock.AddInstruction(ci)
@@ -531,7 +603,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			isMatrix = False
 
 		if isVector:
-			cai = LinearIR.VectorAccessInstruction(expr.GetType(),
+			cai = LinearIR.VectorAccessInstruction(
+				ctx.AdaptType (expr.GetType()),
 				array, index)
 			ctx.BasicBlock.AddInstruction(cai)
 
@@ -546,7 +619,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			else:
 				return cai
 		elif isMatrix:
-			cai = LinearIR.MatrixAccessInstruction(expr.GetType(),
+			cai = LinearIR.MatrixAccessInstruction(
+				ctx.AdaptType (expr.GetType()),
 				array, index)
 			ctx.BasicBlock.AddInstruction(cai)
 
@@ -561,7 +635,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			else:
 				return cai
 		else:
-			ai = LinearIR.ArrayAccessInstruction(expr.GetType(), array, index)
+			ai = LinearIR.ArrayAccessInstruction(
+				ctx.AdaptType (expr.GetType()), array, index)
 
 			if ctx.InAssignment:
 				ai.SetStore(ctx.AssignmentValue)
