@@ -2,10 +2,9 @@ from typing import List, Dict, Iterable, Optional, Union
 from . import op
 from enum import Enum
 import collections
-from . import Errors, types
+from . import Errors
 from .Visitor import Node, Visitor
 from collections import defaultdict
-
 
 class OpCode(Enum):
     INVALID = 0
@@ -182,7 +181,7 @@ class VectorType(Type):
         return self.__elementType
 
     def __str__(self):
-        return f'<{self.ElementType} x {self.Size}>'
+        return f'<{self.Size} × {self.ElementType}>'
 
 class MatrixType(Type):
     def __init__(self, rowType: VectorType, rowCount: int):
@@ -215,7 +214,7 @@ class MatrixType(Type):
         return (self.__columnCount, self.__rowCount)
 
     def __str__(self):
-        return f'<{self.RowType} x {self.RowCount}>'
+        return f'<{self.RowCount} × {self.RowType}>'
 
 class StructureType(Type):
     def __init__(self, fields: Dict[str, Type]):
@@ -229,8 +228,11 @@ class StructureType(Type):
     def Kind(self):
         return TypeKind.Structure
 
+    def __str__(self):
+        return '{' + ', '.join([f'{v} {k}' for k,v in self.Fields.items()]) + '}'
+
 class ArrayType(Type):
-    def __init__(self, elementType: Type, size: int):
+    def __init__(self, elementType: Type, size):
         self.__elementType = elementType
         self.__size = size
 
@@ -268,7 +270,7 @@ class Value(Node):
         self.__reference = number
 
 class ConstantValue(Value):
-    def __init__(self, valueType: types.Type, constantValue):
+    def __init__(self, valueType: Type, constantValue):
         super().__init__(valueType)
         self.__value = constantValue
 
@@ -280,7 +282,7 @@ class ConstantValue(Value):
         return f'{self.Type}({self.Value})'
 
 class ValueUser(Value):
-    def __init__(self, valueType: types.Type):
+    def __init__(self, valueType: Type):
         super().__init__(valueType)
 
     @property
@@ -293,7 +295,7 @@ class ValueUser(Value):
         pass
 
 class Instruction(ValueUser):
-    def __init__(self, opCode: OpCode, returnType: types.Type):
+    def __init__(self, opCode: OpCode, returnType: Type):
         super().__init__(returnType)
         self.__parent = None
         self.__opcode = opCode
@@ -319,7 +321,7 @@ class Instruction(ValueUser):
 
 class BasicBlock(Value):
     def __init__(self, function):
-        super().__init__(types.Void())
+        super().__init__(VoidType())
         self.__instructions = []
         self.__predecessors = []
         self.__successors = []
@@ -433,7 +435,7 @@ class BasicBlock(Value):
         self.__instructions = [i for i in self.__instructions if i]
 
 class Function(Value):
-    def __init__(self, name, functionType: types.Function):
+    def __init__(self, name, functionType: FunctionType):
         super().__init__(functionType)
         self.__basicBlocks = []
         self.__name = name
@@ -475,7 +477,7 @@ class Function(Value):
         self.__values.append(value)
         return n
 
-    def CreateConstant(self, constantType: types.Type, value):
+    def CreateConstant(self, constantType: Type, value):
         result = self.__constants.get(value, None)
         if result:
             return result
@@ -528,7 +530,7 @@ class Program(Node):
         self.__functions = function(self.__functions)
 
 class BinaryInstruction(Instruction):
-    def __init__(self, operation: OpCode, returnType: types.Type,
+    def __init__(self, operation: OpCode, returnType: Type,
         v1: Value, v2: Value):
         super().__init__(operation, returnType)
         self.__values = [v1, v2]
@@ -602,7 +604,7 @@ class BinaryInstruction(Instruction):
         return self.__values
 
 class CompareInstruction(Instruction):
-    def __init__(self, predicate: OpCode, returnType: types.Type,
+    def __init__(self, predicate: OpCode, returnType: Type,
         v1: Value, v2: Value):
         super().__init__(predicate, returnType)
         self.__predicate = predicate
@@ -619,7 +621,7 @@ class BranchInstruction(Instruction):
     def __init__(self, trueBlock: Optional[BasicBlock],
         falseBlock: BasicBlock = None,
         predicate: Value = None):
-        super().__init__(OpCode.BRANCH, types.Void())
+        super().__init__(OpCode.BRANCH, VoidType())
         self.__trueBlock = trueBlock
         self.__falseBlock = falseBlock
         self.__predicate = predicate
@@ -665,7 +667,7 @@ class BranchInstruction(Instruction):
         return self.__predicate
 
 class UnaryInstruction(Instruction):
-    def __init__(self, operation: OpCode, returnType: types.Type, value: Value):
+    def __init__(self, operation: OpCode, returnType: Type, value: Value):
         super().__init__(operation, returnType)
         self.__operation = operation
         self.__value = value
@@ -683,7 +685,7 @@ class UnaryInstruction(Instruction):
         yield self.__value.Reference
 
 class CastInstruction(UnaryInstruction):
-    def __init__(self, value: Value, targetType: types.Type):
+    def __init__(self, value: Value, targetType: Type):
         super().__init__(OpCode.CAST, targetType, value)
 
 class ReturnInstruction(Instruction):
@@ -691,7 +693,7 @@ class ReturnInstruction(Instruction):
         if value:
             super().__init__(OpCode.RETURN, value.Type)
         else:
-            super().__init__(OpCode.RETURN, types.Void())
+            super().__init__(OpCode.RETURN, VoidType())
         self.__value = value
 
     @property
@@ -715,7 +717,7 @@ class VariableAccessScope(Enum):
     FUNCTION_LOCAL = 2
 
 class ConstructPrimitiveInstruction(Instruction):
-    def __init__(self, returnType: types.Type,
+    def __init__(self, returnType: Type,
         items: List[Value]):
         super().__init__(OpCode.CONSTRUCT_PRIMITIVE, returnType)
         self.__values = items
@@ -774,7 +776,7 @@ class MemberAccessInstruction(Instruction):
             yield self.__store.Reference
 
 class ShuffleInstruction(Instruction):
-    def __init__(self, returnType: types.VectorType,
+    def __init__(self, returnType: VectorType,
         first: Value,
         second: Value,
         indices: List[int]):
@@ -808,7 +810,7 @@ class ShuffleInstruction(Instruction):
         yield self.__second.Reference
 
 class VariableAccessInstruction(Instruction):
-    def __init__(self, returnType: types.Type, variableName,
+    def __init__(self, returnType: Type, variableName,
             accessScope: VariableAccessScope = VariableAccessScope.GLOBAL):
         super().__init__(OpCode.LOAD, returnType)
         self.__variable = variableName
@@ -843,7 +845,7 @@ class VariableAccessInstruction(Instruction):
             return []
 
 class CallInstruction(Instruction):
-    def __init__(self, returnType: types.Type, functionName: str,
+    def __init__(self, returnType: Type, functionName: str,
         arguments = []):
         super().__init__(OpCode.CALL, returnType)
         self.__function = functionName
@@ -913,19 +915,19 @@ class _IndexedAccessBase(Instruction):
             yield self.__store.Reference
 
 class ArrayAccessInstruction(_IndexedAccessBase):
-    def __init__(self, returnType: types.Type, array: Value, index: Value):
+    def __init__(self, returnType: Type, array: Value, index: Value):
         super().__init__(returnType, array, index,
             (OpCode.LOAD_ARRAY, OpCode.STORE_ARRAY))
         assert array.Type.IsArray()
 
 class VectorAccessInstruction(_IndexedAccessBase):
-    def __init__(self, returnType: types.Type, vector: Value, index: Value):
+    def __init__(self, returnType: Type, vector: Value, index: Value):
         super().__init__(returnType, vector, index,
             (OpCode.VECTOR_GET, OpCode.VECTOR_SET))
         assert vector.Type.IsVector()
 
 class MatrixAccessInstruction(_IndexedAccessBase):
-    def __init__(self, returnType: types.Type, matrix: Value, index: Value):
+    def __init__(self, returnType: Type, matrix: Value, index: Value):
         super().__init__(returnType, matrix, index,
             (OpCode.MATRIX_GET, OpCode.MATRIX_SET))
         assert matrix.Type.IsMatrix()
@@ -963,7 +965,7 @@ class InstructionPrinter(Visitor):
         else:
             return f'%{v.Reference}'
 
-    def __FormatType(self, t: types.Type):
+    def __FormatType(self, t: Type):
         return str(t)
 
     def __FormatLabel(self, label):
@@ -993,12 +995,12 @@ class InstructionPrinter(Visitor):
 
     def v_CastInstruction(self, ci, ctx=None):
         self.__Print(self.__FormatReference(ci), '=',
-            f'cast.{self.__FormatType(ci.Type)}',
+            f'cast {self.__FormatType(ci.Type)}',
             self.__FormatReference (ci.Value))
 
     def v_BinaryInstruction(self, bi, ctx=None):
         self.__Print(self.__FormatReference(bi), '=',
-            f'{bi.OpCode.name.lower()}.{self.__FormatType(bi.Type)}',
+            f'{bi.OpCode.name.lower()} {self.__FormatType(bi.Type)}',
             self.__FormatReference(bi.Values[0]),
             self.__FormatReference(bi.Values[1]))
 
