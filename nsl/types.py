@@ -462,6 +462,7 @@ def ResolveType(theType: Type, scope):
 	if theType.IsArray() and theType.GetComponentType().NeedsResolve():
 		resolvedComponentType = scope.GetType (theType.GetComponentType().GetName ())
 		assert not isinstance (resolvedComponentType, UnresolvedType)
+		assert isinstance(theType, ArrayType)
 		result =  theType.WithComponentType (resolvedComponentType)
 		return result
 	elif theType.NeedsResolve ():
@@ -545,10 +546,12 @@ def ResolveBinaryExpressionType (operation, left, right):
 		# Matrix * Vector or Matrix * Matrix
 		resultShape = (leftShape [0], rightShape [1])
 		if resultShape [1] == 1:
+			assert isinstance(baseType, ScalarType)
 			return ExpressionType (VectorType (baseType, resultShape [0]),
 				[left.WithComponentType (baseType),
 				 right.WithComponentType (baseType)])
 		elif resultShape [1] > 1:
+			assert isinstance(baseType, ScalarType)
 			return ExpressionType (MatrixType (baseType, resultShape [0], resultShape [1]),
 				[left.WithComponentType (baseType),
 				 right.WithComponentType (baseType)])
