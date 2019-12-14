@@ -66,6 +66,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			self.__variables = {}
 			self.__assignmentValue = []
 			self.__loops = []
+			self.__function = None
 
 		def OnEnterModule(self, module):
 			for g in module.GetDeclarations():
@@ -554,8 +555,17 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			ctx.BasicBlock.AddInstruction(store)
 			store.SetStore(initValue)
 
-	def v_Module (self, module, ctx):
+	def v_Module (self, module: ast.Module, ctx: Context):
+		import itertools
 		ctx.OnEnterModule(module)
+
+		ctx.Module.Metadata['functions'] = [f.GetType() for f in module.GetFunctions()]
+		ctx.Module.Metadata['types'] = {d.GetName(): d.GetType() for d in
+										itertools.chain(*[gd.GetDeclarations() for gd in module.GetDeclarations()])}
+
+		for importName in module.GetImports():
+			ctx.Module.AddImport(importName)
+
 		for globalDeclaration in module.GetDeclarations():
 			for decl in globalDeclaration.GetDeclarations():
 				ctx.Module.CreateGlobalVariable(decl.GetName(), decl.GetType())

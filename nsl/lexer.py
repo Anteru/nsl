@@ -20,6 +20,11 @@ class NslLexer:
 
     literals = [';', '{', '}', '(', ')', '.' ,'[', ']', ',', ':']
 
+    # string literals (K&R2: A.2.6)
+    escape_sequence_start_in_string = r"""(\\[0-9a-zA-Z._~!=&\^\-\\?'"])"""
+    string_char = r"""([^"\\\n]|"""+escape_sequence_start_in_string+')'
+    string_literal = '"'+string_char+'*"'
+
     types = ['VOID',
              'FLOAT', 'FLOAT2', 'FLOAT3', 'FLOAT4',
              'INT', 'INT2', 'INT3', 'INT4',
@@ -32,6 +37,7 @@ class NslLexer:
                        'DO', 'WHILE', 'CASE',
 
                        'EXPORT',
+                       'IMPORT',
 
                        '__OPTIONAL',
 
@@ -42,7 +48,7 @@ class NslLexer:
                        'CONST']
     tokens = types + reserved_tokens + ['ID',
             'INT_CONST_DEC', 'INT_CONST_OCT', 'INT_CONST_HEX',
-            'FLOAT_CONST',
+            'FLOAT_CONST', 'STRING_LITERAL',
 
              # Operators
             'PLUS', 'MINUS', 'TIMES', 'DIVIDE', 'MOD',
@@ -97,6 +103,8 @@ class NslLexer:
     @TOKEN(decimal_constant)
     def t_INT_CONST_DEC(self, t):
         return t
+
+    t_STRING_LITERAL = string_literal
 
     # Operators
     t_PLUS              = r'\+'

@@ -48,29 +48,47 @@ class NslParser:
         p[0].AddFunction (p[1])
 
     def p_module_2(self, p):
+        '''module : module function'''
+        p[0] = p[1]
+        p[0].AddFunction (p[2])
+
+    def p_module_3(self, p):
         '''module : declaration_statement'''
         p[0] = ast.Module ()
         p[0].AddDeclaration (p[1])
 
-    def p_module_3(self, p):
+    def p_module_4(self, p):
         '''module : module declaration_statement'''
         p[0] = p[1]
         p[0].AddDeclaration (p[2])
 
-    def p_module_4(self, p):
+    def p_module_5(self, p):
         '''module : type_definition'''
         p[0] = ast.Module ()
         p[0].AddType (p[1])
-
-    def p_module_5(self, p):
-        '''module : module function'''
-        p[0] = p[1]
-        p[0].AddFunction (p[2])
 
     def p_module_6(self, p):
         '''module : module type_definition'''
         p[0] = p[1]
         p[0].AddType (p[2])
+
+    def p_module_7(self, p):
+        '''module : import_statement'''
+        p[0] = ast.Module()
+        p[0].AddImport(p[1])
+
+    def p_module_8(self, p):
+        '''module : module import_statement'''
+        p[0] = p[1]
+        p[0].AddImport(p[1])
+
+    def p_string_literal(self, p):
+        '''string_literal : STRING_LITERAL'''
+        p[0] = p[1][1:-1]
+
+    def p_import_statement(self, p):
+        '''import_statement : IMPORT string_literal ';' '''
+        p[0] = p[2]
 
     def p_type_definition(self, p):
         '''type_definition : structure_definition'''

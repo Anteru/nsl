@@ -190,12 +190,13 @@ class Function(Type):
 			(implicit) conversions have to be performed to match.'''
 		matchingArguments = self.arguments
 
-		if (len(parameterList) != len(self.arguments)):
-			# cut off optional arguments until it matches
+		if len(parameterList) < len(self.arguments):
+			# Try to cut off optional arguments
 			if not all ([arg.IsOptional() for arg in matchingArguments[len(parameterList):]]):
 				return -1
-			else:
-				matchingArguments = matchingArguments[:len(parameterList)]
+		elif len(parameterList) > len(self.arguments):
+			# More parameters than arguments, this is not a valid overload
+			return -1
 
 		matchingArgumentTypes = list (self.__argumentTypes.values ())[:len(parameterList)]
 

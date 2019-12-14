@@ -15,3 +15,7 @@ htmlcov/**
 .pytest_cache/**
 .coverage
 *-pass-*-print*.txt
+# Default ignored files
+.idea/workspace.xml
+# Project exclude paths
+.idea/

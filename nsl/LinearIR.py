@@ -509,6 +509,12 @@ class Module(Node):
     def __init__(self):
         self.__functions = collections.OrderedDict()
         self.__globals = collections.OrderedDict()
+        self.__imports = set()
+        self.__metadata = dict()
+
+    @property
+    def Metadata(self):
+        return self.__metadata
 
     @property
     def Functions(self):
@@ -518,6 +524,10 @@ class Module(Node):
     def Globals(self):
         return self.__globals
 
+    @property
+    def Imports(self):
+        return self.__imports
+
     def CreateFunction(self, name, functionType):
         f = Function(name, functionType)
         self.__functions[name] = f
@@ -525,6 +535,9 @@ class Module(Node):
 
     def CreateGlobalVariable(self, name, variableType):
         self.__globals[name]= variableType
+
+    def AddImport(self, name):
+        self.__imports.add(name)
 
     def _Traverse(self, function):
         self.__functions = function(self.__functions)

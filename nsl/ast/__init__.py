@@ -108,6 +108,7 @@ class Module (Node):
         # Types may depend on types which are previously defined
         # Ensure ordering by using an ordered dict
         self.__types = collections.OrderedDict ()
+        self.__imports = set()
 
     def _Traverse (self, function):
         self.__types = function(self.__types)
@@ -123,6 +124,9 @@ class Module (Node):
     def AddType (self, decl):
         self.__types [decl.GetName ()] = decl
 
+    def AddImport(self, name):
+        self.__imports.add((name))
+
     def GetDeclarations (self):
         return self.__variables
 
@@ -131,6 +135,9 @@ class Module (Node):
 
     def GetFunctions(self):
         return self.__functions
+
+    def GetImports(self):
+        return self.__imports
 
     def __str__(self):
         return '''Module ({0} variable(s), {1} function(s), {2} type(s))'''.format(

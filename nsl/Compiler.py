@@ -74,21 +74,21 @@ class Compiler:
 		ast = self.parser.Parse (source, debug = debugParsing)
 		for i,p in enumerate (self.astPasses):
 			if not self.__RunPass(ast, i, p, 'AST', debugPasses):
-				return (False, None)
+				return False, None
 
 		# Done with the AST, we need to lower to IR now
 		lowerPass = LowerToIR.GetPass ()
 		if not lowerPass.Process (ast):
 			print (f'Failed to lower AST to IR')
-			return (False, None)
+			return False, None
 
-		ir = lowerPass.Visitor.Module
+		module = lowerPass.Visitor.Module
 
 		for i, p in enumerate(self.irPasses):
 			if not optimizations and p.Flags & PassFlags.IsOptimization:
 				continue
 
-			if not self.__RunPass(ir, i, p, 'IR', debugPasses):
-				return (False, None)
+			if not self.__RunPass(module, i, p, 'IR', debugPasses):
+				return False, None
 
-		return (True, ir)
+		return True, module

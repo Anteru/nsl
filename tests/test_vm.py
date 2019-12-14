@@ -9,7 +9,12 @@ def _compile(code):
     result, ir = c.Compile(code)
     assert result == True
 
-    vm = VM.VirtualMachine(ir)
+    linker = VM.Linker()
+    linker.AddModule(ir)
+
+    program = linker.Link()
+
+    vm = VM.VirtualMachine(program)
     return vm
 
 def testSimpleAddInt():

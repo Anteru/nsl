@@ -1,23 +1,17 @@
 #!/usr/bin/env python3
 from nsl.Compiler import Compiler
-from nsl.VM import VirtualMachine
 import argparse
+import sys
 
 def Compile(args):
     c = Compiler ()
-    ok, ir = c.Compile (args.FILE.read(),
+    ok, module = c.Compile (args.FILE.read(),
         options={
                  'debug-parsing' : args.debug_parsing,
                  'debug-passes' : args.debug_passes,
                  'optimize': args.opt_level > 0})
 
-    vm = VirtualMachine(ir)
-    result = vm.Invoke('AddTwoIntegers', a=2, b=3)
-    print(result)
-
-    vm.SetGlobal('global_a', 23)
-    result = vm.Invoke('AddToGlobal', a=42)
-    print(result)
+    return ok, module
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser('nslc')
@@ -30,8 +24,25 @@ if __name__=='__main__':
         type=int, choices=[0, 1],
         default=0,
         dest='opt_level')
+    parser.add_argument('--verbose', '-v', action='store_true')
     parser.add_argument('FILE', type=argparse.FileType('r'),
         metavar='INPUT')
+    parser.add_argument('-o', '--output', type=argparse.FileType('wb'))
     args = parser.parse_args()
 
-    Compile(args)
+    ok, module = Compile(args)
+
+    if args.output:
+        import pickle
+        pickle.dump(module, args.output)
+
+    if args.verbose:
+        if ok:
+            print('SUCCESS')
+        else:
+            print('ERROR')
+
+    if ok:
+        sys.exit(0)
+    else:
+        sys.exit(1)

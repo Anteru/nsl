@@ -1,6 +1,7 @@
 ﻿from collections import OrderedDict
-from nsl import ast, types, Errors, Visitor
+from nsl import ast, types, Errors, Visitor, LinearIR
 from enum import Enum
+from typing import List
 
 def ParseSwizzleMask(mask):
 	'''Parse a swizzle mask into a list of element indices, starting
@@ -41,7 +42,7 @@ class FunctionVisitationPass(Enum):
 	Visit = 1
 
 class ComputeTypeVisitor(Visitor.DefaultVisitor):
-	def GetContext(self):
+	def GetContext(self) -> List[types.Scope]:
 		return [self.scope]
 
 	def __init__(self):
@@ -174,7 +175,8 @@ class ComputeTypeVisitor(Visitor.DefaultVisitor):
 				
 		func.ResolveType (ctx [-1])
 		func.GetType ().Resolve (ctx[-1])
-		ctx[-1].RegisterFunction (func.GetType ().GetName (), func.GetType ())
+		funcType = func.GetType()
+		ctx[-1].RegisterFunction (funcType.GetName (), funcType)
 			
 	def v_Function(self, func, ctx):
 		'''Computes the function type and processes all statements.'''
@@ -188,7 +190,19 @@ class ComputeTypeVisitor(Visitor.DefaultVisitor):
 		self.v_Visit (func.GetBody(), ctx)
 		ctx.pop ()
 
-	def v_Module(self, module, ctx):
+	def v_Module(self, module: ast.Module, ctx: List[types.Scope]):
+		import pickle
+		# Module imports are added first, so the symbols exported from a module
+		# are available to everyone
+		for importedModule in module.GetImports():
+			irModule = pickle.load(open(f"{importedModule}.nslir", 'rb'))
+			assert isinstance(irModule, LinearIR.Module)
+			for moduleType in irModule.Metadata['types']:
+				assert isinstance(moduleType, types.Type)
+				ctx[-1].RegisterType(moduleType.GetName(), moduleType)
+			for func in irModule.Metadata['functions']:
+				ctx[-1].RegisterFunction(func.GetName(), func)
+
 		# Must visit types first
 		for programType in module.GetTypes ():
 			self.v_Visit (programType, ctx)
@@ -207,24 +221,12 @@ class ComputeTypesPass(nsl.Pass.Pass):
 		import os, pickle, nsl.parser
 		# register default functions and types
 		self.visitor = ComputeTypeVisitor ()
-		stdlib = None
-		if not os.path.exists ('stdlib.cache') or True:
-			# generate the std lib first
-			stdlib_vis = ComputeTypeVisitor ()
-			p = nsl.parser.NslParser ()
-			stdlib_ast = p.Parse (open ('nsl/stdlib.nsl').read ())
-			stdlib_vis.Visit(stdlib_ast)
-			stdlib = stdlib_vis.scope
-			pickle.dump(stdlib, open ('stdlib.cache', 'wb'))
-		else:
-			stdlib = pickle.load(open ('stdlib.cache', 'rb'))
-		self.visitor.scope = stdlib
 
 	def GetName (self):
 		return 'compute-types'
 
-	def Process (self, ast, ctx=None,output=None):
-		self.visitor.Visit (ast)
+	def Process (self, root: ast.Module, ctx=None,output=None):
+		self.visitor.Visit (root)
 
 		return self.visitor.ok
 

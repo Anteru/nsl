@@ -38,3 +38,12 @@ class TestExpressionParsing:
         assert isinstance (m, ast.PrimaryExpression)
         assert p.GetName () == 'foo'
         assert m.GetName () == 'bar'
+
+    def testImportStatement(self):
+        p = parser.NslParser()
+        root = p.Parse("""import "std";""")
+
+        assert isinstance(root, ast.Module)
+
+        imports = root.GetImports()
+        assert 'std' in imports
