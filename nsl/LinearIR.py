@@ -767,7 +767,7 @@ class MemberAccessInstruction(Instruction):
             self.__parent = newValue
 
         if self.__store and self.__store.Reference == newValue:
-            self.__store == newValue
+            self.__store = newValue
 
     @property
     def Uses(self):
