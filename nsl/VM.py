@@ -277,10 +277,10 @@ class ExecutionContext:
                 raise Exception(f"Unhandled opcode: {opCode}")
 
 class VirtualMachine:
-    def __init__(self, program):
-        self.__globalScope = {k: None for k in program.Globals.keys()}
+    def __init__(self, module):
+        self.__globalScope = {k: None for k in module.Globals.keys()}
 
-        self.__ctx = ExecutionContext(program.Functions, self.__globalScope)
+        self.__ctx = ExecutionContext(module.Functions, self.__globalScope)
 
     def SetGlobal(self, globalVariableName, value):
         self.__globalScope [globalVariableName] = value

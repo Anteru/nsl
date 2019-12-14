@@ -188,17 +188,17 @@ class ComputeTypeVisitor(Visitor.DefaultVisitor):
 		self.v_Visit (func.GetBody(), ctx)
 		ctx.pop ()
 
-	def v_Program(self, prog, ctx):
+	def v_Module(self, module, ctx):
 		# Must visit types first
-		for programType in prog.GetTypes ():
+		for programType in module.GetTypes ():
 			self.v_Visit (programType, ctx)
-		for decl in prog.GetDeclarations ():
+		for decl in module.GetDeclarations ():
 			self.v_Visit (decl, ctx)
 		
-		for func in prog.GetFunctions ():
+		for func in module.GetFunctions ():
 			self.__RegisterFunction(func, ctx)
 
-		for func in prog.GetFunctions():
+		for func in module.GetFunctions():
 			self.v_Visit (func, ctx)
 
 import nsl.Pass

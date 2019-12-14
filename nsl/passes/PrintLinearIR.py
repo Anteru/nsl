@@ -10,8 +10,8 @@ class PrintLinearIRVisitor (Visitor.DefaultVisitor):
     def v_Function(self, function, ctx=None):
         self.__printer.Print(function)
 
-    def v_Program(self, program, ctx=None):
-        for function in program.Functions.values():
+    def v_Module(self, module, ctx=None):
+        for function in module.Functions.values():
             self.v_Visit(function, ctx)
 
 def GetPass():

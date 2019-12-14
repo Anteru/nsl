@@ -1,12 +1,12 @@
 ﻿from nsl import ast, Visitor
 
 class PrettyPrintVisitor(Visitor.DefaultVisitor):
-	def v_Program (self, prog, ctx):
-		for programType in prog.GetTypes():
+	def v_Module (self, module, ctx):
+		for programType in module.GetTypes():
 			self.v_Visit (programType, ctx)
-		for decl in prog.GetDeclarations():
+		for decl in module.GetDeclarations():
 			self.v_Visit (decl, ctx)
-		for func in prog.GetFunctions():
+		for func in module.GetFunctions():
 			self.v_Visit (func, ctx)
 
 	def GetContext(self):

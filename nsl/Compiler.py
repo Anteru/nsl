@@ -82,7 +82,7 @@ class Compiler:
 			print (f'Failed to lower AST to IR')
 			return (False, None)
 
-		ir = lowerPass.Visitor.Program
+		ir = lowerPass.Visitor.Module
 
 		for i, p in enumerate(self.irPasses):
 			if not optimizations and p.Flags & PassFlags.IsOptimization:

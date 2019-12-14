@@ -505,7 +505,7 @@ class Function(Value):
         # know that their uses are no longer valid
         self.UpdateUses()
 
-class Program(Node):
+class Module(Node):
     def __init__(self):
         self.__functions = collections.OrderedDict()
         self.__globals = collections.OrderedDict()

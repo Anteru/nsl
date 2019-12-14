@@ -97,8 +97,10 @@ class Node(Visitor.Node):
     def GetLocation(self):
         return self.__location
                     
-class Program (Node):
-    '''Program container, keeping everything together.'''
+class Module (Node):
+    '''A single translation module.
+    
+    A module consists of types, variables and functions.'''
     def __init__(self):
         super().__init__()
         self.__variables = list ()
@@ -114,6 +116,12 @@ class Program (Node):
 
     def AddDeclaration (self, variable):
         self.__variables.append (variable)
+    
+    def AddFunction(self, func):
+        self.__functions.append (func)
+
+    def AddType (self, decl):
+        self.__types [decl.GetName ()] = decl
 
     def GetDeclarations (self):
         return self.__variables
@@ -123,15 +131,9 @@ class Program (Node):
 
     def GetFunctions(self):
         return self.__functions
-    
-    def AddFunction(self, func):
-        self.__functions.append (func)
-
-    def AddType (self, decl):
-        self.__types [decl.GetName ()] = decl
 
     def __str__(self):
-        return '''Program ({0} variable(s), {1} function(s), {2} type(s))'''.format(
+        return '''Module ({0} variable(s), {1} function(s), {2} type(s))'''.format(
             len(self.__variables), len(self.__functions), len (self.__types))
 
 class Expression(Node):

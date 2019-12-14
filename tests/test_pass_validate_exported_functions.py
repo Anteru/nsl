@@ -7,7 +7,7 @@ import nsl.Errors
 
 class TestValidateExportedFunctions:
     def testOverloadExportedFails(self):
-        p = nsl.ast.Program()
+        p = nsl.ast.Module()
         f1 = nsl.ast.Function("f", [nsl.types.Integer()], isExported=True)
         f2 = nsl.ast.Function("f", [nsl.types.Float()], isExported=True)
         p.AddFunction(f1)
@@ -18,7 +18,7 @@ class TestValidateExportedFunctions:
         assert validatePass.valid == False
 
     def testOverloadNonExportedWorks(self):
-        p = nsl.ast.Program()
+        p = nsl.ast.Module()
         f1 = nsl.ast.Function("f", [nsl.types.Integer()])
         f2 = nsl.ast.Function("f", [nsl.types.Float()])
         p.AddFunction(f1)

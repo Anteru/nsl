@@ -52,12 +52,12 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		self.__ctx = ctx
 
 	@property
-	def Program(self):
-		return self.__ctx.Program
+	def Module(self):
+		return self.__ctx.Module
 	
 	class Context:
 		def __init__(self):
-			self.__program = LinearIR.Program()
+			self.__module = LinearIR.Module()
 			self.__functions = []
 			self.__startNewBlock = False
 			self.__globals = {}
@@ -67,20 +67,20 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			self.__assignmentValue = []
 			self.__loops = []
 
-		def OnEnterProgram(self, program):
-			for g in program.GetDeclarations():
+		def OnEnterModule(self, module):
+			for g in module.GetDeclarations():
 				for decl in g.GetDeclarations():
 					self.__globals[decl.GetName()] = LinearIR.VariableAccessScope.GLOBAL
 
-		def OnLeaveProgram(self):
-			return self.__program
+		def OnLeaveModule(self):
+			return self.__module
 
 		@property
-		def Program(self):
-			return self.__program
+		def Module(self):
+			return self.__module
 
 		def OnEnterFunction(self, name, functionType):
-			self.__function = self.__program.CreateFunction(name, functionType)
+			self.__function = self.__module.CreateFunction(name, functionType)
 			self.__locals = {}
 			self.__args = {}
 			for arg in functionType.GetArguments():
@@ -554,14 +554,14 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			ctx.BasicBlock.AddInstruction(store)
 			store.SetStore(initValue)
 
-	def v_Program (self, program, ctx):
-		ctx.OnEnterProgram(program)
-		for globalDeclaration in program.GetDeclarations():
+	def v_Module (self, module, ctx):
+		ctx.OnEnterModule(module)
+		for globalDeclaration in module.GetDeclarations():
 			for decl in globalDeclaration.GetDeclarations():
-				ctx.Program.CreateGlobalVariable(decl.GetName(), decl.GetType())
-		for function in program.GetFunctions():
+				ctx.Module.CreateGlobalVariable(decl.GetName(), decl.GetType())
+		for function in module.GetFunctions():
 			self.v_Visit(function, ctx)
-		return ctx.OnLeaveProgram()
+		return ctx.OnLeaveModule()
 
 	def v_MethodCallExpression(self, expr, ctx):
 		args = [self.v_Visit(arg, ctx) for arg in expr]

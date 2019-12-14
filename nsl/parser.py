@@ -3,12 +3,12 @@ from nsl import ast, types, lexer, op
 from enum import Enum
 
 class ParseEntryPoint(Enum):
-    Program = 'program'
+    Module = 'module'
     Expression = 'expression'
     Statement = 'statement'
 
 class NslParser:
-    def __init__(self, parseEntryPoint = ParseEntryPoint.Program):
+    def __init__(self, parseEntryPoint = ParseEntryPoint.Module):
         self.lexer = lexer.NslLexer ()
         self.lexer.Build()
         self.tokens = self.lexer.tokens
@@ -42,33 +42,33 @@ class NslParser:
         ('left', 'TIMES', 'DIVIDE', 'MOD')
     )
 
-    def p_program_1(self, p):
-        '''program : function'''
-        p[0] = ast.Program ()
+    def p_module_1(self, p):
+        '''module : function'''
+        p[0] = ast.Module ()
         p[0].AddFunction (p[1])
 
-    def p_program_2(self, p):
-        '''program : declaration_statement'''
-        p[0] = ast.Program ()
+    def p_module_2(self, p):
+        '''module : declaration_statement'''
+        p[0] = ast.Module ()
         p[0].AddDeclaration (p[1])
 
-    def p_program_3(self, p):
-        '''program : program declaration_statement'''
+    def p_module_3(self, p):
+        '''module : module declaration_statement'''
         p[0] = p[1]
         p[0].AddDeclaration (p[2])
 
-    def p_program_4(self, p):
-        '''program : type_definition'''
-        p[0] = ast.Program ()
+    def p_module_4(self, p):
+        '''module : type_definition'''
+        p[0] = ast.Module ()
         p[0].AddType (p[1])
 
-    def p_program_5(self, p):
-        '''program : program function'''
+    def p_module_5(self, p):
+        '''module : module function'''
         p[0] = p[1]
         p[0].AddFunction (p[2])
 
-    def p_program_6(self, p):
-        '''program : program type_definition'''
+    def p_module_6(self, p):
+        '''module : module type_definition'''
         p[0] = p[1]
         p[0].AddType (p[2])
 
