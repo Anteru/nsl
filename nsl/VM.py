@@ -15,8 +15,8 @@ class ExecutionContext:
         # The global invoke method uses key-value pairs though, so we build
         # a flat list and use the provided arguments (or None if nothing was
         # set)        
-        functionArgs = [args.get(arg.GetName(), None)
-            for arg in function.Type.GetArguments()]
+        functionArgs = [args.get(arg, None)
+            for arg in function.Type.Arguments]
 
         return self.__Execute(self.__functions[functionName], functionArgs)
 

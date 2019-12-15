@@ -133,8 +133,6 @@ class IntegerType(ScalarType):
         return 'int'
 
 class FloatType(ScalarType):
-    pass
-
     def __str__(self):
         return 'float'
 
@@ -989,7 +987,7 @@ class InstructionPrinter(Visitor):
 
     def v_Function(self, function, ctx=None):
         self.__Print('function', function.Name,
-            '(' + ', '.join(map(str, function.Type.GetArguments())) + ')')
+            '(' + ', '.join(map(str, function.Type.Arguments)) + ')')
         for basicBlock in function.BasicBlocks:
             self.v_Visit(basicBlock, 1)
         self.__Print()
@@ -1159,6 +1157,7 @@ class Linker:
         self.__functions = {}
         self.__globals =  {}
         self.__loader = loader
+        self.__pendingImports = set()
 
     def AddModule(self, module: Module):
         self.__modules.append(module)
@@ -1170,5 +1169,11 @@ class Linker:
             assert k not in self.__globals
             self.__globals[k] = v
 
+        self.__pendingImports.update(module.Imports)
+
     def Link(self) -> Program:
+        # add all imported modules
+        for importedModule in self.__pendingImports:
+            self.AddModule(self.__loader.Load(importedModule))
+
         return Program(self.__functions, self.__globals)

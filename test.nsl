@@ -21,8 +21,8 @@ export function AddTwoIntegers(int a, int b) -> int
 	return a + b;
 }
 
-export function useStdLibFunction(float4 f) -> float {
-    return dot(f);
+export function useStdLibFunction(float a, float b, float c, float d) -> float {
+    return dot(float4(a,b,c,d));
 }
 
 int global_a;

@@ -10,8 +10,6 @@ def _CreateLinearIRType(t: types.Type):
 			return LinearIR.IntegerType (unsigned = True)
 		elif isinstance(t, types.Float):
 			return LinearIR.FloatType()
-		elif isinstance(t, types.Void):
-			return LinearIR.VoidType()
 		elif isinstance(t, types.VectorType):
 			return LinearIR.VectorType(
 				_CreateLinearIRType(t.GetComponentType()),
@@ -25,10 +23,10 @@ def _CreateLinearIRType(t: types.Type):
 			)
 	elif isinstance(t, types.Function):
 		return LinearIR.FunctionType(
-			_CreateLinearIRType(f.GetReturnType()),
+			_CreateLinearIRType(t.GetReturnType()),
 			collections.OrderedDict([
-				(k, _CreateLinearIRType(t)) for k,t in 
-				f.GetArgumentTypes().items()
+				(k, _CreateLinearIRType(argType)) for k,argType in
+				t.GetArgumentTypes().items()
 			])
 		)
 	elif isinstance(t, types.ArrayType):
@@ -44,6 +42,8 @@ def _CreateLinearIRType(t: types.Type):
 				for k in members.GetSymbolNames()
 			])
 		)
+	elif isinstance(t, types.Void):
+		return LinearIR.VoidType()
 
 	raise Exception("Unhandled type: ", t)
 
@@ -84,8 +84,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			self.__function = self.__module.CreateFunction(name, functionType)
 			self.__locals = {}
 			self.__args = {}
-			for arg in functionType.GetArguments():
-				self.__args[arg.GetName()] = LinearIR.VariableAccessScope.FUNCTION_ARGUMENT
+			for arg in functionType.Arguments:
+				self.__args[arg] = LinearIR.VariableAccessScope.FUNCTION_ARGUMENT
 			self.__variables = collections.ChainMap(
 				self.__globals,
 				self.__args,
@@ -170,7 +170,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 	def v_Function(self, function, ctx):
 		functionType = function.GetType()
 		name = self.__GetFunctionName(functionType)
-		ctx.OnEnterFunction(name, function.GetType())
+		ctx.OnEnterFunction(name, ctx.AdaptType (function.GetType()))
 		function.GetBody().AcceptVisitor(self, ctx)
 		ctx.OnLeaveFunction()
 

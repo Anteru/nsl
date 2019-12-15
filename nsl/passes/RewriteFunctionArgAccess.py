@@ -8,8 +8,8 @@ class RewriteFunctionArgAccessVisitor (Visitor.DefaultVisitor):
     
     def v_Function(self, function: LinearIR.Function, ctx=None):
         mapping = {}
-        for i, arg in enumerate(function.Type.GetArguments()):
-            mapping[arg.GetName()] = i
+        for i, arg in enumerate(function.Type.Arguments):
+            mapping[arg] = i
 
         function.AcceptVisitor(self, mapping)
 
