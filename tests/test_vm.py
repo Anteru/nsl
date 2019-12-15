@@ -9,7 +9,7 @@ def _compile(code):
     result, ir = c.Compile(code)
     assert result == True
 
-    linker = VM.Linker()
+    linker = LinearIR.Linker()
     linker.AddModule(ir)
 
     program = linker.Link()

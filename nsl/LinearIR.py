@@ -1127,3 +1127,48 @@ class InstructionPrinter(Visitor):
             self.__FormatReference(si.First),
             self.__FormatReference(si.Second),
             ', '.join(map(str, si.Indices)))
+
+
+class ModuleLoader:
+    def Load(self, moduleName) -> Module:
+        raise NotImplementedError
+
+class FilesystemModuleLoader(ModuleLoader):
+    def Load(self, moduleName) -> Module:
+        import pickle
+        module = pickle.load(open(f'{moduleName}.nslir', 'rb'))
+        assert isinstance(module, Module)
+        return module
+
+class Program:
+    def __init__(self, functions, globalSymbols):
+        self.__functions = functions
+        self.__globals = globalSymbols
+
+    @property
+    def Functions(self):
+        return self.__functions
+
+    @property
+    def Globals(self):
+        return self.__globals
+
+class Linker:
+    def __init__(self, *, loader = FilesystemModuleLoader()):
+        self.__modules = []
+        self.__functions = {}
+        self.__globals =  {}
+        self.__loader = loader
+
+    def AddModule(self, module: Module):
+        self.__modules.append(module)
+        for k,v in module.Functions.items():
+            assert k not in self.__functions
+            self.__functions[k] = v
+
+        for k,v in module.Globals.items():
+            assert k not in self.__globals
+            self.__globals[k] = v
+
+    def Link(self) -> Program:
+        return Program(self.__functions, self.__globals)

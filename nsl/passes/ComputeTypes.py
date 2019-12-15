@@ -48,6 +48,7 @@ class ComputeTypeVisitor(Visitor.DefaultVisitor):
 	def __init__(self):
 		self.ok = True
 		self.scope = types.Scope ()
+		self.__loader = LinearIR.FilesystemModuleLoader()
 
 	def v_StructureDefinition(self, decl, ctx):
 		assert isinstance(decl, ast.StructureDefinition)
@@ -195,12 +196,13 @@ class ComputeTypeVisitor(Visitor.DefaultVisitor):
 		# Module imports are added first, so the symbols exported from a module
 		# are available to everyone
 		for importedModule in module.GetImports():
-			irModule = pickle.load(open(f"{importedModule}.nslir", 'rb'))
-			assert isinstance(irModule, LinearIR.Module)
+			irModule = self.__loader.Load(importedModule)
+
 			for moduleType in irModule.Metadata['types']:
 				assert isinstance(moduleType, types.Type)
 				ctx[-1].RegisterType(moduleType.GetName(), moduleType)
 			for func in irModule.Metadata['functions']:
+				assert isinstance(func, types.Function)
 				ctx[-1].RegisterFunction(func.GetName(), func)
 
 		# Must visit types first

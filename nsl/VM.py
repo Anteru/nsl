@@ -276,41 +276,8 @@ class ExecutionContext:
             else:
                 raise Exception(f"Unhandled opcode: {opCode}")
 
-
-class Program:
-    def __init__(self, functions, globalSymbols):
-        self.__functions = functions
-        self.__globals = globalSymbols
-
-    @property
-    def Functions(self):
-        return self.__functions
-
-    @property
-    def Globals(self):
-        return self.__globals
-
-class Linker:
-    def __init__(self):
-        self.__modules = []
-        self.__functions = {}
-        self.__globals =  {}
-
-    def AddModule(self, module: LinearIR.Module):
-        self.__modules.append(module)
-        for k,v in module.Functions.items():
-            assert k not in self.__functions
-            self.__functions[k] = v
-
-        for k,v in module.Globals.items():
-            assert k not in self.__globals
-            self.__globals[k] = v
-
-    def Link(self) -> Program:
-        return Program(self.__functions, self.__globals)
-
 class VirtualMachine:
-    def __init__(self, program: Program):
+    def __init__(self, program: LinearIR.Program):
         self.__globalScope = {k: None for k in program.Globals.keys()}
 
         self.__ctx = ExecutionContext(program.Functions, self.__globalScope)
