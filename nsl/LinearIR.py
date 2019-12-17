@@ -264,7 +264,7 @@ class Value(Node):
     def Reference(self):
         return self.__reference
 
-    def SetReference(self, number):
+    def SetReference(self, number: int):
         self.__reference = number
 
 class ConstantValue(Value):
@@ -318,9 +318,9 @@ class Instruction(ValueUser):
                 valueList[i] = newValue
 
 class BasicBlock(Value):
-    def __init__(self, function):
+    def __init__(self, function: "Function"):
         super().__init__(VoidType())
-        self.__instructions = []
+        self.__instructions: List[Instruction] = []
         self.__predecessors = []
         self.__successors = []
         self.__function = function
@@ -369,19 +369,20 @@ class BasicBlock(Value):
         self.__replaceUses = {}
         self.__instructions = function(self.__instructions)
 
+        # During traversal, we can register replacements which cannot be
+        # executed immediately, we record them and then apply them here
+
         if self.__replaceUses:
             # We replace uses first: Otherwise, we could remove an instruction
             # and all references to it, and there is no way to fix this
             # once the reference to the instruction has been removed
             # For instance, if we have ``ret %7``, and we remove the instruction
             # producing %7, then we'll have ``ret None``, and if we want to
-            # replace that with a new reference, we can't any more as there is
-            # nothing referencing ``%7`` any more.
+            # replace that with a new reference, we can't as the reference to
+            # %7 is missing.
             self.Parent.ReplaceUses(self.__replaceUses)
 
         if self.__replacements:
-            # During traversal, we can register replacements which cannot be
-            # executed immediately, we record them and then apply them here
             self.__Replace()
 
             # Our uses may have changed, so we need to update them
@@ -958,7 +959,7 @@ class DeclareVariableInstruction(Instruction):
     def Scope(self):
         return self.__scope
 
-    def SetReference(self, reference):
+    def SetReference(self, reference: int):
         super().SetReference(reference)
         if self.__name is None:
             self.__name = f'${self.Reference}'
@@ -979,43 +980,43 @@ class InstructionPrinter(Visitor):
     def __FormatType(self, t: Type):
         return str(t)
 
-    def __FormatLabel(self, label):
+    def __FormatLabel(self, label: Value):
         return f'label bb_{label.Reference}'
 
     def Print(self, i):
         self.v_Visit(i)
 
-    def v_Function(self, function, ctx=None):
+    def v_Function(self, function: Function, ctx=None):
         self.__Print('function', function.Name,
             '(' + ', '.join(map(str, function.Type.Arguments)) + ')')
         for basicBlock in function.BasicBlocks:
             self.v_Visit(basicBlock, 1)
         self.__Print()
 
-    def v_BasicBlock(self, bb, ctx=None):
+    def v_BasicBlock(self, bb: BasicBlock, ctx=None):
         self.__Print(f'bb_{bb.Reference}: ')
         for i in bb.Instructions:
             self.__Print(' ' * (ctx * 4), end='')
             self.v_Visit(i, ctx + 1)
     
-    def v_ReturnInstruction(self, ri, ctx=None):
+    def v_ReturnInstruction(self, ri: ReturnInstruction, ctx=None):
         if ri.Value:
             self.__Print('ret', self.__FormatReference(ri.Value))
         else:
             self.__Print('ret')
 
-    def v_CastInstruction(self, ci, ctx=None):
+    def v_CastInstruction(self, ci: CastInstruction, ctx=None):
         self.__Print(self.__FormatReference(ci), '=',
             f'cast {self.__FormatType(ci.Type)}',
             self.__FormatReference (ci.Value))
 
-    def v_BinaryInstruction(self, bi, ctx=None):
+    def v_BinaryInstruction(self, bi: BinaryInstruction, ctx=None):
         self.__Print(self.__FormatReference(bi), '=',
             f'{bi.OpCode.name.lower()} {self.__FormatType(bi.Type)}',
             self.__FormatReference(bi.Values[0]),
             self.__FormatReference(bi.Values[1]))
 
-    def v_CallInstruction(self, ci, ctx=None):
+    def v_CallInstruction(self, ci: CallInstruction, ctx=None):
         self.__Print(self.__FormatReference(ci), '=',
             'call',
             self.__FormatType(ci.Type),
@@ -1030,7 +1031,7 @@ class InstructionPrinter(Visitor):
         else:
             return 'local'
 
-    def v_VariableAccessInstruction(self, li, ctx=None):
+    def v_VariableAccessInstruction(self, li: VariableAccessInstruction, ctx=None):
         scope = self.__FormatScope(li.Scope)
 
         if li.Store:
@@ -1044,7 +1045,7 @@ class InstructionPrinter(Visitor):
                 self.__FormatType(li.Type),
                 li.Variable)
 
-    def v_ArrayAccessInstruction(self, aai, ctx=None):
+    def v_ArrayAccessInstruction(self, aai: ArrayAccessInstruction, ctx=None):
         if aai.Store:
             self.__Print(f'store',
                 self.__FormatReference(aai.Array),
@@ -1074,15 +1075,15 @@ class InstructionPrinter(Visitor):
                 self.__FormatReference(instruction.Index))
 
 
-    def v_VectorAccessInstruction(self, vai, ctx=None):
+    def v_VectorAccessInstruction(self, vai: VectorAccessInstruction, ctx=None):
         self.__printAccessInstruction('vectorget', 'vectorset',
             vai, ctx)
 
-    def v_MatrixAccessInstruction(self, mai, ctx=None):
+    def v_MatrixAccessInstruction(self, mai: MatrixAccessInstruction, ctx=None):
         self.__printAccessInstruction('matrixget', 'matrixset',
             mai, ctx)
 
-    def v_MemberAccessInstruction(self, mai, ctx=None):
+    def v_MemberAccessInstruction(self, mai: MemberAccessInstruction, ctx=None):
         if mai.Store:
             self.__Print(
                 f'fieldset',
@@ -1096,7 +1097,7 @@ class InstructionPrinter(Visitor):
                 self.__FormatReference(mai.Parent),
                 mai.Member)
 
-    def v_BranchInstruction(self, bi, ctx=None):
+    def v_BranchInstruction(self, bi: BranchInstruction, ctx=None):
         if bi.Predicate is None:
             self.__Print('branch', self.__FormatLabel(bi.TrueBlock))
         else:
@@ -1106,20 +1107,20 @@ class InstructionPrinter(Visitor):
                 self.__Print(',', self.__FormatLabel (bi.FalseBlock), end='')
             self.__Print()
 
-    def v_DeclareVariableInstruction(self, dvi, ctx=None):
+    def v_DeclareVariableInstruction(self, dvi: DeclareVariableInstruction, ctx=None):
         scope = self.__FormatScope(dvi.Scope)
         self.__Print(self.__FormatReference(dvi), '=',
             f'var.{scope}',
             self.__FormatType(dvi.Type),
             dvi.Name)
 
-    def v_ConstructPrimitiveInstruction(self, cpi, ctx=None):
+    def v_ConstructPrimitiveInstruction(self, cpi: ConstructPrimitiveInstruction, ctx=None):
         self.__Print(self.__FormatReference(cpi), '=',
             'constructprimitive',
             self.__FormatType(cpi.Type),
             ', '.join([self.__FormatReference(v) for v in cpi.Values]))
 
-    def v_ShuffleInstruction(self, si, ctx=None):
+    def v_ShuffleInstruction(self, si: ShuffleInstruction, ctx=None):
         self.__Print(self.__FormatReference(si), '=',
             'shuffle',
             self.__FormatReference(si.First),
@@ -1128,15 +1129,25 @@ class InstructionPrinter(Visitor):
 
 
 class ModuleLoader:
-    def Load(self, moduleName) -> Module:
+    def Load(self, moduleName: str) -> Module:
         raise NotImplementedError
 
 class FilesystemModuleLoader(ModuleLoader):
-    def Load(self, moduleName) -> Module:
+    def Load(self, moduleName: str) -> Module:
         import pickle
         module = pickle.load(open(f'{moduleName}.nslir', 'rb'))
         assert isinstance(module, Module)
         return module
+
+class MemoryModuleLoader(ModuleLoader):
+    def __init__(self):
+        self.__modules: Dict[str, Module] = {}
+
+    def AddModule(self, name: str, module: Module):
+        self.__modules[name] = module
+
+    def Load(self, moduleName: str) -> Module:
+        return self.__modules[moduleName]
 
 class Program:
     def __init__(self, functions, globalSymbols):
