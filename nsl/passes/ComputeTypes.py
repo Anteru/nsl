@@ -101,7 +101,7 @@ class ComputeTypeVisitor(Visitor.DefaultVisitor):
 				parentType = p.GetType()
 				if parentType.IsPrimitive ():
 					if parentType.IsVector () or parentType.IsScalar ():
-						# We allow both swizzling of vector and scalar types
+						# We allow swizzling of vector and scalar types
 						expr.SetType (ComputeSwizzleType(parentType, expr.GetMember ().GetName ()))
 						expr.SetSwizzle(True)
 					else:

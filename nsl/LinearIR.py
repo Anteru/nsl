@@ -1,3 +1,4 @@
+from abc import ABC
 from typing import List, Dict, Iterable, Optional, Union
 from . import op
 from enum import Enum
@@ -265,6 +266,7 @@ class Value(Node):
         return self.__reference
 
     def SetReference(self, number: int):
+        assert number >= 0
         self.__reference = number
 
 class ConstantValue(Value):
@@ -290,26 +292,26 @@ class ValueUser(Value):
 
     def ReplaceUses(self, ref: int, newValue: Value):
         # Replace all uses referencing ``ref`` with the new value
-        pass
+        raise NotImplementedError
 
-class Instruction(ValueUser):
+class Instruction(ValueUser, ABC):
     def __init__(self, opCode: OpCode, returnType: Type):
         super().__init__(returnType)
         self.__parent = None
         self.__opcode = opCode
 
-    def SetParent(self, basicBlock):
+    def SetParent(self, basicBlock: 'BasicBlock'):
         self.__parent = basicBlock
 
     @property
-    def Parent(self):
+    def Parent(self) -> 'BasicBlock':
         return self.__parent
 
     @property
     def OpCode(self):
         return self.__opcode
 
-    def _SetOpCode(self, opcode):
+    def _SetOpCode(self, opcode: OpCode):
         self.__opcode = opcode
 
     def _ReplaceUsesInList(self, valueList: List[Value], ref: int, newValue: Value):

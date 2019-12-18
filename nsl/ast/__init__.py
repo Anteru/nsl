@@ -3,6 +3,7 @@ import collections.abc
 from nsl import op, types, Visitor
 from enum import Enum
 import bisect
+from typing import List
 
 class SourceMapping:
     def __init__(self, source, sourceName = '<unknown>'):
@@ -211,9 +212,9 @@ class ConstructPrimitiveExpression(UnaryExpression):
         self.children = args
 
 class CallExpression(UnaryExpression):
-    '''A function call of the form ID ([expr], ...). ID references
-    an unresolved function type at first.'''
-    def __init__(self, function, expressions):
+    """A function call of the form ID ([expr], ...). ID references
+    an unresolved function type at first."""
+    def __init__(self, function: types.Type, expressions: List[Expression]):
         super().__init__(expressions)
         self.function = function
 
@@ -225,15 +226,17 @@ class CallExpression(UnaryExpression):
     def GetArguments(self):
         return self.children
     
-    def SetArguments(self, arguments):
+    def SetArguments(self, arguments: List[Expression]):
         self.children = arguments
     
-    def GetFunction(self):
+    def GetFunction(self) -> types.Type:
         return self.function
 
     def ResolveType(self, scope):
         self.function = types.ResolveFunction(self.function,
             scope, [expr.GetType() for expr in self.GetArguments ()])
+
+        assert isinstance(self.function, types.Function)
         
 class VariableAccessExpression(UnaryExpression):
     pass

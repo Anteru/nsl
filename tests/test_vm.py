@@ -43,6 +43,17 @@ def testSimpleAddIntToGlobalArray():
     r = vm.Invoke('f', a = 3, i = 1)
     assert r == 10
 
+def testSimpleAddIntToTwoDimensionalGlobalArray():
+    code = '''int g[2][2];
+    export function f(int a, int i, int j) -> void { g[i][j] += a; }'''
+
+    vm = _compile(code)
+    g = [[1, 2], [3, 4]]
+    vm.SetGlobal('g', g)
+
+    r = vm.Invoke('f', a=3, i=1, j=0)
+    assert g[1][0] == 6
+
 def testSimpleWriteToGlobal():
     code = '''int g;
     export function f(int v) -> void { g = v; }'''

@@ -25,6 +25,10 @@ export function useStdLibFunction(float a, float b, float c, float d) -> float {
     return dot(float4(a,b,c,d));
 }
 
+function testImplicitCastOnCall (int a, int b, int c, int d) -> float {
+    return useStdLibFunction(a,b,c,d);
+}
+
 int global_a;
 
 export function AddToGlobal(int a) -> int
@@ -37,6 +41,14 @@ int global_array[2];
 export function AddToGlobalArray (int a, int index) -> int
 {
 	return a + global_array[index];
+}
+
+
+int global_array_2d[2][2];
+
+export function AddToGlobalTwoDimensionalArray (int a, int i, int j) -> int
+{
+    return a + global_array_2d[i][j];
 }
 
 export function AddToArgumentArray (int a, int i, int arr[2]) -> void {

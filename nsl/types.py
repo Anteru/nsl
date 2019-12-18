@@ -2,7 +2,7 @@
 from nsl import op, Errors
 from enum import Enum
 import collections
-from typing import Tuple
+from typing import List, Iterable, Tuple, OrderedDict, Optional
 
 class UnknownSymbolException(Exception):
 	def __init__(self, symbol: str):
@@ -146,16 +146,16 @@ class StructType(AggregateType):
 	def GetMembers(self):
 		return self._members
 
-	def GetFieldType(self, variableName):
+	def GetFieldType(self, variableName) -> Type:
 		return self._members.GetFieldType (variableName)
 
 class Function(Type):
-	def __init__(self, name, returnType, arguments, exported = False):
+	def __init__(self, name: str, returnType: Type, arguments, exported = False):
 		self.returnType = returnType
 		self.arguments = arguments
 		self.name = name
 		self.exported = exported
-		self.__argumentTypes = OrderedDict ()
+		self.__argumentTypes = collections.OrderedDict ()
 		
 	def Resolve(self, scope):
 		self.returnType = ResolveType(self.returnType, scope)
@@ -164,7 +164,7 @@ class Function(Type):
 				self.__argumentTypes [arg.GetName ()] = ResolveType (arg.GetType (), scope)
 			else:
 				# generate an invalid name
-				self.__argumentTypes ['$unnamed_arg${}'.format (counter)] = ResolveType (arg.GetType (), scope)
+				self.__argumentTypes ['$arg${}'.format (counter)] = ResolveType (arg.GetType (), scope)
 
 	def GetName(self):
 		return self.name
@@ -181,13 +181,13 @@ class Function(Type):
 		return 'Function (\'{}\', {}, [{}])'.format (self.name, repr(self.returnType),
 												 ', '.join ([repr(arg) for arg in self.__argumentTypes.keys ()]))
 
-	def Match(self, parameterList):
-		'''Match the function signature against a parameter list.
+	def Match(self, parameterList: List[Type]) -> int:
+		"""Match the function signature against a parameter list.
 		@return: A score indicating how well the function signature
 			matches the argument list. 0 means all types match,
 			negative numbers indicate the function does not match the
 			signature at all and positive numbers indicate how many
-			(implicit) conversions have to be performed to match.'''
+			(implicit) conversions have to be performed to match."""
 		matchingArguments = self.arguments
 
 		if len(parameterList) < len(self.arguments):
@@ -202,14 +202,14 @@ class Function(Type):
 
 		return sum([Match (e[0], e[1]) for e in zip (parameterList, matchingArgumentTypes)])
 
-	def GetReturnType (self):
-		'''The return type of this function, potentially unresolved.'''
+	def GetReturnType (self) -> Type:
+		"""The return type of this function, potentially unresolved."""
 		return self.returnType
 
 	def GetArguments(self):
 		return self.arguments
 
-	def GetArgumentTypes(self):
+	def GetArgumentTypes(self) -> OrderedDict[str, Type]:
 		return self.__argumentTypes
 
 class Void(Type):
@@ -455,11 +455,11 @@ def _GetRowsColumns (primitiveType):
 	if primitiveType.IsMatrix ():
 		return primitiveType.GetSize ()
 	elif primitiveType.IsVector ():
-		return (primitiveType.GetSize () [0], 1)
+		return primitiveType.GetSize () [0], 1
 	elif primitiveType.IsScalar ():
-		return (1, 1)
+		return 1, 1
 
-def ResolveType(theType: Type, scope):
+def ResolveType(theType: Type, scope: 'Scope'):
 	if theType.IsArray() and theType.GetComponentType().NeedsResolve():
 		resolvedComponentType = scope.GetType (theType.GetComponentType().GetName ())
 		assert not isinstance (resolvedComponentType, UnresolvedType)
@@ -475,11 +475,11 @@ def ResolveType(theType: Type, scope):
 
 def ResolveFunction(theType: Type, scope, argumentTypes):
 	if theType.NeedsResolve ():
-		return scope.GetMethodType (theType.GetName (), argumentTypes)
+		return scope.FindFunction (theType.GetName (), argumentTypes)
 	else:
 		return theType
 
-def ResolveBinaryExpressionType (operation, left, right):
+def ResolveBinaryExpressionType (operation: op.Operation, left: Type, right: Type):
 	'''Get the type of an expression combining two elements,
 	one of type left and one of type right. This performs the standard
 	type promotion rules (``int->float``, ``int->uint``) and expects that both
@@ -620,27 +620,26 @@ def BuiltinTypeFactory(typeName):
 
 class Scope:
 	'''Handles generic symbols and functions, which allow overloading.'''
-	def __init__(self, parent = None):
+	def __init__(self, parent: Optional['Scope'] = None):
 		# We store everything in ordered dicts so we can use
 		# this for structures/classes without further modification
-		self.__symbols = OrderedDict ()
-		self.__types = OrderedDict ()
+		self.__symbols = collections.OrderedDict ()
+		self.__types = collections.OrderedDict ()
 		self.__parent = parent
-		self.__functions = OrderedDict ()
+		self.__functions = collections.OrderedDict ()
 
 		self.__registeredObjects = set ()
 
 	def GetSymbolNames(self):
 		return self.__symbols.keys()
 
-	def HasParent(self):
+	def HasParent(self) -> bool:
 		return self.__parent is not None
 
 	def GetParent(self):
 		return self.__parent
 	
-	def RegisterType(self, typename, typeinfo):
-		assert isinstance (typeinfo, Type)
+	def RegisterType(self, typename: str, typeinfo: Type):
 		assert typename not in self.__types
 		
 		if typename in self.__registeredObjects:
@@ -649,8 +648,7 @@ class Scope:
 		self.__types [typename] = typeinfo
 		self.__registeredObjects.add (typename)
 
-
-	def RegisterVariable(self, symbol, typeinfo):
+	def RegisterVariable(self, symbol: str, typeinfo: Type):
 		assert isinstance (typeinfo, Type), 'Expected Type instance but got {}'.format (type(typeinfo))
 		assert symbol not in self.__symbols
 
@@ -660,7 +658,7 @@ class Scope:
 		self.__symbols [symbol] = typeinfo
 		self.__registeredObjects.add (symbol)
 
-	def GetFieldType (self, symbol):
+	def GetFieldType (self, symbol: str) -> Type:
 		if symbol in self.__symbols:
 			return self.__symbols [symbol]
 		else:
@@ -669,7 +667,7 @@ class Scope:
 			else:
 				raise UnknownSymbolException(symbol)
 
-	def GetType (self, typename):
+	def GetType (self, typename: str) -> Type:
 		if typename in self.__types:
 			return self.__types [typename]
 		else:
@@ -687,16 +685,16 @@ class Scope:
 		self.__functions [functionName].append (typeinfo)
 		self.__registeredObjects.add (functionName)
 
-	def GetMethodType(self, functionName, argumentTypes):
-		'''Get a matching function.
+	def FindFunction(self, functionName: str, argumentTypes: List[Type]):
+		"""Find a function with the specified name matching the argument types.
 
-		@param argumentTypes: The type of each function parameter.'''
+		If the function is overloaded, this will find the best candidate."""
 
 		# Resolve overloaded __functions
 		if not functionName in self.__functions:
 			if not self.__parent is None:
-				return self.__parent.GetMethodType(functionName,
-												   argumentTypes)
+				return self.__parent.FindFunction(functionName,
+												  argumentTypes)
 			else:
 				Errors.ERROR_UNKNOWN_FUNCTION_CALL.Raise (functionName)
 

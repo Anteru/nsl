@@ -47,7 +47,7 @@ class CompileExceptionToErrorHandler:
         pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type == None:
+        if exc_type is None:
             return True
         if issubclass(exc_type, CompileException):
             self.errorHandler.Log (exc_val.messageText, exc_val.message)

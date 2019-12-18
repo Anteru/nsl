@@ -1,7 +1,7 @@
 ﻿from nsl import ast, types, Visitor
 
 class AddImplicitCastVisitor (Visitor.DefaultVisitor):
-    def _GetTargetType (self, sourceType, componentType):
+    def _GetTargetType (self, sourceType: types.Type, componentType: types.Type):
         assert isinstance(sourceType, types.Type)
         assert isinstance(componentType, types.Type)
 
@@ -11,19 +11,20 @@ class AddImplicitCastVisitor (Visitor.DefaultVisitor):
             # Must be a scalar
             return componentType
         
-    def v_ArrayExpression(self, node, ctx):
+    def v_ArrayExpression(self, node, ctx=None):
         assert isinstance(node, ast.ArrayExpression)
         node.GetExpression().AcceptVisitor(self, ctx)
 
-        # We allow Integer or UnsignedInteger
+        # We allow Integer or UnsignedInteger as the index
         exprType = node.GetExpression().GetType()
         if exprType != types.Integer () and exprType != types.UnsignedInteger():
-            # If it's not an integer type, it's a signed type, so we cast to
-            # integer here.
+            # Non-integer means it must be float, which is signed -- cast to
+            # integer
+            assert isinstance(exprType, types.Float)
             node.SetExpression (ast.CastExpression (node.GetExpression (),
                 types.Integer (), True))
 
-    def v_BinaryExpression (self, node, ctx):
+    def v_BinaryExpression (self, node, ctx=None):
         assert isinstance(node, ast.BinaryExpression)
         
         self.v_Generic (node.GetLeft (), ctx)
@@ -37,9 +38,9 @@ class AddImplicitCastVisitor (Visitor.DefaultVisitor):
             node.SetRight (ast.CastExpression (node.GetRight (),
                 node.GetOperator ().GetOperandType (1), True))
 
-    def v_ConstructPrimitiveExpression(self, node, ctx):
+    def v_ConstructPrimitiveExpression(self, node, ctx=None):
         assert isinstance(node, ast.ConstructPrimitiveExpression)
-        
+
         # The primitive type of each argument must be the same as the result
         resultType = node.GetType().GetComponentType ()
 
@@ -57,7 +58,7 @@ class AddImplicitCastVisitor (Visitor.DefaultVisitor):
 
         node.SetArguments (arguments)
 
-    def v_CallExpression(self, node, ctx):
+    def v_CallExpression(self, node, ctx=None):
         assert isinstance(node, ast.CallExpression)
 
         # The primitive type of each argument must be the same as the argument type
@@ -65,8 +66,8 @@ class AddImplicitCastVisitor (Visitor.DefaultVisitor):
 
         arguments = []
         for arg, expectedType in zip (node.GetArguments (), argumentTypes):
-            # If this is something like float4 (float2, int, int), we want to
-            # cast int->float but float2 should not be casted
+            # This works for calls (same as above for construct primitive) as
+            # non-primitive types return themselves in GetComponentType()
             argumentType = arg.GetType().GetComponentType()
             if argumentType != expectedType.GetComponentType ():
                 arguments.append (ast.CastExpression (arg,
