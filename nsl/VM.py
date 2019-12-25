@@ -288,6 +288,6 @@ class VirtualMachine:
     def GetGlobal(self, globalVariableName):
         return self.__globalScope[globalVariableName]
 
-    def Invoke(self, functionName, **args):
+    def Invoke(self, functionName, **args) -> Any:
         return self.__ctx.Invoke(functionName, **args)
         

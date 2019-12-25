@@ -7,23 +7,14 @@ class RewriteFunctionArgAccessVisitor (Visitor.DefaultVisitor):
     load.arg <name> to load.arg <index> with index being the argument number.'''
     
     def v_Function(self, function: LinearIR.Function, ctx=None):
-        mapping = {}
-        for i, arg in enumerate(function.Type.Arguments):
-            mapping[arg] = i
+        mapping = {arg: idx for idx, arg in enumerate(function.Type.Arguments)}
 
         function.AcceptVisitor(self, mapping)
 
-    def v_VariableAccessInstruction(self, vai, ctx=None):
+    def v_VariableAccessInstruction(self, vai, ctx):
         if vai.Scope == LinearIR.VariableAccessScope.FUNCTION_ARGUMENT:
-            instruction = LinearIR.VariableAccessInstruction (
-                vai.Type, ctx[vai.Variable], vai.Scope)
+            instruction = vai.WithVariable(ctx[vai.Variable])
 
-            # Copy remaining fields over
-            instruction.SetReference (vai.Reference)
-            instruction.SetParent (vai.Parent)
-            
-            if vai.Store:
-                instruction.SetStore(vai.Store)
             return instruction
 
 def GetPass():

@@ -703,7 +703,7 @@ class CastInstruction(UnaryInstruction):
         super().__init__(OpCode.CAST, targetType, value)
 
 class ReturnInstruction(Instruction):
-    def __init__(self, value: Value):
+    def __init__(self, value: Optional[Value] = None):
         if value:
             super().__init__(OpCode.RETURN, value.Type)
         else:
@@ -714,7 +714,7 @@ class ReturnInstruction(Instruction):
     def Value(self):
         return self.__value
 
-    def ReplaceUses(self, ref, newValue):
+    def ReplaceUses(self, ref: int, newValue: Value):
         if self.__value and self.__value.Reference == ref:
             self.__value = newValue
 
@@ -824,18 +824,28 @@ class ShuffleInstruction(Instruction):
         yield self.__second.Reference
 
 class VariableAccessInstruction(Instruction):
-    def __init__(self, returnType: Type, variableName,
+    def __init__(self, returnType: Type, variableName: Union[str, int],
             accessScope: VariableAccessScope = VariableAccessScope.GLOBAL):
         super().__init__(OpCode.LOAD, returnType)
         self.__variable = variableName
         self.__store = None
         self.__scope = accessScope
 
+    def WithVariable(self, newVariableName: Union[str, int]):
+        """Create a copy of this instruction with a different variable name."""
+        result = VariableAccessInstruction(self.Type, newVariableName,
+            self.__scope)
+        if self.Store:
+            result.SetStore(self.Store)
+        result.SetParent(self.Parent)
+        result.SetReference(self.Reference)
+        return result
+
     @property
     def Variable(self):
         return self.__variable
 
-    def SetStore(self, destination):
+    def SetStore(self, destination: Value):
         self.__store = destination
         self._SetOpCode(OpCode.STORE)
 
@@ -900,7 +910,7 @@ class _IndexedAccessBase(Instruction):
     def Index(self):
         return self.__index
 
-    def SetStore(self, value):
+    def SetStore(self, value: Value):
         assert value is not None
 
         self.__store = value
