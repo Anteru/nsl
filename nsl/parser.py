@@ -443,7 +443,7 @@ class NslParser:
 
     def p_iteration_statement_3(self, p):
         '''iteration_statement : DO compound_statement WHILE '(' expression ')' '''
-        p[0] = ast.DoStatement (p[5], p[3])
+        p[0] = ast.DoStatement (p[5], p[2])
 
     def p_iteration_statement_4(self, p):
         '''iteration_statement : CONTINUE ';' '''

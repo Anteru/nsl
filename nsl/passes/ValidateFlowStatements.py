@@ -1,18 +1,28 @@
 ﻿from nsl import Errors, Visitor
 
 class ValidateFlowStatementVisitor(Visitor.DefaultVisitor):
+    """Validate that continue/break statements only appear within loops."""
     def GetContext (self):
         return 0
     
     def __init__(self):
         super().__init__()
         self.valid = True
-    
-    def v_FlowStatement(self, stmt, ctx):
-        ctx += 1
-        with Errors.CompileExceptionToErrorHandler (self.errorHandler):
+
+    def __VisitLoop(self, stmt, ctx):
+        ctx +=  1
+        with Errors.CompileExceptionToErrorHandler(self.errorHandler):
             stmt.AcceptVisitor(self, ctx)
         ctx -= 1
+
+    def v_DoStatement(self, stmt, ctx):
+        self.__VisitLoop(stmt, ctx)
+
+    def v_ForStatement(self, stmt, ctx):
+        self.__VisitLoop(stmt, ctx)
+
+    def v_WhileStatement(self, stmt, ctx):
+        self.__VisitLoop(stmt, ctx)
         
     def v_ContinueStatement(self, stmt, ctx):
         if ctx == 0:

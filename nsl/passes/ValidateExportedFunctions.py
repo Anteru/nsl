@@ -1,7 +1,7 @@
 from nsl import Errors, Visitor
 
 class ValidateExportedFunctionsVisitor(Visitor.DefaultVisitor):
-    '''Validate that exported functions have no overloads.'''
+    """Validate that exported functions have no overloads."""
     def __init__(self):
         super().__init__()
         self.valid = True

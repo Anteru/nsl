@@ -257,17 +257,71 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		# Unconditional branch back to the conditional test
 		backBranch = LinearIR.BranchInstruction(condBB)
 		ctx.BasicBlock.AddInstruction(backBranch)
-		exitBB = ctx.CreateBasicBlock ()
+		endBB = ctx.CreateBasicBlock ()
 
 		# Fix up the condition to either continue with the body, or exit
 		condBranch.SetTrueBlock(bodyBB)
-		condBranch.SetFalseBlock(exitBB)
+		condBranch.SetFalseBlock(endBB)
 
 		for breakInstruction in breakContinueInstructions['break']:
-			breakInstruction.SetTrueBlock(exitBB)
+			breakInstruction.SetTrueBlock(endBB)
 		
 		for continueInstruction in breakContinueInstructions['continue']:
 			continueInstruction.SetTrueBlock(incrementBB)
+
+	def v_DoStatement(self, expr, ctx: Context):
+		# We lower this as following:
+		# start:
+		#   body
+	    #   if (condition) goto start: else goto end:
+		# end:
+		startBB = ctx.CreateBasicBlock()
+
+		# Loop body
+		ctx.BeginLoop()
+		self.v_Visit(expr.GetBody(), ctx)
+		breakContinueInstructions = ctx.EndLoop ()
+
+		# Conditional jump back to start or to end
+		condition = self.v_Visit(expr.GetCondition(), ctx)
+		branch = LinearIR.BranchInstruction(startBB, None, condition)
+		ctx.BasicBlock.AddInstruction(branch)
+		endBB = ctx.CreateBasicBlock()
+
+		branch.SetFalseBlock(endBB)
+		for breakInstruction in breakContinueInstructions['break']:
+			breakInstruction.SetTrueBlock(endBB)
+
+		for continueInstruction in breakContinueInstructions['continue']:
+			continueInstruction.SetTrueBlock(startBB)
+
+	def v_WhileStatement(self, expr: ast.WhileStatement, ctx: Context):
+		# We lower this as following
+		# start: if (condition) goto body: else goto end:
+		# body
+		# goto start:
+		# end:
+		startBB = ctx.CreateBasicBlock()
+		condition = self.v_Visit(expr.GetCondition(), ctx)
+		branch = LinearIR.BranchInstruction(None, None, condition)
+		ctx.BasicBlock.AddInstruction(branch)
+		ctx.BeginLoop()
+		bodyBB = ctx.CreateBasicBlock()
+		self.v_Visit(expr.GetBody(), ctx)
+		breakContinueInstructions = ctx.EndLoop()
+
+		returnBranch = LinearIR.BranchInstruction(startBB)
+		ctx.BasicBlock.AddInstruction(returnBranch)
+		endBB = ctx.CreateBasicBlock()
+
+		branch.SetTrueBlock(bodyBB)
+		branch.SetFalseBlock(endBB)
+
+		for breakInstruction in breakContinueInstructions['break']:
+			breakInstruction.SetTrueBlock(endBB)
+
+		for continueInstruction in breakContinueInstructions['continue']:
+			continueInstruction.SetTrueBlock(startBB)
 
 	def v_ContinueStatement(self, expr, ctx):
 		branch = LinearIR.BranchInstruction(None)

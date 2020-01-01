@@ -197,10 +197,40 @@ def testConstructPrimitiveVector():
     r = vm.Invoke('f', a = [1, 2], b = 3, c = 4)
     assert r == [1, 2, 3, 4]
 
-def testRunSimpleLoop():
+def testRunSimpleForLoop():
     code = '''export function f(float f, int l) -> float {
         for (int i = 0; i < l; ++i) {
             f *= f;
+        }
+
+        return f;
+    }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f', f = 2, l = 4)
+    assert r == 2**16
+
+def testRunSimpleDoLoop():
+    code = '''export function f(float f, int l) -> float {
+        int i = 0;
+        do {
+            f *= f;
+            ++i;
+        } while (i < l)
+
+        return f;
+    }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f', f = 2, l = 4)
+    assert r == 2**16
+
+def testRunSimpleWhileLoop():
+    code = '''export function f(float f, int l) -> float {
+        int i = 0;
+        while (i < l) {
+            f *= f;
+            ++i;
         }
 
         return f;
