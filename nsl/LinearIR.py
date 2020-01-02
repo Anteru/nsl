@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import List, Dict, Iterable, Optional, Union
+from typing import List, Dict, Iterable, Optional, Tuple, Union
 from . import op
 from enum import Enum
 import collections
@@ -633,8 +633,8 @@ class CompareInstruction(Instruction):
 
 class BranchInstruction(Instruction):
     def __init__(self, trueBlock: Optional[BasicBlock],
-        falseBlock: BasicBlock = None,
-        predicate: Value = None):
+        falseBlock: Optional[BasicBlock] = None,
+        predicate: Optional[Value] = None):
         super().__init__(OpCode.BRANCH, VoidType())
         self.__trueBlock = trueBlock
         self.__falseBlock = falseBlock
@@ -870,7 +870,7 @@ class VariableAccessInstruction(Instruction):
 
 class CallInstruction(Instruction):
     def __init__(self, returnType: Type, functionName: str,
-        arguments = []):
+        arguments: List[Value] = []):
         super().__init__(OpCode.CALL, returnType)
         self.__function = functionName
         self.__arguments = arguments
@@ -892,7 +892,7 @@ class CallInstruction(Instruction):
 
 class _IndexedAccessBase(Instruction):
     def __init__(self, returnType: Type, array: Value, index: Value,
-        opCodes = (None, None)):
+        opCodes: Tuple[OpCode, OpCode]):
         super().__init__(opCodes[0], returnType)
 
         assert index.Type.IsScalar()
@@ -962,6 +962,9 @@ class DeclareVariableInstruction(Instruction):
         super().__init__(OpCode.NEW_VARIABLE, variableType)
         self.__name = name
         self.__scope = scope
+
+    def ReplaceUses(self, ref: int, newValue: Value):
+        pass
 
     @property
     def Name(self):
