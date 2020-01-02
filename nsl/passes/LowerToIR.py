@@ -47,6 +47,19 @@ def _CreateLinearIRType(t: types.Type):
 
 	raise Exception("Unhandled type: ", t)
 
+class _BreakContinueStatements:
+	def __init__(self, breakStatements, continueStatements):
+		self.__breakStatements = breakStatements
+		self.__continueStatements = continueStatements
+
+	def SetContinueTarget(self, block: LinearIR.BasicBlock):
+		for cs in self.__continueStatements:
+			cs.SetTrueBlock(block)
+
+	def SetBreakTarget(self, block: LinearIR.BasicBlock):
+		for bs in self.__breakStatements:
+			bs.SetTrueBlock(block)
+
 class LowerToIRVisitor(Visitor.DefaultVisitor):
 	def __init__(self, ctx):
 		self.__ctx = ctx
@@ -116,16 +129,22 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 			self.__assignmentValue.pop()
 
 		def BeginLoop(self):
-			self.__loops.append({'break': [], 'continue': []})
+			breakContinueContainer = collections.namedtuple(
+				'BreakContinueContainer',
+				['breakStatements', 'continueStatements'],
+				defaults=[[], []])
+			self.__loops.append(breakContinueContainer())
 
-		def EndLoop(self):
-			return self.__loops.pop()
+		def EndLoop(self) -> _BreakContinueStatements:
+			container = self.__loops.pop()
+			return _BreakContinueStatements(container.breakStatements,
+										    container.continueStatements)
 
 		def RegisterLoopContinue(self, branch: LinearIR.BranchInstruction):
-			self.__loops[-1]['continue'].append(branch)
+			self.__loops[-1].continueStatements.append(branch)
 
 		def RegisterLoopBreak(self, branch: LinearIR.BranchInstruction):
-			self.__loops[-1]['break'].append(branch)
+			self.__loops[-1].breakStatements.append(branch)
 
 		@property
 		def InAssignment(self) -> bool:
@@ -224,7 +243,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		destination.SetStore(instruction)
 		return returnValue
 
-	def v_ForStatement(self, expr, ctx):
+	def v_ForStatement(self, expr: ast.ForStatement, ctx):
 		# We split a loop as following: We always run the initializer, then
 		# we emit the conditional test (which either continues to the body, or
 		# the exit node.) After the body, we place the increment, and an 
@@ -236,8 +255,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		condBB = ctx.CreateBasicBlock ()
 		cond = self.v_Visit(expr.GetCondition(), ctx)
 		condBranch = LinearIR.BranchInstruction(
-			condBB, # We will replace this later
-			None,
+			# Will be replaced later
+			None, None,
 			cond)
 		ctx.BasicBlock.AddInstruction(condBranch)
 
@@ -263,11 +282,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		condBranch.SetTrueBlock(bodyBB)
 		condBranch.SetFalseBlock(endBB)
 
-		for breakInstruction in breakContinueInstructions['break']:
-			breakInstruction.SetTrueBlock(endBB)
-		
-		for continueInstruction in breakContinueInstructions['continue']:
-			continueInstruction.SetTrueBlock(incrementBB)
+		breakContinueInstructions.SetBreakTarget(endBB)
+		breakContinueInstructions.SetContinueTarget(incrementBB)
 
 	def v_DoStatement(self, expr, ctx: Context):
 		# We lower this as following:
@@ -289,11 +305,9 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		endBB = ctx.CreateBasicBlock()
 
 		branch.SetFalseBlock(endBB)
-		for breakInstruction in breakContinueInstructions['break']:
-			breakInstruction.SetTrueBlock(endBB)
 
-		for continueInstruction in breakContinueInstructions['continue']:
-			continueInstruction.SetTrueBlock(startBB)
+		breakContinueInstructions.SetBreakTarget(endBB)
+		breakContinueInstructions.SetContinueTarget(startBB)
 
 	def v_WhileStatement(self, expr: ast.WhileStatement, ctx: Context):
 		# We lower this as following
@@ -317,34 +331,30 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		branch.SetTrueBlock(bodyBB)
 		branch.SetFalseBlock(endBB)
 
-		for breakInstruction in breakContinueInstructions['break']:
-			breakInstruction.SetTrueBlock(endBB)
+		breakContinueInstructions.SetBreakTarget(endBB)
+		breakContinueInstructions.SetContinueTarget(startBB)
 
-		for continueInstruction in breakContinueInstructions['continue']:
-			continueInstruction.SetTrueBlock(startBB)
-
-	def v_ContinueStatement(self, expr, ctx):
+	def v_ContinueStatement(self, _: ast.ContinueStatement, ctx):
 		branch = LinearIR.BranchInstruction(None)
 		ctx.BasicBlock.AddInstruction(branch)
 		ctx.RegisterLoopContinue(branch)
 
 		return branch
 
-	def v_BreakStatement(self, expr, ctx):
+	def v_BreakStatement(self, _: ast.BreakStatement, ctx):
 		branch = LinearIR.BranchInstruction(None)
 		ctx.BasicBlock.AddInstruction(branch)
 		ctx.RegisterLoopBreak(branch)
 
 		return branch
 
-	def v_IfStatement(self, expr, ctx):
+	def v_IfStatement(self, expr: ast.IfStatement, ctx):
 		# Evaluate condition
 		condition = self.v_Visit(expr.GetCondition(), ctx)
 
 		# Insert branch, targets will be set later
 		branch = LinearIR.BranchInstruction(
-			ctx.BasicBlock, # We will replace this later
-			None,
+			None, None,
 			condition)
 		ctx.BasicBlock.AddInstruction(branch)
 
