@@ -40,7 +40,8 @@ def _CreateLinearIRType(t: types.Type):
 			collections.OrderedDict([
 				(k, _CreateLinearIRType(members.GetFieldType(k))) 
 				for k in members.GetSymbolNames()
-			])
+			]),
+			name = t.GetName()
 		)
 	elif isinstance(t, types.Void):
 		return LinearIR.VoidType()

@@ -39,6 +39,31 @@ class ExecutionContext:
 
         return result
 
+    def __CreateInstance(self, varType: LinearIR.Type):
+        if varType.IsPrimitive():
+            return self.__CreatePrimitiveInstance(varType)
+        elif varType.IsStructure():
+            return self.__CreateStructureInstance(varType)
+
+    def __CreatePrimitiveInstance(self, primitiveType: LinearIR.Type):
+        if primitiveType.Kind == LinearIR.TypeKind.Vector:
+            var = [0] * primitiveType.Size
+        elif primitiveType.Kind == LinearIR.TypeKind.Matrix:
+            var = [
+                      [0] * primitiveType.ColumnCount
+                  ] * primitiveType.RowCount
+        elif primitiveType.Kind == LinearIR.TypeKind.Scalar:
+            return 0
+        else:
+            raise Exception('Cannot create primitive instance')
+
+    def __CreateStructureInstance(self, structureType: LinearIR.StructureType) -> object:
+        r = {}
+        for name, fieldType in structureType.Fields.items():
+            value = self.__CreateInstance(fieldType)
+            r[name] = value
+        return r
+
     def __Execute(self, function: LinearIR.Function, args):
         instructions = list()
         blockOffsets = {}
@@ -205,16 +230,8 @@ class ExecutionContext:
                 localScope[instruction.Reference] = self._Invoke(instruction.Function, args)
             elif opCode == LinearIR.OpCode.NEW_VARIABLE:
                 varType = instruction.Type
-                var = 0
-                if varType.Kind == LinearIR.TypeKind.Vector:
-                    var = [0] * varType.Size
-                elif varType.Kind == LinearIR.TypeKind.Matrix:
-                    var = [
-                        [0] * varType.ColumnCount
-                    ] * varType.RowCount
-                else:
-                    # structures not handled yet
-                    pass
+                var = self.__CreateInstance(varType)
+
                 # The semantics of NEW_VARIABLE are such that it registers a new
                 # variable and loads it at the same time
                 localScope[instruction.Name] = var

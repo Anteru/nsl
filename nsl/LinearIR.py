@@ -111,6 +111,9 @@ class Type:
     def IsArray(self):
         return self.Kind == TypeKind.Array
 
+    def IsStructure(self):
+        return self.Kind == TypeKind.Structure
+
     def IsPrimitive(self):
         return self.Kind in {TypeKind.Scalar, TypeKind.Vector, TypeKind.Matrix}
 
@@ -216,12 +219,17 @@ class MatrixType(Type):
         return f'<{self.RowCount} × {self.RowType}>'
 
 class StructureType(Type):
-    def __init__(self, fields: Dict[str, Type]):
+    def __init__(self, fields: Dict[str, Type], *, name=''):
         self.__fields = fields
+        self.__name = name
 
     @property
     def Fields(self):
         return self.__fields
+
+    @property
+    def Name(self):
+        return self.__name
     
     @property
     def Kind(self):

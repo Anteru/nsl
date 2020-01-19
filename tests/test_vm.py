@@ -197,6 +197,19 @@ def testConstructPrimitiveVector():
     r = vm.Invoke('f', a = [1, 2], b = 3, c = 4)
     assert r == [1, 2, 3, 4]
 
+def testConstructStructure():
+    code = '''struct s { float a; float b; }
+    export function f(float x) -> float {
+        s tmp;
+        tmp.a = x;
+        tmp.b = tmp.a;
+        return tmp.b;
+    }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f', x=5)
+    assert r == 5
+
 def testRunSimpleForLoop():
     code = '''export function f(float f, int l) -> float {
         for (int i = 0; i < l; ++i) {
