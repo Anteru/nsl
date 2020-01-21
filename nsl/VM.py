@@ -44,6 +44,12 @@ class ExecutionContext:
             return self.__CreatePrimitiveInstance(varType)
         elif varType.IsStructure():
             return self.__CreateStructureInstance(varType)
+        elif varType.IsArray():
+            assert isinstance(varType, LinearIR.ArrayType)
+            result = [self.__CreateInstance(varType.ElementType)] * varType.Size[0]
+            for dimSize in varType.Size[1:]:
+                result = [result] * dimSize
+            return result
 
     def __CreatePrimitiveInstance(self, primitiveType: LinearIR.Type):
         if primitiveType.Kind == LinearIR.TypeKind.Vector:

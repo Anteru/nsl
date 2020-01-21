@@ -210,6 +210,28 @@ def testConstructStructure():
     r = vm.Invoke('f', x=5)
     assert r == 5
 
+def testConstructArray():
+    code = '''export function f(float x) -> float {
+        float tmp[1];
+        tmp[0] = x;
+        return tmp[0];
+    }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f', x=4)
+    assert r == 4
+
+def testConstruct2DArray():
+    code = '''export function f(float x, int a, int b) -> float {
+        float tmp[2][3];
+        tmp[a][b] = x;
+        return tmp[a][b];
+    }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f', x=4, a=1, b=0)
+    assert r == 4
+
 def testRunSimpleForLoop():
     code = '''export function f(float f, int l) -> float {
         for (int i = 0; i < l; ++i) {
