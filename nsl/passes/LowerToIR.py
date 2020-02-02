@@ -595,11 +595,17 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		return instruction
 					
 	def v_ReturnStatement (self, stmt, ctx):
-		v = self.v_Visit(stmt.GetExpression(), ctx)
+		expr = stmt.GetExpression()
 
-		assert isinstance(v, LinearIR.Value)
+		if expr:
+			v = self.v_Visit(stmt.GetExpression(), ctx)
 
-		ri = LinearIR.ReturnInstruction(v)
+			assert isinstance(v, LinearIR.Value)
+
+			ri = LinearIR.ReturnInstruction(v)
+		else:
+			ri = LinearIR.ReturnInstruction()
+
 		ctx.BasicBlock.AddInstruction(ri)
 		ctx.EndBasicBlock()
 

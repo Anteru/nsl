@@ -700,18 +700,22 @@ class CompoundStatement(Statement):
         return '{0} statement(s)'.format (len(self))
 
 class ReturnStatement(FlowStatement):
-    def __init__(self, expression):
+    def __init__(self, expression = None):
         super().__init__()
         self.__expression = expression
 
     def _Traverse(self, function):
-        self.__expression = function(self.__expression)
+        if self.__expression:
+            self.__expression = function(self.__expression)
 
     def GetExpression(self):
         return self.__expression
 
     def __str__(self):
-        return 'return ' + str(self.__expression)
+        if self.__expression:
+            return 'return ' + str(self.__expression)
+        else:
+            return 'return'
 
 class DeclarationStatement(Statement):
     def __init__(self, variableDeclarations):

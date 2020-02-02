@@ -457,9 +457,13 @@ class NslParser:
         '''compound_statement : '{' statement_list_opt '}' '''
         p[0] = ast.CompoundStatement (p[2])
 
-    def p_return_statement(self, p):
+    def p_return_statement_1(self, p):
         '''return_statement : RETURN expression ';' '''
         p[0] = ast.ReturnStatement(p[2])
+
+    def p_return_statement_2(self, p):
+        '''return_statement : RETURN ';' '''
+        p[0] = ast.ReturnStatement()
 
     def p_var_decl_1(self, p):
         '''var_decl : type ID array_size_declaration_list semantic_decl_opt'''

@@ -165,6 +165,28 @@ def testSimpleIfElseIfElseBranch():
     r = vm.Invoke('f', a = -2)
     assert r == -1
 
+def testSimpleBranchNotTaken():
+    code = '''export function f(int a) -> int {
+        if (a > 0) return 1; return 0;
+    }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f', a = 0)
+    assert r == 0
+
+def testFunctionWithNoReturn():
+    code = '''
+    int g;
+    export function f() -> void {
+        g = 1;
+        return;
+    }'''
+    vm = _compile(code)
+
+    vm.SetGlobal('g', 0)
+    vm.Invoke('f')
+    assert vm.GetGlobal('g') == 1
+
 def testArrayAccessOnVector():
     code = '''export function f(float4 f, int i) -> float {
         return f[i];

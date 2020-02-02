@@ -213,14 +213,14 @@ class ExecutionContext:
                 if instruction.Predicate:
                     predicate = localScope[instruction.Predicate.Reference]
 
-                    # Predicated branches must have at least a 'true' target
+                    # Predicated branches must have both targets set
                     assert instruction.TrueBlock.Reference is not None
-
+                    assert instruction.FalseBlock.Reference is not None
                     if predicate:
                         currentInstruction = blockOffsets[instruction.TrueBlock.Reference]
                     else:
-                        if instruction.FalseBlock:
-                            currentInstruction = blockOffsets[instruction.FalseBlock.Reference]
+                        currentInstruction = blockOffsets[instruction.FalseBlock.Reference]
+
                 else:
                     currentInstruction = blockOffsets[instruction.TrueBlock.Reference]
             elif opCode == LinearIR.OpCode.RETURN:
