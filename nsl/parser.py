@@ -463,15 +463,15 @@ class NslParser:
         p[0] = ast.ReturnStatement()
 
     def p_var_decl_1(self, p):
-        '''var_decl : type ID semantic_decl_opt'''
+        '''var_decl : type ID'''
 
-        p[0] = ast.VariableDeclaration (p[1], p[2], p[3])
+        p[0] = ast.VariableDeclaration (p[1], p[2])
 
         p[0].SetLocation(self.__GetLocation(p, 2))
 
     def p_var_decl_2(self, p):
         '''var_decl : type ID EQUALS expression'''
-        p[0] = ast.VariableDeclaration(p[1], p[2], None, p[4])
+        p[0] = ast.VariableDeclaration(p[1], p[2], p[4])
         p[0].SetLocation(self.__GetLocation(p, 2))
 
     def p_array_size_declaration (self, p):
@@ -492,22 +492,6 @@ class NslParser:
 
     def p_var_decl_opt_2(self, p):
         '''var_decl_opt : empty'''
-        p[0] = None
-
-    def p_semantic_decl_1(self, p):
-        '''semantic_decl : ':' ID'''
-        p[0] = ast.Semantic (p[2])
-
-    def p_semantic_decl_2(self, p):
-        '''semantic_decl : ':' ID array_size_declaration '''
-        p[0] = ast.Semantic (p[2], p[3])
-
-    def p_semantic_decl_opt_1(self, p):
-        ''' semantic_decl_opt : semantic_decl'''
-        p[0] = p[1]
-
-    def p_semantic_decl_opt_2(self, p):
-        ''' semantic_decl_opt : empty'''
         p[0] = None
 
     def p_type_1(self, p):

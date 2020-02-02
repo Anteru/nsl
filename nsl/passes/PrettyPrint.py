@@ -60,10 +60,7 @@ class PrettyPrintVisitor(Visitor.DefaultVisitor):
 		else:
 			self._p (ctx, '{0} {1}'.format(decl.GetType().GetName (), decl.GetName()), end = '')
 
-		if decl.HasSemantic ():
-			self.Print (': {0};'.format(str(decl.GetSemantic ())))
-		else:
-			self.Print (';')
+		self.Print (';')
 
 	def v_DeclarationStatement(self, decl, ctx):
 		for d in decl.GetDeclarations ():

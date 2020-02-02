@@ -475,47 +475,11 @@ class InterfaceDefinition(Node):
     def GetType(self):
         return self.__type
 
-class BuiltinSemantic(Enum):
-    Position = 1
-    ColorOutput = 2
-
-class Semantic:
-    def __init__(self, semantic, slot = None):
-        _semanticTable = {
-            'Position' : BuiltinSemantic.Position,
-            'ColorOutput' : BuiltinSemantic.ColorOutput
-        }
-        self.__semantic = _semanticTable [semantic]
-        self.__slot = slot
-
-    def Get(self):
-        return self.__semantic
-
-    def GetSlot (self, default = None):
-        if self.__slot is not None:
-            return self.__slot
-        else:
-            return default
-        
-    def HasSlot (self):
-        return self.__slot is not None
-
-    def __str__ (self):
-        if self.__slot:
-            return '{}[{}]'.format (self.__semantic.name, self.__slot)
-        else:
-            return str (self.__semantic.name)
-
-    def __repr__(self):
-        return 'Semantic ({}, {})'.format (repr(self.__semantic), repr (self.__slot))
-
 class VariableDeclaration(Node):
     def __init__(self, variableType, symbol,
-                 semantic = None,
                  initExpression = None):
         super().__init__()
         self.__symbol = symbol
-        self.__semantic = semantic
         self.__initializer = initExpression
 
         self.__type = variableType
@@ -540,9 +504,6 @@ class VariableDeclaration(Node):
         if (self.HasInitializerExpression ()):
             result += '= ' + str(self.__initializer)
 
-        if (self.HasSemantic()):
-            result += ' : ' + str(self.__semantic)
-
         return result
 
     def GetType(self):
@@ -550,12 +511,6 @@ class VariableDeclaration(Node):
 
     def GetName(self):
         return self.__symbol
-
-    def HasSemantic(self):
-        return self.__semantic is not None
-
-    def GetSemantic(self):
-        return self.__semantic
 
     def HasInitializerExpression(self):
         return self.__initializer is not None
