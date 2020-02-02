@@ -2,19 +2,19 @@ import "std";
 
 struct TransformationMatrices
 {
-	uint applyOffset[3];
-	matrix4x4 matrices[3];
-	float4 offset[3];
+	uint[3] applyOffset;
+	matrix4x4[3] matrices;
+	float4[3] offset;
 }
 
 struct TransformInfo
 {
 	uint pointsToTransform;
-	TransformationMatrices transforms[32];
+	TransformationMatrices[32] transforms;
 }
 
-float4 inputPositions[32];
-float4 outputPositions[32];
+float4[32] inputPositions;
+float4[32] outputPositions;
 
 export function AddTwoIntegers(int a, int b) -> int
 {
@@ -36,7 +36,7 @@ export function AddToGlobal(int a) -> int
 	return a + global_a;
 }
 
-int global_array[2];
+int[2] global_array;
 
 export function AddToGlobalArray (int a, int index) -> int
 {
@@ -44,14 +44,14 @@ export function AddToGlobalArray (int a, int index) -> int
 }
 
 
-int global_array_2d[2][2];
+int[2][2] global_array_2d;
 
 export function AddToGlobalTwoDimensionalArray (int a, int i, int j) -> int
 {
     return a + global_array_2d[i][j];
 }
 
-export function AddToArgumentArray (int a, int i, int arr[2]) -> void {
+export function AddToArgumentArray (int a, int i, int[2] arr) -> void {
 	arr [i] += a;
 }
 

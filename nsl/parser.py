@@ -95,20 +95,17 @@ class NslParser:
         p[0] = p[1]
 
     def p_argument_1(self, p):
-        '''argument : arg_mod_opt type ID array_size_declaration_list'''
-        if not p[4]:
-            arraySize = None
-        
+        '''argument : arg_mod_opt type ID'''
         if p[1]:
             p[1] = set(p[1])
         else:
             p[1] = set()
 
-        p[0] = ast.Argument (p[2], p[3], modifiers=p[1], arraySize = p[4])
+        p[0] = ast.Argument (p[2], p[3], modifiers=p[1])
         p[0].SetLocation(self.__GetLocation(p, 3))
 
     def p_argument_2(self, p):
-        '''argument : arg_mod_opt type array_size_declaration_list'''
+        '''argument : arg_mod_opt type'''
         if not p[3]:
             arraySize = None
         
@@ -117,7 +114,7 @@ class NslParser:
         else:
             p[1] = set()
 
-        p[0] = ast.Argument (p[2], modifiers=p[1], arraySize = p[3])
+        p[0] = ast.Argument (p[2], modifiers=p[1])
 
     def p_arg_mod (self, p):
         '''arg_mod : __OPTIONAL'''
@@ -466,12 +463,9 @@ class NslParser:
         p[0] = ast.ReturnStatement()
 
     def p_var_decl_1(self, p):
-        '''var_decl : type ID array_size_declaration_list semantic_decl_opt'''
+        '''var_decl : type ID semantic_decl_opt'''
 
-        if p[3]:
-            p[0] = ast.VariableDeclaration (p[1], p[2], p[4], arraySize=p[3])
-        else:
-            p[0] = ast.VariableDeclaration (p[1], p[2], p[4])
+        p[0] = ast.VariableDeclaration (p[1], p[2], p[3])
 
         p[0].SetLocation(self.__GetLocation(p, 2))
 
@@ -482,16 +476,15 @@ class NslParser:
 
     def p_array_size_declaration (self, p):
         '''array_size_declaration : '[' constant_integer_expression ']' '''
-        p[0] = p[2].GetValue ()
+        p[0] = [p[2].GetValue ()]
         
-    def p_array_size_declaration_list_1(self, p):
-        '''array_size_declaration_list : array_size_declaration_list array_size_declaration'''
-        p[1].append (p[2])
-        p[0] = p[1]
-
-    def p_array_size_declaration_list_2(self, p):
-        '''array_size_declaration_list : empty'''
-        p[0] = []
+    def p_array_size_declaration_list(self, p):
+        '''array_size_declaration_list : array_size_declaration_list array_size_declaration
+                                       | array_size_declaration'''
+        if len(p) == 3:
+            p[0] = p[1] + p[2]
+        else:
+            p[0] = p[1]
 
     def p_var_decl_opt_1(self, p):
         '''var_decl_opt : var_decl'''
@@ -528,6 +521,10 @@ class NslParser:
     def p_type_3(self, p):
         '''type : VOID'''
         p[0] = types.Void()
+
+    def p_type_4(self, p):
+        '''type : type array_size_declaration_list'''
+        p[0] = types.ArrayType(p[1], p[2])
 
     def p_primitive_type(self, p):
         '''primitive_type : FLOAT

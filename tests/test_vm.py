@@ -34,7 +34,7 @@ def testSimpleAddIntToGlobal():
     assert r == 65
 
 def testSimpleAddIntToGlobalArray():
-    code = '''int g[2];
+    code = '''int[2] g;
     export function f (int a, int i) -> int { return a + g[i]; }'''
 
     vm = _compile(code)
@@ -44,7 +44,7 @@ def testSimpleAddIntToGlobalArray():
     assert r == 10
 
 def testSimpleAddIntToTwoDimensionalGlobalArray():
-    code = '''int g[2][2];
+    code = '''int[2][2] g;
     export function f(int a, int i, int j) -> void { g[i][j] += a; }'''
 
     vm = _compile(code)
@@ -67,7 +67,7 @@ def testSimpleWriteToGlobal():
     assert g == 5
 
 def testSimpleWriteToGlobalArray():
-    code = '''int g[5];
+    code = '''int[5] g;
 
     export function f(int i, int v) -> void { g[i] = v; }'''
 
@@ -234,7 +234,7 @@ def testConstructStructure():
 
 def testConstructArray():
     code = '''export function f(float x) -> float {
-        float tmp[1];
+        float[1] tmp;
         tmp[0] = x;
         return tmp[0];
     }'''
@@ -245,7 +245,7 @@ def testConstructArray():
 
 def testConstruct2DArray():
     code = '''export function f(float x, int a, int b) -> float {
-        float tmp[2][3];
+        float[2][3] tmp;
         tmp[a][b] = x;
         return tmp[a][b];
     }'''
@@ -373,6 +373,16 @@ def testRunSimpleVectorAdd():
 
     r = vm.Invoke('f', a = [1, 2, 3, 4], b = [1, 0, 3, 0])
     assert r == [2, 2, 6, 4]
+
+def testCreateDefaultInitializedArray():
+    code = '''export function f() -> int[2] {
+        int[2] t;
+        return t;
+    }'''
+    vm = _compile(code)
+
+    r = vm.Invoke('f')
+    assert r ==  [0, 0]
 
 def testCreateMatrix():
     code = '''export function f() -> float4x4 {
@@ -505,7 +515,7 @@ def testConstantantCastIsOptimized():
         assert not isinstance(i, LinearIR.CastInstruction)
 
 def testAddToArrayArgument():
-    code = '''export function f(int i, int v, int arr[2]) -> void {
+    code = '''export function f(int i, int v, int[2] arr) -> void {
         arr[i] += v;
     }'''
     vm = _compile(code)

@@ -510,19 +510,15 @@ class Semantic:
         return 'Semantic ({}, {})'.format (repr(self.__semantic), repr (self.__slot))
 
 class VariableDeclaration(Node):
-    def __init__(self, elementType, symbol,
+    def __init__(self, variableType, symbol,
                  semantic = None,
-                 initExpression = None,
-                 arraySize = None):
+                 initExpression = None):
         super().__init__()
         self.__symbol = symbol
         self.__semantic = semantic
         self.__initializer = initExpression
 
-        if arraySize is not None:
-            self.__type = types.ArrayType (elementType, arraySize)
-        else:
-            self.__type = elementType
+        self.__type = variableType
 
     def ResolveType(self, scope):
         self.__type = types.ResolveType(self.__type, scope)
@@ -573,13 +569,9 @@ class ArgumentModifier(Enum):
 class Argument(Node):
     '''Function argument. Captures the type (potentially a Type or
     UnresolvedType) and the name of the argument.'''
-    def __init__(self, argumentType, name = None, modifiers = set(),
-        arraySize = None):
+    def __init__(self, argumentType, name = None, modifiers = set()):
         super().__init__()
-        if arraySize:
-            self.__type = types.ArrayType(argumentType, arraySize)
-        else:
-            self.__type = argumentType
+        self.__type = argumentType
         self.__name = name
         self.__modifiers = modifiers
 
