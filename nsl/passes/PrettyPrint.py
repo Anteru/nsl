@@ -54,11 +54,7 @@ class PrettyPrintVisitor(Visitor.DefaultVisitor):
 		self.Print()
 
 	def v_VariableDeclaration(self, decl, ctx):
-		if decl.GetType().IsArray():
-			self._p (ctx, '{0} {1}{2}'.format(decl.GetType().GetComponentType(), 
-				decl.GetName(), ''.join(['[{}]'.format(s) for s in decl.GetType().GetSize()])), end = '')
-		else:
-			self._p (ctx, '{0} {1}'.format(decl.GetType().GetName (), decl.GetName()), end = '')
+		self._p (ctx, '{0} {1}'.format(decl.GetType(), decl.GetName()), end = '')
 
 		self.Print (';')
 
@@ -81,7 +77,7 @@ class PrettyPrintVisitor(Visitor.DefaultVisitor):
 		self._p(ctx, 'if ({0})'.format(str(stmt.GetCondition ())))
 
 		self.v_Visit (stmt.GetTruePath (), ctx)
-		if (stmt.HasElsePath()):
+		if stmt.HasElsePath():
 			self._p(ctx, 'else')
 			self.v_Visit (stmt.GetElsePath(), ctx)
 
