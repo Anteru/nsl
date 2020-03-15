@@ -1,0 +1,6 @@
+import "std";
+
+export function add(int a, int b) -> int
+{
+	return a + b;
+}

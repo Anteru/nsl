@@ -4,6 +4,7 @@ from nsl.passes import (
 	ComputeTypes, 
 	DebugAst, 
 	DebugTypes,
+	GenerateWasm,
 	LowerToIR,
 	OptimizeConstantCasts,
 	OptimizeLoadAfterStore,
@@ -93,4 +94,11 @@ class Compiler:
 			if not self.__RunPass(module, i, p, 'IR', debugPasses):
 				return False, None
 
-		return True, module
+		if options.get('wasm', False):
+			wasmPass = GenerateWasm.GetPass()
+			wasmPass.Process(module)
+			wasm = wasmPass.Visitor.Module
+		else:
+			wasm = None
+
+		return True, module, wasm

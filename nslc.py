@@ -5,13 +5,14 @@ import sys
 
 def Compile(args):
     c = Compiler ()
-    ok, module = c.Compile (args.FILE.read(),
+    ok, module, wasm = c.Compile (args.FILE.read(),
         options={
                  'debug-parsing' : args.debug_parsing,
                  'debug-passes' : args.debug_passes,
+                 'wasm' : args.wasm,
                  'optimize': args.opt_level > 0})
 
-    return ok, module
+    return ok, module, wasm
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser('nslc')
@@ -24,13 +25,17 @@ if __name__=='__main__':
         type=int, choices=[0, 1],
         default=0,
         dest='opt_level')
+    parser.add_argument('--wasm', type=argparse.FileType('wb'))
     parser.add_argument('--verbose', '-v', action='store_true')
     parser.add_argument('FILE', type=argparse.FileType('r'),
         metavar='INPUT')
     parser.add_argument('-o', '--output', type=argparse.FileType('wb'))
     args = parser.parse_args()
 
-    ok, module = Compile(args)
+    ok, module, wasm = Compile(args)
+
+    if args.wasm:
+        wasm.WriteTo(args.wasm)
 
     if args.output:
         import pickle

@@ -6,7 +6,7 @@ from nsl import (
 
 def _compile(code):
     c = Compiler.Compiler()
-    result, ir = c.Compile(code)
+    result, ir, _ = c.Compile(code)
     assert result == True
 
     linker = LinearIR.Linker()
@@ -509,7 +509,7 @@ def testConstantantCastIsOptimized():
     }'''
 
     c = Compiler.Compiler()
-    result, ir = c.Compile(code, {'optimize': True})
+    result, ir, _ = c.Compile(code, {'optimize': True})
 
     for i in ir.Functions['f'].Instructions:
         assert not isinstance(i, LinearIR.CastInstruction)
@@ -608,7 +608,7 @@ def testAssignToArgAndReturnIsOptimizedAway():
     }'''
     
     c = Compiler.Compiler()
-    result, ir = c.Compile(code, {'optimize': True})
+    result, ir, _ = c.Compile(code, {'optimize': True})
 
     # We should never load from f
     # %1 = load a

@@ -737,4 +737,4 @@ def GetPass():
 	ctx = LowerToIRVisitor.Context()
 
 	return nsl.Pass.MakePassFromVisitor(LowerToIRVisitor (ctx),
-		'lower-to-linear-LinearIR')
+		'lower-to-linear-IR')
