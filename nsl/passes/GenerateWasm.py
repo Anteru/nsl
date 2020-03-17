@@ -1,12 +1,12 @@
 from nsl import LinearIR, Visitor, WebAssembly
 import collections
 
-def _ConvertType(t: LinearIR.Type) -> WebAssembly.Type:
+def _ConvertType(t: LinearIR.Type) -> WebAssembly.ValueType:
 	if t.IsScalar():
 		if isinstance(t, LinearIR.IntegerType):
-			return WebAssembly.Type.i32
+			return WebAssembly.ValueType.i32
 		elif isinstance(t, LinearIR.FloatType):
-			return WebAssembly.Type.f32
+			return WebAssembly.ValueType.f32
 
 def _ConvertFunctionType(ft: LinearIR.FunctionType) -> WebAssembly.FunctionType:
 	argTypes = []
@@ -40,7 +40,20 @@ class GenerateWasmVisitor(Visitor.DefaultVisitor):
 
 	def v_Function(self, function: LinearIR.Function, ctx: Context =None):
 		functionType = _ConvertFunctionType(function.Type)
-		ctx.Module.AddFunctionType(functionType)
+		functionTypeIdx = ctx.Module.AddFunctionType(functionType)
+		functionIdx = ctx.Module.AddFunction(functionTypeIdx)
+
+		# Check if function is exported - for now assume yes
+		ctx.Module.AddExport(WebAssembly.Export(0, function.Name))
+		ctx.Module.AddTable(WebAssembly.Table(0))
+
+		c = WebAssembly.Code()
+		c.AddInstruction(WebAssembly.Instruction(WebAssembly.opcodes['local.get'], (0,)))
+		c.AddInstruction(WebAssembly.Instruction(WebAssembly.opcodes['local.get'], (1,)))
+		c.AddInstruction(WebAssembly.Instruction(WebAssembly.opcodes['i32.add']))
+
+		ctx.Module.AddCode(c)
+
 
 def GetPass():
 	import nsl.Pass

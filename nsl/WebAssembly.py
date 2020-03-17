@@ -4,7 +4,7 @@ import io
 from typing import Union, List, BinaryIO
 from enum import Enum
 
-class Type(Enum):
+class ValueType(Enum):
 	i32 = 0x7F
 	i64 = 0x7E
 	f32 = 0x7D
@@ -39,9 +39,12 @@ opcodes = {
 	'i32.le_u': 0x4D,
 	'i32.ge_s': 0x4E,
 	'i32.ge_u': 0x4F,
+	'i32.add': 0x6A
 }
 
 def PackInteger(v):
+	if v == 0:
+		return bytes([0])
 	blockCount = math.ceil(v.bit_length() / 7)
 	output = []
 	for i in range(blockCount):
@@ -65,7 +68,9 @@ def PackString(v):
 	return v.encode('utf-8')
 
 def WriteString(output: BinaryIO, s: str):
-	output.write(PackString(s))
+	b = PackString(s)
+	WriteInteger(output, len(b))
+	output.write(b)
 
 def PackU32(v):
 	return struct.pack('<I', v)
@@ -91,12 +96,12 @@ class Section:
 		pass
 
 class FunctionType:
-	def __init__(self, argumentTypes: List[Type], returnTypes: List[Type]):
+	def __init__(self, argumentTypes: List[ValueType], returnTypes: List[ValueType]):
 		self.__argumentTypes = argumentTypes
 		self.__returnTypes = returnTypes
 
 	def WriteTo(self, output: BinaryIO):
-		WriteByte(output, Type.function.value)
+		WriteByte(output, ValueType.function.value)
 		WriteInteger(output, len(self.__argumentTypes))
 		for i in self.__argumentTypes:
 			WriteByte(output, i.value)
@@ -121,7 +126,7 @@ class TypeSection(Section):
 		for t in self.__types:
 			t.WriteTo(contents)
 
-		output.write(PackByte(self.sectionId))
+		WriteByte(output, self.sectionId)
 		WriteInteger(output, len(contents.getbuffer()))
 		output.write(contents.getbuffer())
 
@@ -134,20 +139,54 @@ class FunctionSection(Section):
 		self.__indices = []
 
 	def AddFunction(self, index: int):
+		slot = len(self.__indices)
 		self.__indices.append(index)
+		return slot
 
 	def WriteTo(self, output: BinaryIO):
 		if not self.__indices:
 			return
 
-		WriteByte(output, self.sectionId)
-		WriteU32(output, len(self.__indices))
+		content = io.BytesIO()
+		WriteInteger(content, len(self.__indices))
 		for i in self.__indices:
-			WriteU32(output, i)
+			WriteInteger(content, i)
 
+		WriteByte(output, self.sectionId)
+		WriteInteger(output, len(content.getbuffer()))
+		output.write(content.getbuffer())
+
+class Table:
+	def __init__(self, size: int, valueType: ValueType = ValueType.funcref):
+		self.__size = size
+		self.__valueType = valueType
+
+	def WriteTo(self, output: BinaryIO):
+		WriteByte(output, self.__valueType.value)
+		WriteByte(output, 0x00)
+		WriteInteger(output, self.__size)
 
 class TableSection(Section):
 	sectionId = 4
+
+	def __init__(self):
+		self.__tables = []
+
+	def Add(self, table: Table):
+		self.__tables.append(table)
+
+	def WriteTo(self, output: BinaryIO):
+		if not self.__tables:
+			return
+
+		content = io.BytesIO()
+		WriteInteger(content, len(self.__tables))
+		for table in self.__tables:
+			table.WriteTo(content)
+
+		WriteByte(output, self.sectionId)
+		WriteInteger(output, len(content.getbuffer()))
+		output.write(content.getbuffer())
 
 class MemorySection(Section):
 	sectionId = 5
@@ -155,8 +194,42 @@ class MemorySection(Section):
 class GlobalSection(Section):
 	sectionId = 6
 
+class ExternalKind(Enum):
+	Function = 0x00
+
+class Export:
+	def __init__(self, index: int, name: str,
+				 kind: ExternalKind = ExternalKind.Function):
+		self.__index =  index
+		self.__name = name
+		self.__kind = kind
+
+	def WriteTo(self, output: BinaryIO):
+		WriteString(output, self.__name)
+		WriteByte(output, self.__kind.value)
+		WriteInteger(output, self.__index)
+
 class ExportSection(Section):
 	sectionId = 7
+
+	def __init__(self):
+		self.__exports = []
+
+	def Add(self, export: Export):
+		self.__exports.append(export)
+
+	def WriteTo(self, output: BinaryIO):
+		if not self.__exports:
+			return
+
+		content = io.BytesIO()
+		WriteInteger(content, len(self.__exports))
+		for export in self.__exports:
+			export.WriteTo(content)
+
+		WriteByte(output, self.sectionId)
+		WriteInteger(output, len(content.getbuffer()))
+		output.write(content.getbuffer())
 
 class StartSection(Section):
 	sectionId = 8
@@ -164,22 +237,72 @@ class StartSection(Section):
 class ElementSection(Section):
 	sectionId = 9
 
+class Local:
+	def __init__(self, valueType: ValueType, count: int = 1):
+		self.__n = count
+		self.__valueType = valueType
+
+	def WriteTo(self, output: BinaryIO):
+		WriteInteger(output, self.__n)
+		WriteByte(output, self.__valueType.value)
+
+class Instruction:
+	def __init__(self, opcode: int, args = None):
+		self.__opcode = opcode
+		self.__args = args
+
+	def WriteTo(self, output: BinaryIO):
+		WriteByte(output, self.__opcode)
+		# TODO Handle non-integer arguments
+		if self.__args:
+			for arg in self.__args:
+				WriteInteger(output, arg)
+
+class Code:
+	def __init__(self):
+		self.__locals = []
+		self.__instructions = []
+
+	def AddLocal(self, local: Local):
+		self.__locals.append(local)
+
+	def AddInstruction(self, instruction: Instruction):
+		self.__instructions.append(instruction)
+
+	def Encode(self):
+		content = io.BytesIO()
+		WriteInteger(content, len(self.__locals))
+		for local in self.__locals:
+			local.WriteTo(content)
+
+		for instruction in self.__instructions:
+			instruction.WriteTo(content)
+		WriteByte(content, 0x0b)
+
+		return content.getbuffer()
+
 class CodeSection(Section):
 	sectionId = 10
 	def __init__(self):
 		self.__code = []
 
-	def AddFunction(self, localVariables, body):
-		self.__code.append ((localVariables, body,))
+	def Add(self, code: Code):
+		self.__code.append (code)
 
 	def WriteTo(self, output: BinaryIO):
 		if not self.__code:
 			return
 
+		content = io.BytesIO()
+		WriteInteger(content, len(self.__code))
+		for code in self.__code:
+			codeContent = code.Encode()
+			WriteInteger(content, len(codeContent))
+			content.write(codeContent)
+
 		WriteByte(output, self.sectionId)
-		WriteU32(output, len(self.__code))
-		for localVariables, body in self.__code:
-			pass
+		WriteInteger(output, len(content.getbuffer()))
+		output.write(content.getbuffer())
 
 class DataSection(Section):
 	sectionId = 11
@@ -198,8 +321,20 @@ class Module:
 		self.__codesec = CodeSection ()
 		self.__datasec = DataSection ()
 
-	def AddFunctionType(self, functionType: FunctionType):
-		self.__typesec.AddType(functionType)
+	def AddFunctionType(self, functionType: FunctionType) -> int:
+		return self.__typesec.AddType(functionType)
+
+	def AddFunction(self, typeIndex: int) -> int:
+		return self.__funcsec.AddFunction(typeIndex)
+
+	def AddExport(self, export: Export):
+		self.__exportsec.Add(export)
+
+	def AddTable(self, table: Table):
+		self.__tablesec.Add(table)
+
+	def AddCode(self, code: Code):
+		self.__codesec.Add(code)
 
 	def WriteTo(self, output: BinaryIO):
 		# magic
