@@ -97,7 +97,7 @@ class Compiler:
 		if options.get('wasm', False):
 			wasmPass = GenerateWasm.GetPass()
 			wasmPass.Process(module)
-			wasm = wasmPass.Visitor.Module
+			wasm = wasmPass.Visitor.Finalize()
 		else:
 			wasm = None
 

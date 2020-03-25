@@ -40,7 +40,10 @@ opcodes = {
 	'i32.le_u': 0x4D,
 	'i32.ge_s': 0x4E,
 	'i32.ge_u': 0x4F,
-	'i32.add': 0x6A
+	'i32.add': 0x6A,
+	'i32.sub': 0x6B,
+
+	'f32.add': 0x92
 }
 
 def PackInteger(v):
@@ -100,6 +103,10 @@ class FunctionType:
 	def __init__(self, argumentTypes: List[ValueType], returnTypes: List[ValueType]):
 		self.__argumentTypes = argumentTypes
 		self.__returnTypes = returnTypes
+
+	@property
+	def Arguments(self):
+		return self.__argumentTypes
 
 	def WriteTo(self, output: BinaryIO):
 		WriteByte(output, ValueType.function.value)
