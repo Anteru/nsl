@@ -1,7 +1,7 @@
 import math
 import struct
 import io
-from typing import Union, List, BinaryIO
+from typing import Optional, Union, List, BinaryIO
 from enum import Enum
 
 class ValueType(Enum):
@@ -28,6 +28,7 @@ opcodes = {
 	'i32.store': 0x36,
 	'memory.size': 0x3F,
 	'memory.grow': 0x40,
+	'i32.const': 0x41,
 	'i32.eqz': 0x45,
 	'i32.eq': 0x46,
 	'i32.ne': 0x47,
@@ -188,8 +189,41 @@ class TableSection(Section):
 		WriteInteger(output, len(content.getbuffer()))
 		output.write(content.getbuffer())
 
+class Memory:
+	def __init__(self, minSize: int = 0, maxSize: Optional[int] = None):
+		self.__min = minSize
+		self.__max = maxSize
+
+	def WriteTo(self, output: BinaryIO):
+		if self.__max:
+			WriteByte(output, 0x01)
+			WriteInteger(output, self.__min)
+			WriteInteger(output, self.__max)
+		else:
+			WriteByte(output, 0x00)
+			WriteInteger(output, self.__min)
+
 class MemorySection(Section):
 	sectionId = 5
+
+	def __init__(self):
+		self.__memories = []
+
+	def Add(self, memory: Memory):
+		self.__memories.append(memory)
+
+	def WriteTo(self, output: BinaryIO):
+		if not self.__memories:
+			return
+
+		content = io.BytesIO()
+		WriteInteger(content, len(self.__memories))
+		for memory in self.__memories:
+			memory.WriteTo(content)
+
+		WriteByte(output, self.sectionId)
+		WriteInteger(output, len(content.getbuffer()))
+		output.write(content.getbuffer())
 
 class GlobalSection(Section):
 	sectionId = 6
@@ -335,6 +369,9 @@ class Module:
 
 	def AddCode(self, code: Code):
 		self.__codesec.Add(code)
+
+	def AddMemory(self, memory: Memory):
+		self.__memsec.Add(memory)
 
 	def WriteTo(self, output: BinaryIO):
 		# magic

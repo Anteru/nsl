@@ -49,8 +49,18 @@ class GenerateWasmVisitor(Visitor.DefaultVisitor):
 
 		c = WebAssembly.Code()
 		c.AddInstruction(WebAssembly.Instruction(WebAssembly.opcodes['local.get'], (0,)))
+		c.AddInstruction(WebAssembly.Instruction(WebAssembly.opcodes['i32.const'], (0,)))
+		c.AddInstruction(WebAssembly.Instruction(WebAssembly.opcodes['i32.store'], (2, 0,)))
 		c.AddInstruction(WebAssembly.Instruction(WebAssembly.opcodes['local.get'], (1,)))
+		c.AddInstruction(WebAssembly.Instruction(WebAssembly.opcodes['i32.const'], (4,)))
+		c.AddInstruction(WebAssembly.Instruction(WebAssembly.opcodes['i32.store'], (2, 0,)))
+		c.AddInstruction(WebAssembly.Instruction(WebAssembly.opcodes['i32.const'], (0,)))
+		c.AddInstruction(WebAssembly.Instruction(WebAssembly.opcodes['i32.load'], (2, 0,)))
+		c.AddInstruction(WebAssembly.Instruction(WebAssembly.opcodes['i32.const'], (4,)))
+		c.AddInstruction(WebAssembly.Instruction(WebAssembly.opcodes['i32.load'], (2, 0,)))
 		c.AddInstruction(WebAssembly.Instruction(WebAssembly.opcodes['i32.add']))
+
+		ctx.Module.AddMemory(WebAssembly.Memory())
 
 		ctx.Module.AddCode(c)
 
