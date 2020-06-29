@@ -41,7 +41,7 @@ if __name__=='__main__':
         sys.exit(1)
 
     if args.wasm:
-        result.wasmModule.WriteTo(args.wasm)
+        result.WasmModule.WriteTo(args.wasm)
 
     if args.output:
         import pickle
