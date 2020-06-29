@@ -20,9 +20,26 @@ from nsl.passes import (
 	ValidateSwizzle, 
 	ValidateVariableNames,
 )
+from nsl import LinearIR, WebAssembly
 from io import StringIO
+from typing import Optional
 
 class Compiler:
+	class Result:
+		def __init__(self, *,
+					 irModule: Optional[LinearIR.Module] = None,
+					 wasmModule: Optional[WebAssembly.Module] = None):
+			self.__irModule = irModule
+			self.__wasmModule = wasmModule
+
+		@property
+		def IRModule(self) -> Optional[LinearIR.Module]:
+			return self.__irModule
+
+		@property
+		def WasmModule(self) -> Optional[WebAssembly.Module]:
+			return self.__wasmModule
+
 	def __init__(self):
 		self.parser = NslParser ()
 
@@ -68,7 +85,7 @@ class Compiler:
 		return True
 
 
-	def Compile (self, source, options = {}):
+	def Compile (self, source, options = {}) -> Optional[Result]:
 		from nsl.Pass import PassFlags
 		debugParsing = options.get('debug-parsing', False)
 		debugPasses = options.get('debug-passes', False)
@@ -77,28 +94,28 @@ class Compiler:
 		ast = self.parser.Parse (source, debug = debugParsing)
 		for i,p in enumerate (self.astPasses):
 			if not self.__RunPass(ast, i, p, 'AST', debugPasses):
-				return False, None
+				return None
 
 		# Done with the AST, we need to lower to IR now
 		lowerPass = LowerToIR.GetPass ()
 		if not lowerPass.Process (ast):
 			print (f'Failed to lower AST to IR')
-			return False, None
+			return None
 
-		module = lowerPass.Visitor.Module
+		irModule = lowerPass.Visitor.Module
 
 		for i, p in enumerate(self.irPasses):
 			if not optimizations and p.Flags & PassFlags.IsOptimization:
 				continue
 
-			if not self.__RunPass(module, i, p, 'IR', debugPasses):
-				return False, None
+			if not self.__RunPass(irModule, i, p, 'IR', debugPasses):
+				return None
 
 		if options.get('wasm', False):
 			wasmPass = GenerateWasm.GetPass()
-			wasmPass.Process(module)
-			wasm = wasmPass.Visitor.Finalize()
+			wasmPass.Process(irModule)
+			wasmModule = wasmPass.Visitor.Finalize()
 		else:
-			wasm = None
+			wasmModule = None
 
-		return True, module, wasm
+		return Compiler.Result (irModule = irModule, wasmModule = wasmModule)

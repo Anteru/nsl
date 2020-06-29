@@ -66,7 +66,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 		self.__ctx = ctx
 
 	@property
-	def Module(self):
+	def Module(self) -> LinearIR.Module:
 		return self.__ctx.Module
 	
 	class Context:

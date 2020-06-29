@@ -5,14 +5,12 @@ import sys
 
 def Compile(args):
     c = Compiler ()
-    ok, module, wasm = c.Compile (args.FILE.read(),
+    return c.Compile (args.FILE.read(),
         options={
                  'debug-parsing' : args.debug_parsing,
                  'debug-passes' : args.debug_passes,
                  'wasm' : args.wasm,
                  'optimize': args.opt_level > 0})
-
-    return ok, module, wasm
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser('nslc')
@@ -32,22 +30,21 @@ if __name__=='__main__':
     parser.add_argument('-o', '--output', type=argparse.FileType('wb'))
     args = parser.parse_args()
 
-    ok, module, wasm = Compile(args)
+    result = Compile(args)
 
-    if args.wasm:
-        wasm.WriteTo(args.wasm)
-
-    if args.output:
-        import pickle
-        pickle.dump(module, args.output)
-
-    if args.verbose:
-        if ok:
+    if result is None:
+        if args.verbose:
             print('SUCCESS')
         else:
             print('ERROR')
 
-    if ok:
-        sys.exit(0)
-    else:
         sys.exit(1)
+
+    if args.wasm:
+        result.wasmModule.WriteTo(args.wasm)
+
+    if args.output:
+        import pickle
+        pickle.dump(result.IRModule, args.output)
+
+    sys.exit(0)

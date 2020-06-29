@@ -6,11 +6,11 @@ from nsl import (
 
 def _compile(code):
     c = Compiler.Compiler()
-    result, ir, _ = c.Compile(code)
-    assert result == True
+    result = c.Compile(code)
+    assert result is not None
 
     linker = LinearIR.Linker()
-    linker.AddModule(ir)
+    linker.AddModule(result.IRModule)
 
     program = linker.Link()
 
@@ -503,15 +503,18 @@ def testMatrixRowAccess():
     r = vm.Invoke('f', m=a, i=2)
     assert r == [4, 1, 0, 1]
 
-def testConstantantCastIsOptimized():
+def testConstantCastIsOptimized():
     code = '''export function f() -> float {
         return float(1);
     }'''
 
     c = Compiler.Compiler()
-    result, ir, _ = c.Compile(code, {'optimize': True})
 
-    for i in ir.Functions['f'].Instructions:
+    result = c.Compile(code, {'optimize': True})
+    assert result is not None
+    module = result.IRModule
+
+    for i in module.Functions['f'].Instructions:
         assert not isinstance(i, LinearIR.CastInstruction)
 
 def testAddToArrayArgument():
@@ -608,14 +611,16 @@ def testAssignToArgAndReturnIsOptimizedAway():
     }'''
     
     c = Compiler.Compiler()
-    result, ir, _ = c.Compile(code, {'optimize': True})
+    result = c.Compile(code, {'optimize': True})
+    assert result is not None
+    module = result.IRModule
 
     # We should never load from f
     # %1 = load a
     # store f, %1
     # %2 = load f <-- This will get removed
     # return %2   <-- This will return %1 directly
-    for i in ir.Functions['f'].Instructions:
+    for i in module.Functions['f'].Instructions:
         if isinstance(i, LinearIR.VariableAccessInstruction):
             if i.Variable == 'f':
                 assert i.Store is None
