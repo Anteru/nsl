@@ -114,6 +114,9 @@ class Type:
     def IsStructure(self):
         return self.Kind == TypeKind.Structure
 
+    def IsVoid(self):
+        return self.Kind == TypeKind.Void
+
     def IsPrimitive(self):
         return self.Kind in {TypeKind.Scalar, TypeKind.Vector, TypeKind.Matrix}
 
@@ -410,6 +413,28 @@ class BasicBlock(Value):
         instruction.SetParent(self)
         self.__function.RegisterValue(instruction)
         self.__instructions.append(instruction)
+        return instruction
+
+    def AddInstructionBefore(self, instruction: Instruction,
+                            insertionPoint: Instruction):
+        for i, e in enumerate(self.__instructions):
+            if e == insertionPoint:
+                self.__instructions.insert(i, instruction)
+                break
+
+        instruction.SetParent(self)
+        self.__function.RegisterValue(instruction)
+        return instruction
+
+    def AddInstructionAfter(self, instruction: Instruction,
+                            insertionPoint: Instruction):
+        for i, e in enumerate(self.__instructions):
+            if e == insertionPoint:
+                self.__instructions.insert(i + 1, instruction)
+                break
+
+        instruction.SetParent(self)
+        self.__function.RegisterValue(instruction)
         return instruction
 
     def Replace(self, old: Union[int, Value], new: Optional[Value]):

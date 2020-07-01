@@ -1,11 +1,6 @@
 import "std";
 
-export function add_ii(int a, int b) -> int
+export function fma(float a, float b, float c) -> float
 {
-	return a + b;
-}
-
-export function add_ff(float a, float b) -> float
-{
-	return a + b;
+    return a * b + c;
 }

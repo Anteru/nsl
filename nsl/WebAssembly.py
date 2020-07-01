@@ -42,8 +42,14 @@ opcodes = {
 	'i32.ge_u': 0x4F,
 	'i32.add': 0x6A,
 	'i32.sub': 0x6B,
+	'i32.mul': 0x6C,
+	'i32.div_s': 0x6D,
+	'i32.div_u': 0x6E,
 
-	'f32.add': 0x92
+	'f32.add': 0x92,
+	'f32.sub': 0x93,
+	'f32.mul': 0x94,
+	'f32.div': 0x95
 }
 
 def PackInteger(v):
@@ -304,8 +310,10 @@ class Code:
 		self.__locals = []
 		self.__instructions = []
 
-	def AddLocal(self, local: Local):
+	def AddLocal(self, local: Local) -> int:
+		count = len(self.__locals)
 		self.__locals.append(local)
+		return count
 
 	def AddInstruction(self, instruction: Instruction):
 		self.__instructions.append(instruction)
