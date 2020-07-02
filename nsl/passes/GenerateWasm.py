@@ -171,7 +171,6 @@ class GenerateWasmVisitor(Visitor.DefaultVisitor):
 		valueReferenceTypes = {}
 
 		for basicBlock in function.BasicBlocks:
-			localValues = set()
 			for instruction in basicBlock.Instructions:
 				ref = instruction.Reference
 
