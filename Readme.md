@@ -3,7 +3,7 @@ NSL
 
 (original author: Matthäus G. Chajdas)
 
-`nsl` is a source-to-source compiler aimed at providing a meta-shading-language which will eventually get compiled to HLSL, GLSL and plain C. The main goal is flexibility and easy hacking.
+`nsl` is a toy programming language to explore various compilation techniques. It's meant to be easy to hack on, first and foremost, which is why it's written in Python, and makes extensive use of passes and visitors for processing.
 
 License
 -------
@@ -31,11 +31,6 @@ What's working?
 * Pretty printing
 * Various debug outputs
 * A minimal standard library
-
-What's missing from making this useful?
-
-* A code generator for GLSL/HLSL
-* The standard library lacks many functions and classes (textures, etc.)
 
 Contributing
 ------------
