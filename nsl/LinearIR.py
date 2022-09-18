@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import List, Dict, Iterable, Optional, Tuple, Union
+from typing import Callable, DefaultDict, List, Dict, Iterable, Optional, Tuple, Union
 from . import op
 from enum import Enum
 import collections
@@ -126,7 +126,7 @@ class ScalarType(Type):
         return TypeKind.Scalar
 
 class IntegerType(ScalarType):
-    def __init__(self, *, unsigned = False):
+    def __init__(self, *, unsigned: bool = False):
         self.__unsigned = unsigned
 
     @property
@@ -222,7 +222,7 @@ class MatrixType(Type):
         return f'<{self.RowCount} × {self.RowType}>'
 
 class StructureType(Type):
-    def __init__(self, fields: Dict[str, Type], *, name=''):
+    def __init__(self, fields: Dict[str, Type], *, name: str =''):
         self.__fields = fields
         self.__name = name
 
@@ -242,7 +242,7 @@ class StructureType(Type):
         return '{' + ', '.join([f'{v} {k}' for k,v in self.Fields.items()]) + '}'
 
 class ArrayType(Type):
-    def __init__(self, elementType: Type, size):
+    def __init__(self, elementType: Type, size: List[int]):
         self.__elementType = elementType
         self.__size = size
 
@@ -281,7 +281,7 @@ class Value(Node):
         self.__reference = number
 
 class ConstantValue(Value):
-    def __init__(self, valueType: Type, constantValue):
+    def __init__(self, valueType: Type, constantValue: Union[float, int, bool]):
         super().__init__(valueType)
         self.__value = constantValue
 
@@ -315,11 +315,11 @@ class Instruction(ValueUser, ABC):
         self.__parent = basicBlock
 
     @property
-    def Parent(self) -> 'BasicBlock':
+    def Parent(self) -> Optional['BasicBlock']:
         return self.__parent
 
     @property
-    def OpCode(self):
+    def OpCode(self) -> OpCode:
         return self.__opcode
 
     def _SetOpCode(self, opcode: OpCode):
@@ -334,15 +334,13 @@ class BasicBlock(Value):
     def __init__(self, function: "Function"):
         super().__init__(VoidType())
         self.__instructions: List[Instruction] = []
-        self.__predecessors = []
-        self.__successors = []
         self.__function = function
         self.__replaceUses = {}
         self.__replacements = {}
         # Link between reference and instruction using it. This makes replacing
         # very fast, as we can find all instructions that reference a given
         # instruction directly
-        self.__uses = defaultdict(list)
+        self.__uses: DefaultDict[int, List[Value]] = defaultdict(list)
 
     def UpdateUses(self):
         self.__uses = defaultdict(list)
@@ -357,7 +355,7 @@ class BasicBlock(Value):
     # Dictionary containing a reference as the key, and a list of instructions
     # referencing it as the value. Only valid after UpdateUses()
     @property
-    def Uses(self) -> Dict[int, Value]:
+    def Uses(self) -> Dict[int, List[Value]]:
         return self.__uses
 
     @property
@@ -377,7 +375,7 @@ class BasicBlock(Value):
                     break
         return None
 
-    def _Traverse(self, function):
+    def _Traverse(self, function: Callable[[List[Instruction]], List[Instruction]]):
         self.__replacements = {}
         self.__replaceUses = {}
         self.__instructions = function(self.__instructions)
@@ -455,23 +453,22 @@ class BasicBlock(Value):
         # reference. Afterwards, we purge empty slots
         # Other uses of the old instruction need to be updated using
         # ReplaceUses()
-        for index in range(len(self.__instructions)):
-            instruction = self.__instructions[index]
+        newInstructions = []
+        for instruction in self.__instructions:
             if instruction.Reference in self.__replacements:
                 newInstruction = self.__replacements[instruction.Reference]
                 if isinstance(newInstruction, Instruction):
                     newInstruction.SetReference(instruction.Reference)
-                    self.__instructions[index] = newInstruction
-                else:
-                    # Constant value or something like that
-                    self.__instructions[index] = None
+                    newInstructions.append(newInstruction)
+            else:
+                newInstructions.append(instruction)
 
-        self.__instructions = [i for i in self.__instructions if i]
+        self.__instructions = newInstructions
 
 class Function(Value):
-    def __init__(self, name, functionType: FunctionType):
+    def __init__(self, name: str, functionType: FunctionType):
         super().__init__(functionType)
-        self.__basicBlocks = []
+        self.__basicBlocks: List[BasicBlock] = []
         self.__name = name
         self.__values = []
         self.__constants = {}
@@ -502,7 +499,7 @@ class Function(Value):
             result.extend(bb.Instructions)
         return result
 
-    def _Traverse(self, function):
+    def _Traverse(self, function: Callable[[List[BasicBlock]], List[BasicBlock]]):
         self.__basicBlocks = function(self.__basicBlocks)
 
     def RegisterValue(self, value: Value):
@@ -511,7 +508,7 @@ class Function(Value):
         self.__values.append(value)
         return n
 
-    def CreateConstant(self, constantType: Type, value):
+    def CreateConstant(self, constantType: Type, value: Union[int, float, bool]):
         result = self.__constants.get(value, None)
         if result:
             return result
@@ -541,7 +538,7 @@ class Function(Value):
 
 class Module(Node):
     def __init__(self):
-        self.__functions = collections.OrderedDict()
+        self.__functions: Dict[str, Function] = collections.OrderedDict()
         self.__globals = collections.OrderedDict()
         self.__imports = set()
         self.__metadata = dict()
@@ -551,7 +548,7 @@ class Module(Node):
         return self.__metadata
 
     @property
-    def Functions(self):
+    def Functions(self) -> Dict[str, Function]:
         return self.__functions
 
     @property
@@ -562,18 +559,18 @@ class Module(Node):
     def Imports(self):
         return self.__imports
 
-    def CreateFunction(self, name, functionType):
+    def CreateFunction(self, name: str, functionType: FunctionType):
         f = Function(name, functionType)
         self.__functions[name] = f
         return f
 
-    def CreateGlobalVariable(self, name, variableType):
+    def CreateGlobalVariable(self, name: str, variableType: Type):
         self.__globals[name]= variableType
 
-    def AddImport(self, name):
+    def AddImport(self, name: str):
         self.__imports.add(name)
 
-    def _Traverse(self, function):
+    def _Traverse(self, function: Callable[[Dict[str, Function]], Dict[str, Function]]):
         self.__functions = function(self.__functions)
 
 class BinaryInstruction(Instruction):
@@ -654,7 +651,6 @@ class CompareInstruction(Instruction):
     def __init__(self, predicate: OpCode, returnType: Type,
         v1: Value, v2: Value):
         super().__init__(predicate, returnType)
-        self.__predicate = predicate
         self.__values = [v1, v2]
 
     def ReplaceUses(self, ref, newValue):
@@ -669,8 +665,8 @@ class BranchInstruction(Instruction):
         falseBlock: Optional[BasicBlock] = None,
         predicate: Optional[Value] = None):
         super().__init__(OpCode.BRANCH, VoidType())
-        self.__trueBlock = trueBlock
-        self.__falseBlock = falseBlock
+        self.__trueBlock: Optional[BasicBlock] = trueBlock
+        self.__falseBlock: Optional[BasicBlock] = falseBlock
         self.__predicate = predicate
 
     def ReplaceUses(self, ref, newValue):
@@ -699,7 +695,7 @@ class BranchInstruction(Instruction):
         self.__trueBlock = trueBlock
 
     @property
-    def TrueBlock(self):
+    def TrueBlock(self) -> Optional[BasicBlock]:
         return self.__trueBlock
 
     def SetFalseBlock(self, falseBlock: BasicBlock):
@@ -716,7 +712,6 @@ class BranchInstruction(Instruction):
 class UnaryInstruction(Instruction):
     def __init__(self, operation: OpCode, returnType: Type, value: Value):
         super().__init__(operation, returnType)
-        self.__operation = operation
         self.__value = value
 
     @property
@@ -781,7 +776,7 @@ class ConstructPrimitiveInstruction(Instruction):
         return [v.Reference for v in self.__values]
 
 class MemberAccessInstruction(Instruction):
-    def __init__(self, memberType, variable: Value, member: str,
+    def __init__(self, memberType: Type, variable: Value, member: str,
         accessScope: VariableAccessScope = VariableAccessScope.FUNCTION_LOCAL):
         super().__init__(OpCode.LOAD_MEMBER, memberType)
         self.__variable = variable

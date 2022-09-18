@@ -450,11 +450,13 @@ def _GetCommonPrimitiveType(left, right):
 				right.GetComponentType()),
 			left.GetRowCount (), left.GetColumnCount ())
 
-def _GetRowsColumns (primitiveType):
+def _GetRowsColumns (primitiveType: PrimitiveType):
 	assert isinstance (primitiveType, PrimitiveType)
 	if primitiveType.IsMatrix ():
+		assert isinstance(primitiveType, MatrixType)
 		return primitiveType.GetSize ()
 	elif primitiveType.IsVector ():
+		assert isinstance(primitiveType, VectorType)
 		return primitiveType.GetSize () [0], 1
 	elif primitiveType.IsScalar ():
 		return 1, 1
@@ -499,6 +501,8 @@ def ResolveBinaryExpressionType (operation: op.Operation, left: Type, right: Typ
 		baseType = _GetCommonPrimitiveType (left, right)
 
 		if left.IsVector() and right.IsVector():
+			assert isinstance (left, VectorType)
+			assert isinstance (right, VectorType)
 			assert left.GetComponentCount() == right.GetComponentCount()
 			return ExpressionType (VectorType(Integer(),
 				left.GetComponentCount()), [baseType, baseType])	
@@ -520,6 +524,7 @@ def ResolveBinaryExpressionType (operation: op.Operation, left: Type, right: Typ
 
 			# In this branch, right and left cannot be scalar simultaneously
 			assert not left.IsScalar ()		
+			assert isinstance(left, VectorType) or isinstance (left, MatrixType)
 			resultType = left.WithComponentType (baseType)
 			return ExpressionType (resultType,
 				[resultType, baseType])
@@ -529,9 +534,11 @@ def ResolveBinaryExpressionType (operation: op.Operation, left: Type, right: Typ
 
 		# Only one of both can be scalar
 		if left.IsScalar ():
+			assert isinstance(right, VectorType) or isinstance (right, MatrixType)
 			resultType = right.WithComponentType (baseType)
 			return ExpressionType (resultType, [baseType, resultType])
 		elif right.IsScalar ():
+			assert isinstance(left, VectorType) or isinstance (left, MatrixType)
 			resultType = left.WithComponentType (baseType)
 			return ExpressionType (resultType, [resultType, baseType])
 
@@ -548,11 +555,17 @@ def ResolveBinaryExpressionType (operation: op.Operation, left: Type, right: Typ
 		resultShape = (leftShape [0], rightShape [1])
 		if resultShape [1] == 1:
 			assert isinstance(baseType, ScalarType)
+			assert isinstance(left, VectorType) or isinstance (left, MatrixType)
+			assert isinstance(right, VectorType) or isinstance (right, MatrixType)
+
 			return ExpressionType (VectorType (baseType, resultShape [0]),
 				[left.WithComponentType (baseType),
 				 right.WithComponentType (baseType)])
 		elif resultShape [1] > 1:
 			assert isinstance(baseType, ScalarType)
+			assert isinstance(left, VectorType) or isinstance (left, MatrixType)
+			assert isinstance(right, VectorType) or isinstance (right, MatrixType)
+			
 			return ExpressionType (MatrixType (baseType, resultShape [0], resultShape [1]),
 				[left.WithComponentType (baseType),
 				 right.WithComponentType (baseType)])

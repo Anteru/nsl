@@ -157,7 +157,7 @@ class GenerateWasmVisitor(Visitor.DefaultVisitor):
 			WebAssembly.opcodes['return']
 		))
 
-	def v_Function(self, function: LinearIR.Function, ctx: Context = None):
+	def v_Function(self, function: LinearIR.Function, ctx: Context):
 		ctx.OnEnterFunction(function.Name)
 		functionType = _ConvertFunctionType(function.Type)
 		functionTypeIdx = ctx.Module.AddFunctionType(functionType)
@@ -171,7 +171,6 @@ class GenerateWasmVisitor(Visitor.DefaultVisitor):
 		valueReferenceTypes = {}
 
 		for basicBlock in function.BasicBlocks:
-			localValues = set()
 			for instruction in basicBlock.Instructions:
 				ref = instruction.Reference
 
