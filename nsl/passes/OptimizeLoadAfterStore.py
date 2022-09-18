@@ -30,7 +30,7 @@ class OptimizeLoadAfterStoreVisitor (Visitor.DefaultVisitor):
                 vai.Parent.Replace(vai, None)
     
 def GetPass():
-	import nsl.Pass
-	return nsl.Pass.MakePassFromVisitor(OptimizeLoadAfterStoreVisitor (),
+    import nsl.Pass
+    return nsl.Pass.MakePassFromVisitor(OptimizeLoadAfterStoreVisitor (),
         'optimize-load-after-store',
         flags = nsl.Pass.PassFlags.IsOptimization)

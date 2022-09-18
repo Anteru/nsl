@@ -15,5 +15,5 @@ class PrintLinearIRVisitor (Visitor.DefaultVisitor):
             self.v_Visit(function, ctx)
 
 def GetPass():
-	import nsl.Pass
-	return nsl.Pass.MakePassFromVisitor(PrintLinearIRVisitor (), 'print-linear-ir')
+    import nsl.Pass
+    return nsl.Pass.MakePassFromVisitor(PrintLinearIRVisitor (), 'print-linear-ir')

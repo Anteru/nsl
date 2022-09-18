@@ -319,7 +319,7 @@ class Instruction(ValueUser, ABC):
         return self.__parent
 
     @property
-    def OpCode(self):
+    def OpCode(self) -> OpCode:
         return self.__opcode
 
     def _SetOpCode(self, opcode: OpCode):
