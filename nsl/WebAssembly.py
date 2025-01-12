@@ -293,6 +293,18 @@ class Local:
 		WriteInteger(output, self.__n)
 		WriteByte(output, self.__valueType.value)
 
+	@property
+	def Type(self):
+		return self.__valueType
+
+	@property
+	def Count(self):
+		return self.__n
+
+	def SetCount(self, n):
+		assert n > 0
+		self.__n = n
+
 class Instruction:
 	def __init__(self, opcode: int, args = None):
 		self.__opcode = opcode
@@ -309,11 +321,23 @@ class Code:
 	def __init__(self):
 		self.__locals = []
 		self.__instructions = []
+		self.__lastLocal = None
+		self.__lastLocalIndex = -1
 
-	def AddLocal(self, local: Local) -> int:
-		count = len(self.__locals)
-		self.__locals.append(local)
-		return count
+	def AddLocal(self, local: Local):
+		# If we're adding another local of the same type, we simply increment
+		# the last local so we avoid generating tons of repeated locals
+		if self.__lastLocal:
+			if self.__lastLocal.Type == local.Type:
+				self.__lastLocal.SetCount(
+					self.__lastLocal.Count + local.Count
+				) 
+		else:
+			self.__locals.append(local)
+			self.__lastLocal = local
+			
+		self.__lastLocalIndex += local.Count
+		return self.__lastLocalIndex
 
 	def AddInstruction(self, instruction: Instruction):
 		self.__instructions.append(instruction)
