@@ -52,16 +52,17 @@ class ExecutionContext:
             return result
 
     def __CreatePrimitiveInstance(self, primitiveType: LinearIR.Type):
-        if primitiveType.Kind == LinearIR.TypeKind.Vector:
-            return [0] * primitiveType.Size
-        elif primitiveType.Kind == LinearIR.TypeKind.Matrix:
-            return [
-                      [0] * primitiveType.ColumnCount
-                  ] * primitiveType.RowCount
-        elif primitiveType.Kind == LinearIR.TypeKind.Scalar:
-            return 0
-        else:
-            raise Exception('Cannot create primitive instance')
+        match primitiveType.Kind:
+            case LinearIR.TypeKind.Vector:
+                return [0] * primitiveType.Size
+            case LinearIR.TypeKind.Matrix:
+                return [
+                        [0] * primitiveType.ColumnCount
+                    ] * primitiveType.RowCount
+            case LinearIR.TypeKind.Scalar:
+                return 0
+
+        raise Exception('Cannot create primitive instance')
 
     def __CreateStructureInstance(self, structureType: LinearIR.StructureType) -> object:
         r = {}
@@ -96,19 +97,21 @@ class ExecutionContext:
             match opCode:
                 case LinearIR.OpCode.LOAD:
                     ref = instruction.Reference
-                    if instruction.Scope == LinearIR.VariableAccessScope.GLOBAL:
-                        localScope[ref] = self.__globalScope[instruction.Variable]
-                    elif instruction.Scope == LinearIR.VariableAccessScope.FUNCTION_ARGUMENT:
-                        localScope[ref] = args[instruction.Variable]
-                    else:
-                        localScope[ref] = localScope[instruction.Variable]
+                    match instruction.Scope:
+                        case LinearIR.VariableAccessScope.GLOBAL:
+                            localScope[ref] = self.__globalScope[instruction.Variable]
+                        case LinearIR.VariableAccessScope.FUNCTION_ARGUMENT:
+                            localScope[ref] = args[instruction.Variable]
+                        case LinearIR.VariableAccessScope.FUNCTION_LOCAL:
+                            localScope[ref] = localScope[instruction.Variable]
                 case LinearIR.OpCode.STORE:
-                    if instruction.Scope == LinearIR.VariableAccessScope.GLOBAL:
-                        self.__globalScope[instruction.Variable] = localScope[instruction.Store.Reference]
-                    elif instruction.Scope == LinearIR.VariableAccessScope.FUNCTION_ARGUMENT:
-                        args[instruction.Variable] = localScope[instruction.Store.Reference]
-                    else:
-                        localScope[instruction.Variable] = localScope[instruction.Store.Reference]
+                    match instruction.Scope:
+                        case LinearIR.VariableAccessScope.GLOBAL:
+                            self.__globalScope[instruction.Variable] = localScope[instruction.Store.Reference]
+                        case LinearIR.VariableAccessScope.FUNCTION_ARGUMENT:
+                            args[instruction.Variable] = localScope[instruction.Store.Reference]
+                        case LinearIR.VariableAccessScope.FUNCTION_LOCAL:
+                            localScope[instruction.Variable] = localScope[instruction.Store.Reference]
                 case LinearIR.OpCode.LOAD_ARRAY | LinearIR.OpCode.VECTOR_GET | LinearIR.OpCode.MATRIX_GET:
                     ref = instruction.Reference
                     var = localScope[instruction.Array.Reference][

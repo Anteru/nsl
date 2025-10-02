@@ -4,13 +4,37 @@ import io
 from typing import Optional, Union, List, BinaryIO
 from enum import Enum
 
-class ValueType(Enum):
+class Type:
+	def WriteTo(self, output: BinaryIO):
+		...
+
+class ValueType(Type, Enum):
 	i32 = 0x7F
 	i64 = 0x7E
 	f32 = 0x7D
 	f64 = 0x7C
 	function = 0x60
 	funcref = 0x70
+
+	def WriteTo(self, output: BinaryIO):
+		WriteByte(output, self.value)
+
+class HeapType(Type, Enum):
+	none = 0x71
+
+	def WriteTo(self, output: BinaryIO):
+		WriteByte(output, self.value)
+
+class StructType:
+	def __init__(self, fields: [Type]):
+		self.__fields = fields
+
+	def WriteTo(self, output: BinaryIO):
+		WriteByte(output, 0x5F)
+		WriteInteger(output, len(self.__fields))
+		for field in self.__fields:
+			field.WriteTo(output)
+
 
 opcodes = {
 	'unreachable': 0x00,
@@ -106,7 +130,7 @@ class Section:
 		pass
 
 class FunctionType:
-	def __init__(self, argumentTypes: List[ValueType], returnTypes: List[ValueType]):
+	def __init__(self, argumentTypes: List[Type], returnTypes: List[Type]):
 		self.__argumentTypes = argumentTypes
 		self.__returnTypes = returnTypes
 
@@ -118,10 +142,10 @@ class FunctionType:
 		WriteByte(output, ValueType.function.value)
 		WriteInteger(output, len(self.__argumentTypes))
 		for i in self.__argumentTypes:
-			WriteByte(output, i.value)
+			i.WriteTo(output)
 		WriteInteger(output, len(self.__returnTypes))
 		for i in self.__returnTypes:
-			WriteByte(output, i.value)
+			i.WriteTo(output)
 
 class TypeSection(Section):
 	sectionId = 1
@@ -291,7 +315,7 @@ class Local:
 
 	def WriteTo(self, output: BinaryIO):
 		WriteInteger(output, self.__n)
-		WriteByte(output, self.__valueType.value)
+		self.__valueType.WriteTo(output)
 
 	@property
 	def Type(self):

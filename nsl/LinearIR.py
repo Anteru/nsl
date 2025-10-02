@@ -1178,7 +1178,17 @@ class ModuleLoader:
 class FilesystemModuleLoader(ModuleLoader):
     def Load(self, moduleName: str) -> Module:
         import pickle
-        module = pickle.load(open(f'{moduleName}.nslir', 'rb'))
+        import pathlib
+        # Try to open the full path first, and if missing, try with '.nslir'
+        path = pathlib.Path(moduleName)
+        if path.exists():
+            module = pickle.load(path.open('rb'))
+        else:
+            path = path.with_suffix('.nslir')
+            if path.exists():
+                module = pickle.load(path.open('rb'))
+            else:
+                raise RuntimeError(f"Could not find module '{moduleName}'")
         assert isinstance(module, Module)
         return module
 

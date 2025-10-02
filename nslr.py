@@ -1,35 +1,62 @@
 #!/usr/bin/env python3
 from nsl import LinearIR, VM
 import argparse
-import wasmer
-from wasmer_compiler_cranelift import Compiler
 
 def run(args):
 	if args.wasm:
-		print(args.MODULE)
-		store = wasmer.Store(wasmer.engine.JIT(Compiler))
-		module = wasmer.Module(
-			store,
-			open(args.MODULE, 'rb').read()
-		)
-		instance = wasmer.Instance(module)
-		try:
-			f = getattr(instance.exports, args.FUNCTION)
-		except:
-			print(f'ERROR: Function "{args.FUNCTION}" not found')
-		
-		def convertArgs(parameterTypes, arguments):
-			for param, arg in zip(parameterTypes, arguments):
-				match param:
-					case wasmer.Type.F32:
-						yield float(arg)
-					case wasmer.Type.I32:
-						yield int(arg)
+		print("Executing '{}' using '{}'".format(args.MODULE, args.wasm_runtime))
+		if args.wasm_runtime == 'wasmer':
+			import wasmer
+			from wasmer_compiler_cranelift import Compiler
+			store = wasmer.Store(wasmer.engine.JIT(Compiler))
+			module = wasmer.Module(
+				store,
+				open(args.MODULE, 'rb').read()
+			)
+			instance = wasmer.Instance(module)
+			try:
+				f = getattr(instance.exports, args.FUNCTION)
+			except:
+				print(f'ERROR: Function "{args.FUNCTION}" not found')
+			
+			def convertArgs(parameterTypes, arguments):
+				for param, arg in zip(parameterTypes, arguments):
+					match param:
+						case wasmer.Type.F32:
+							yield float(arg)
+						case wasmer.Type.I32:
+							yield int(arg)
 
-		invokeArgs = list(convertArgs(f.type.params, args.ARGS))
+			invokeArgs = list(convertArgs(f.type.params, args.ARGS))
 
-		print (f'{args.FUNCTION} (' + ', '.join(map(str,invokeArgs)) + ') =',
-			f(*invokeArgs))
+			print (f'{args.FUNCTION} (' + ', '.join(map(str,invokeArgs)) + ') =',
+				f(*invokeArgs))
+		elif args.wasm_runtime == 'wasmtime':
+			import wasmtime
+			store = wasmtime.Store()
+			module = wasmtime.Module(
+				store.engine,
+				open(args.MODULE, 'rb').read()
+			)
+			instance = wasmtime.Instance(store, module, [])
+			try:
+				f = instance.exports(store).get(args.FUNCTION)
+			except:
+				print(f'ERROR: Function "{args.FUNCTION}" not found')
+			
+			def convertArgs(parameterTypes, arguments):
+				for param, arg in zip(parameterTypes, arguments):
+					match str(param):
+						case 'f32':
+							yield float(arg)
+						case 'i32':
+							yield int(arg)
+
+			f_args = f.type(store).params
+			invokeArgs = list(convertArgs(f_args, args.ARGS))
+
+			print (f'{args.FUNCTION} (' + ', '.join(map(str,invokeArgs)) + ') =',
+				f(store, *invokeArgs))
 
 	else:
 		loader = LinearIR.FilesystemModuleLoader()
@@ -63,6 +90,7 @@ if __name__=='__main__':
 	runCommand = subparsers.add_parser('run')
 
 	runCommand.add_argument('--wasm', action='store_true')
+	runCommand.add_argument('--wasm-runtime', choices=['wasmer', 'wasmtime'], default='wasmtime')
 
 	runCommand.add_argument('MODULE', type=str)
 	runCommand.add_argument('FUNCTION', type=str)

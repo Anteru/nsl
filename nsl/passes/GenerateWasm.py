@@ -1,6 +1,16 @@
 from nsl import LinearIR, Visitor, WebAssembly
 import collections
-from typing import Tuple, Dict
+from typing import Tuple, Dict, cast
+import math
+
+def _MakeStructForArray(elementType: WebAssembly.Type, length: int | list[int]):
+	if isinstance(length, int):
+		return WebAssembly.StructType(
+			[elementType for _ in range(length)]
+		)
+	else:
+		size = math.prod(length)
+		return _MakeStructForArray(elementType, size)
 
 def _ConvertType(t: LinearIR.Type) -> WebAssembly.ValueType:
 	if t.IsScalar():
@@ -8,8 +18,33 @@ def _ConvertType(t: LinearIR.Type) -> WebAssembly.ValueType:
 			return WebAssembly.ValueType.i32
 		elif isinstance(t, LinearIR.FloatType):
 			return WebAssembly.ValueType.f32
+	elif t.IsArray():
+		at = cast(LinearIR.ArrayType, t)
+		match type(at.ElementType):
+			case LinearIR.FloatType:
+				return _MakeStructForArray(WebAssembly.ValueType.f32, at.Size)
+			case LinearIR.IntegerType:
+				return _MakeStructForArray(WebAssembly.ValueType.i32, at.Size)
+	elif t.IsVector():
+		vt = cast(LinearIR.VectorType, t)
+		match type(vt.ElementType):
+			case LinearIR.FloatType:
+				return _MakeStructForArray(WebAssembly.ValueType.f32, vt.Size)
+	elif t.IsMatrix():
+		mt = cast(LinearIR.MatrixType, t)
 
-	raise Exception('Unsupported type')
+		match type(mt.ElementType):
+			case LinearIR.FloatType:
+				return _MakeStructForArray(WebAssembly.ValueType.f32,
+										   mt.RowCount * mt.ColumnCount)
+	elif t.IsStructure():
+		st = cast(LinearIR.StructureType, t)
+		elements = [_ConvertType(e) for e in st.Fields.values()]
+		return WebAssembly.StructType(elements)
+	elif t.IsVoid():
+		return WebAssembly.HeapType.none
+
+	raise Exception(f'Unsupported type: {t}')
 
 def _ConvertFunctionType(ft: LinearIR.FunctionType) -> WebAssembly.FunctionType:
 	argTypes = []
@@ -117,8 +152,7 @@ class GenerateWasmVisitor(Visitor.DefaultVisitor):
 		elif isinstance(bi.Type, LinearIR.FloatType):
 			operationType = 'f32'
 		else:
-			#TODO Handle error
-			pass
+			raise RuntimeError(f"Unsupported type for binary operation: {bi.Type}")
 
 		for value in bi.Values:
 			self.__PushValueOntoStack(value, ctx)
@@ -130,11 +164,13 @@ class GenerateWasmVisitor(Visitor.DefaultVisitor):
 			LinearIR.OpCode.DIV: 'div',
 
 			LinearIR.OpCode.CMP_EQ: 'eq',
+			LinearIR.OpCode.CMP_LT: 'lt',
+			LinearIR.OpCode.CMP_GT: 'gt'
 		}
 
 		opCode = f'{operationType}.{opCodeMap[bi.OpCode]}'
 
-		if operationType == 'i32' and bi.OpCode in {LinearIR.OpCode.DIV}:
+		if operationType == 'i32' and bi.OpCode not in {LinearIR.OpCode.ADD, LinearIR.OpCode.SUB, LinearIR.OpCode.MUL}:
 			if unsigned:
 				opCode += '_u'
 			else:

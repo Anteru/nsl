@@ -23,7 +23,7 @@ if __name__=='__main__':
         type=int, choices=[0, 1],
         default=0,
         dest='opt_level')
-    parser.add_argument('--wasm', type=argparse.FileType('wb'))
+    parser.add_argument('--wasm', action='store_true')
     parser.add_argument('--verbose', '-v', action='store_true')
     parser.add_argument('FILE', type=argparse.FileType('r'),
         metavar='INPUT')
@@ -40,11 +40,15 @@ if __name__=='__main__':
 
         sys.exit(1)
 
-    if args.wasm:
-        result.WasmModule.WriteTo(args.wasm)
+    if not args.output:
+        print('No output specified')
 
-    if args.output:
+    if args.wasm:
+        result.WasmModule.WriteTo(args.output)
+        print('Wrote WASM file to:', args.output.name)
+    else:
         import pickle
         pickle.dump(result.IRModule, args.output)
-
+        print('Wrote NSLIR file to:', args.output.name)
+    
     sys.exit(0)

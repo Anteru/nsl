@@ -3,3 +3,5 @@ pytest
 sphinx
 wasmer
 wasmer-compiler-cranelift
+wasmtime
+pytest-cov

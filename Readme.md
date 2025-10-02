@@ -13,12 +13,19 @@ All of this is provided under the BSD license. See the `COPYING` file for detail
 Requirements
 ------------
 
-All you need is a working Python 3 installation. `nsl` has been tested with Python 3.4. In a virtualenv, install the dependencies as specified in  `requirements.txt`.
+All you need is a working Python 3 installation. `nsl` has been tested with Python 3.4. In a virtual environment, install the dependencies as specified in  `requirements.txt`.
 
 Running
 -------
 
-To run the tests, simply invoke `./run_tests.sh` from the main directory. To see it compile, use `nsl.py`, which parses a small example shader and pretty prints it back to the console after all compiler passes have been run.
+To run the tests, simply invoke `./run_tests.sh` from the main directory.
+
+For any other code, generate the standard library by calling `nslc.py nsl/stdlib.nsl -o std.nslir` first, then:
+
+* `nslc.py your-test-file.nsl -o your-test-file.nslir` to compile a file
+* `nslr.py run your-test-file.nslir <function name> <arg0> <argN>` to run
+
+To use WebAssembly, specify `--wasm` while compiling as well as running, and use `.wasm` as the file ending.
 
 Status
 ------
