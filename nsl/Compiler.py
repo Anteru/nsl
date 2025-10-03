@@ -79,7 +79,7 @@ class Compiler:
 
 		if debug and buffer.getvalue ():
 			outputFilename = f'{kind.lower()}-pass-{passIndex}-{p.Name}.txt'
-			with open(outputFilename, 'w') as outputFile:
+			with open(outputFilename, 'w', encoding='utf-8') as outputFile:
 				outputFile.write (buffer.getvalue ())
 
 		return True
