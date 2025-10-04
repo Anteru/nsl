@@ -1,11 +1,12 @@
 from nsl import Visitor
 from .. import LinearIR
 
-class RewriteFunctionArgAccessVisitor (Visitor.DefaultVisitor):
-    '''We want to store function arguments in a list for simple access instead
+
+class RewriteFunctionArgAccessVisitor(Visitor.DefaultVisitor):
+    """We want to store function arguments in a list for simple access instead
     of going through a dictionary lookup. In this pass, we will translate any
-    load.arg <name> to load.arg <index> with index being the argument number.'''
-    
+    load.arg <name> to load.arg <index> with index being the argument number."""
+
     def v_Function(self, function: LinearIR.Function, ctx=None):
         mapping = {arg: idx for idx, arg in enumerate(function.Type.Arguments)}
 
@@ -17,7 +18,10 @@ class RewriteFunctionArgAccessVisitor (Visitor.DefaultVisitor):
 
             return instruction
 
+
 def GetPass():
-	import nsl.Pass
-	return nsl.Pass.MakePassFromVisitor(RewriteFunctionArgAccessVisitor (),
-        'rewrite-function-arg-accessor')
+    import nsl.Pass
+
+    return nsl.Pass.MakePassFromVisitor(
+        RewriteFunctionArgAccessVisitor(), "rewrite-function-arg-accessor"
+    )

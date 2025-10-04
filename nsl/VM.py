@@ -1,7 +1,8 @@
 from typing import Dict, Any, List
-from . import (LinearIR, Errors)
+from . import LinearIR, Errors
 import math
 import copy
+
 
 class ExecutionContext:
     def __init__(self, functions, globalScope: Dict[str, Any]):
@@ -14,15 +15,14 @@ class ExecutionContext:
         # Internally, function args are always a flat list for fast access
         # The global invoke method uses key-value pairs though, so we build
         # a flat list and use the provided arguments (or None if nothing was
-        # set)        
-        functionArgs = [args.get(arg, None)
-            for arg in function.Type.Arguments]
+        # set)
+        functionArgs = [args.get(arg, None) for arg in function.Type.Arguments]
 
         return self.__Execute(self.__functions[functionName], functionArgs)
 
     def _Invoke(self, functionName, args):
-        '''Similar to Invoke, but we get a list of args and those are matched
-        to the arguments of the function already.'''
+        """Similar to Invoke, but we get a list of args and those are matched
+        to the arguments of the function already."""
         function = self.__functions[functionName]
 
         return self.__Execute(function, args)
@@ -46,7 +46,9 @@ class ExecutionContext:
             return self.__CreateStructureInstance(varType)
         elif varType.IsArray():
             assert isinstance(varType, LinearIR.ArrayType)
-            result = [self.__CreateInstance(varType.ElementType)] * varType.Size[0]
+            result = [
+                self.__CreateInstance(varType.ElementType)
+            ] * varType.Size[0]
             for dimSize in varType.Size[1:]:
                 result = [result] * dimSize
             return result
@@ -57,14 +59,16 @@ class ExecutionContext:
                 return [0] * primitiveType.Size
             case LinearIR.TypeKind.Matrix:
                 return [
-                        [0] * primitiveType.ColumnCount
-                    ] * primitiveType.RowCount
+                    [0] * primitiveType.ColumnCount
+                ] * primitiveType.RowCount
             case LinearIR.TypeKind.Scalar:
                 return 0
 
-        raise Exception('Cannot create primitive instance')
+        raise Exception("Cannot create primitive instance")
 
-    def __CreateStructureInstance(self, structureType: LinearIR.StructureType) -> object:
+    def __CreateStructureInstance(
+        self, structureType: LinearIR.StructureType
+    ) -> object:
         r = {}
         for name, fieldType in structureType.Fields.items():
             value = self.__CreateInstance(fieldType)
@@ -72,7 +76,7 @@ class ExecutionContext:
         return r
 
     def __Execute(self, function: LinearIR.Function, args):
-        instructions : List[LinearIR.Instruction] = list()
+        instructions: List[LinearIR.Instruction] = list()
         blockOffsets = {}
 
         for bb in function.BasicBlocks:
@@ -83,7 +87,7 @@ class ExecutionContext:
 
         # Register all constants
         for constant in function.Constants:
-            localScope [constant.Reference] = constant.Value
+            localScope[constant.Reference] = constant.Value
 
         currentInstruction = 0
         lastInstruction = len(instructions)
@@ -99,7 +103,9 @@ class ExecutionContext:
                     ref = instruction.Reference
                     match instruction.Scope:
                         case LinearIR.VariableAccessScope.GLOBAL:
-                            localScope[ref] = self.__globalScope[instruction.Variable]
+                            localScope[ref] = self.__globalScope[
+                                instruction.Variable
+                            ]
                         case LinearIR.VariableAccessScope.FUNCTION_ARGUMENT:
                             localScope[ref] = args[instruction.Variable]
                         case LinearIR.VariableAccessScope.FUNCTION_LOCAL:
@@ -107,12 +113,22 @@ class ExecutionContext:
                 case LinearIR.OpCode.STORE:
                     match instruction.Scope:
                         case LinearIR.VariableAccessScope.GLOBAL:
-                            self.__globalScope[instruction.Variable] = localScope[instruction.Store.Reference]
+                            self.__globalScope[instruction.Variable] = (
+                                localScope[instruction.Store.Reference]
+                            )
                         case LinearIR.VariableAccessScope.FUNCTION_ARGUMENT:
-                            args[instruction.Variable] = localScope[instruction.Store.Reference]
+                            args[instruction.Variable] = localScope[
+                                instruction.Store.Reference
+                            ]
                         case LinearIR.VariableAccessScope.FUNCTION_LOCAL:
-                            localScope[instruction.Variable] = localScope[instruction.Store.Reference]
-                case LinearIR.OpCode.LOAD_ARRAY | LinearIR.OpCode.VECTOR_GET | LinearIR.OpCode.MATRIX_GET:
+                            localScope[instruction.Variable] = localScope[
+                                instruction.Store.Reference
+                            ]
+                case (
+                    LinearIR.OpCode.LOAD_ARRAY
+                    | LinearIR.OpCode.VECTOR_GET
+                    | LinearIR.OpCode.MATRIX_GET
+                ):
                     ref = instruction.Reference
                     var = localScope[instruction.Array.Reference][
                         localScope[instruction.Index.Reference]
@@ -190,27 +206,40 @@ class ExecutionContext:
                         case LinearIR.OpCode.VECTOR_MUL:
                             localScope[ref] = [x * y for x, y in zip(op1, op2)]
                         case LinearIR.OpCode.VECTOR_CMP_GT:
-                            localScope[ref] = [1 if x > y else 0 for x, y in zip(op1, op2)]
+                            localScope[ref] = [
+                                1 if x > y else 0 for x, y in zip(op1, op2)
+                            ]
                         case LinearIR.OpCode.VECTOR_CMP_GE:
-                            localScope[ref] = [1 if x >= y else 0 for x, y in zip(op1, op2)]
+                            localScope[ref] = [
+                                1 if x >= y else 0 for x, y in zip(op1, op2)
+                            ]
                         case LinearIR.OpCode.VECTOR_CMP_LT:
-                            localScope[ref] = [1 if x < y else 0 for x, y in zip(op1, op2)]
+                            localScope[ref] = [
+                                1 if x < y else 0 for x, y in zip(op1, op2)
+                            ]
                         case LinearIR.OpCode.VECTOR_CMP_LE:
-                            localScope[ref] = [1 if x <= y else 0 for x, y in zip(op1, op2)]
+                            localScope[ref] = [
+                                1 if x <= y else 0 for x, y in zip(op1, op2)
+                            ]
                         case LinearIR.OpCode.VECTOR_CMP_EQ:
-                            localScope[ref] = [1 if x == y else 0 for x, y in zip(op1, op2)]
+                            localScope[ref] = [
+                                1 if x == y else 0 for x, y in zip(op1, op2)
+                            ]
                         case LinearIR.OpCode.VECTOR_CMP_NE:
-                            localScope[ref] = [1 if x != y else 0 for x, y in zip(op1, op2)]
+                            localScope[ref] = [
+                                1 if x != y else 0 for x, y in zip(op1, op2)
+                            ]
                         case LinearIR.OpCode.VECTOR_MUL_SCALAR:
                             localScope[ref] = [v * op2 for v in op1]
                         case LinearIR.OpCode.VECTOR_DIV_SCALAR:
                             localScope[ref] = [v / op2 for v in op1]
                         case LinearIR.OpCode.MATRIX_MUL_MATRIX:
                             localScope[ref] = self.__MatrixMatrixMultiply(
-                                instruction.Type.Shape, op1, op2)
+                                instruction.Type.Shape, op1, op2
+                            )
                         case _:
                             Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise(
-                                f'Unsupported binary operation: {operation}'
+                                f"Unsupported binary operation: {operation}"
                             )
                 case LinearIR.OpCode.BRANCH:
                     if instruction.Predicate:
@@ -220,12 +249,18 @@ class ExecutionContext:
                         assert instruction.TrueBlock.Reference is not None
                         assert instruction.FalseBlock.Reference is not None
                         if predicate:
-                            currentInstruction = blockOffsets[instruction.TrueBlock.Reference]
+                            currentInstruction = blockOffsets[
+                                instruction.TrueBlock.Reference
+                            ]
                         else:
-                            currentInstruction = blockOffsets[instruction.FalseBlock.Reference]
+                            currentInstruction = blockOffsets[
+                                instruction.FalseBlock.Reference
+                            ]
 
                     else:
-                        currentInstruction = blockOffsets[instruction.TrueBlock.Reference]
+                        currentInstruction = blockOffsets[
+                            instruction.TrueBlock.Reference
+                        ]
                 case LinearIR.OpCode.RETURN:
                     if instruction.Value:
                         return localScope[instruction.Value.Reference]
@@ -233,10 +268,12 @@ class ExecutionContext:
                         return None
                 case LinearIR.OpCode.CALL:
                     args = [
-                        localScope[arg.Reference] for arg in
-                        instruction.Arguments
+                        localScope[arg.Reference]
+                        for arg in instruction.Arguments
                     ]
-                    localScope[instruction.Reference] = self._Invoke(instruction.Function, args)
+                    localScope[instruction.Reference] = self._Invoke(
+                        instruction.Function, args
+                    )
                 case LinearIR.OpCode.NEW_VARIABLE:
                     varType = instruction.Type
                     var = self.__CreateInstance(varType)
@@ -261,7 +298,7 @@ class ExecutionContext:
                         assert isinstance(instruction.Type, LinearIR.FloatType)
 
                         var = float(var)
-                    
+
                     localScope[ref] = var
                 case LinearIR.OpCode.CONSTRUCT_PRIMITIVE:
                     ref = instruction.Reference
@@ -283,24 +320,25 @@ class ExecutionContext:
                         localScope[ref] = var
                     else:
                         Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise(
-                            f'Cannot construct primitive of type: {instruction.Type}'
+                            f"Cannot construct primitive of type: {instruction.Type}"
                         )
                 case LinearIR.OpCode.VECTOR_SET:
                     ref = instruction.Reference
                     var = localScope[instruction.Store.Reference]
                     array = instruction.Array.Reference
                     result = copy.deepcopy(localScope[array])
-                    result [localScope[instruction.Index.Reference]] = var
+                    result[localScope[instruction.Index.Reference]] = var
                     localScope[ref] = result
                 case LinearIR.OpCode.MATRIX_SET:
                     ref = instruction.Reference
                     var = localScope[instruction.Store.Reference]
                     array = instruction.Array.Reference
-                    result = copy.deepcopy (localScope[array])
-                    result [localScope[instruction.Index.Reference]] = var
+                    result = copy.deepcopy(localScope[array])
+                    result[localScope[instruction.Index.Reference]] = var
                     localScope[ref] = result
                 case _:
                     raise Exception(f"Unhandled opcode: {opCode}")
+
 
 class VirtualMachine:
     def __init__(self, program: LinearIR.Program):
@@ -309,11 +347,10 @@ class VirtualMachine:
         self.__ctx = ExecutionContext(program.Functions, self.__globalScope)
 
     def SetGlobal(self, globalVariableName, value):
-        self.__globalScope [globalVariableName] = value
+        self.__globalScope[globalVariableName] = value
 
     def GetGlobal(self, globalVariableName):
         return self.__globalScope[globalVariableName]
 
     def Invoke(self, functionName, **args) -> Any:
         return self.__ctx.Invoke(functionName, **args)
-        

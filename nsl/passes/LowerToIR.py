@@ -2,51 +2,57 @@ from nsl import ast, LinearIR, op, types, Errors, Visitor
 import collections
 from typing import Optional
 
+
 def _CreateLinearIRType(t: types.Type):
     match t:
         case types.Integer():
             return LinearIR.IntegerType()
         case types.UnsignedInteger():
-            return LinearIR.IntegerType (unsigned = True)
+            return LinearIR.IntegerType(unsigned=True)
         case types.Float():
             return LinearIR.FloatType()
         case types.VectorType():
             return LinearIR.VectorType(
-                _CreateLinearIRType(t.GetComponentType()),
-                t.GetComponentCount()
+                _CreateLinearIRType(t.GetComponentType()), t.GetComponentCount()
             )
         case types.MatrixType():
             return LinearIR.MatrixType(
-                LinearIR.VectorType(_CreateLinearIRType(
-                    t.GetComponentType()
-                ), t.GetColumnCount()),  t.GetRowCount()
+                LinearIR.VectorType(
+                    _CreateLinearIRType(t.GetComponentType()),
+                    t.GetColumnCount(),
+                ),
+                t.GetRowCount(),
             )
         case types.Function():
             return LinearIR.FunctionType(
                 _CreateLinearIRType(t.GetReturnType()),
-                collections.OrderedDict([
-                    (k, _CreateLinearIRType(argType)) for k,argType in
-                    t.GetArgumentTypes().items()
-                ])
+                collections.OrderedDict(
+                    [
+                        (k, _CreateLinearIRType(argType))
+                        for k, argType in t.GetArgumentTypes().items()
+                    ]
+                ),
             )
         case types.ArrayType():
-            return LinearIR.ArrayType (
-                _CreateLinearIRType(t.GetComponentType()),
-                t.GetSize()
+            return LinearIR.ArrayType(
+                _CreateLinearIRType(t.GetComponentType()), t.GetSize()
             )
         case types.StructType():
             members = t.GetMembers()
             return LinearIR.StructureType(
-                collections.OrderedDict([
-                    (k, _CreateLinearIRType(members.GetFieldType(k))) 
-                    for k in members.GetSymbolNames()
-                ]),
-                name = t.GetName()
+                collections.OrderedDict(
+                    [
+                        (k, _CreateLinearIRType(members.GetFieldType(k)))
+                        for k in members.GetSymbolNames()
+                    ]
+                ),
+                name=t.GetName(),
             )
         case types.Void():
             return LinearIR.VoidType()
 
     raise Exception("Unhandled type: ", t)
+
 
 class _BreakContinueStatements:
     def __init__(self, breakStatements, continueStatements):
@@ -61,6 +67,7 @@ class _BreakContinueStatements:
         for bs in self.__breakStatements:
             bs.SetTrueBlock(block)
 
+
 class LowerToIRVisitor(Visitor.DefaultVisitor):
     def __init__(self, ctx):
         self.__ctx = ctx
@@ -68,7 +75,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
     @property
     def Module(self) -> LinearIR.Module:
         return self.__ctx.Module
-    
+
     class Context:
         def __init__(self):
             self.__module = LinearIR.Module()
@@ -85,7 +92,9 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
         def OnEnterModule(self, module):
             for g in module.GetDeclarations():
                 for decl in g.GetDeclarations():
-                    self.__globals[decl.GetName()] = LinearIR.VariableAccessScope.GLOBAL
+                    self.__globals[decl.GetName()] = (
+                        LinearIR.VariableAccessScope.GLOBAL
+                    )
 
         def OnLeaveModule(self):
             return self.__module
@@ -99,11 +108,12 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
             self.__locals = {}
             self.__args = {}
             for arg in functionType.Arguments:
-                self.__args[arg] = LinearIR.VariableAccessScope.FUNCTION_ARGUMENT
+                self.__args[arg] = (
+                    LinearIR.VariableAccessScope.FUNCTION_ARGUMENT
+                )
             self.__variables = collections.ChainMap(
-                self.__globals,
-                self.__args,
-                self.__locals)
+                self.__globals, self.__args, self.__locals
+            )
             self.__startNewBlock = True
 
         def OnLeaveFunction(self):
@@ -118,10 +128,10 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
             return self.__variables[name]
 
         def OnEnterNode(self):
-            self.__assignmentValue.append (None)
+            self.__assignmentValue.append(None)
 
         def OnLeaveNode(self):
-            self.__assignmentValue.pop ()
+            self.__assignmentValue.pop()
 
         def BeginAssignment(self, value: LinearIR.Value):
             self.__assignmentValue.append(value)
@@ -131,15 +141,17 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
         def BeginLoop(self):
             breakContinueContainer = collections.namedtuple(
-                'BreakContinueContainer',
-                ['breakStatements', 'continueStatements'],
-                defaults=[[], []])
+                "BreakContinueContainer",
+                ["breakStatements", "continueStatements"],
+                defaults=[[], []],
+            )
             self.__loops.append(breakContinueContainer())
 
         def EndLoop(self) -> _BreakContinueStatements:
             container = self.__loops.pop()
-            return _BreakContinueStatements(container.breakStatements,
-                                            container.continueStatements)
+            return _BreakContinueStatements(
+                container.breakStatements, container.continueStatements
+            )
 
         def RegisterLoopContinue(self, branch: LinearIR.BranchInstruction):
             self.__loops[-1].continueStatements.append(branch)
@@ -149,7 +161,10 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
         @property
         def InAssignment(self) -> bool:
-            return len(self.__assignmentValue) >= 2 and self.__assignmentValue[-2] is not None
+            return (
+                len(self.__assignmentValue) >= 2
+                and self.__assignmentValue[-2] is not None
+            )
 
         @property
         def AssignmentValue(self) -> Optional[LinearIR.Value]:
@@ -175,10 +190,10 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
         def AdaptType(self, t: types.Type) -> LinearIR.Type:
             return _CreateLinearIRType(t)
-    
+
     def GetContext(self):
         return self.__ctx
-    
+
     def __GetFunctionName(self, functionType):
         """Exported functions use their raw name, everything else uses the
         mangled name."""
@@ -190,7 +205,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
     def v_Function(self, function, ctx):
         functionType = function.GetType()
         name = self.__GetFunctionName(functionType)
-        ctx.OnEnterFunction(name, ctx.AdaptType (function.GetType()))
+        ctx.OnEnterFunction(name, ctx.AdaptType(function.GetType()))
         function.GetBody().AcceptVisitor(self, ctx)
         ctx.OnLeaveFunction()
 
@@ -199,8 +214,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
             self.v_Visit(s, ctx)
 
     def v_AffixExpression(self, expr, ctx):
-        constOne = ctx.Function.CreateConstant(
-            ctx.AdaptType (expr.GetType()), 1)
+        constOne = ctx.Function.CreateConstant(ctx.AdaptType(expr.GetType()), 1)
         initialValue = self.v_Visit(expr.GetExpression(), ctx)
         assert isinstance(initialValue, LinearIR.Value)
 
@@ -208,7 +222,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
         opMap = {
             op.Operation.ADD: LinearIR.OpCode.ADD,
-            op.Operation.SUB: LinearIR.OpCode.SUB
+            op.Operation.SUB: LinearIR.OpCode.SUB,
         }
 
         operation = opMap[expr.GetOperation()]
@@ -217,21 +231,15 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
             # Return the value before
             # increment, save again
             instruction = LinearIR.BinaryInstruction(
-                operation,
-                ctx.AdaptType (expr.GetType ()),
-                initialValue,
-                constOne
+                operation, ctx.AdaptType(expr.GetType()), initialValue, constOne
             )
             ctx.BasicBlock.AddInstruction(instruction)
             returnValue = initialValue
         elif expr.IsPrefix():
-            # Return the value after 
+            # Return the value after
             # increment, save again
             instruction = LinearIR.BinaryInstruction(
-                operation,
-                ctx.AdaptType (expr.GetType ()),
-                initialValue,
-                constOne
+                operation, ctx.AdaptType(expr.GetType()), initialValue, constOne
             )
             returnValue = ctx.BasicBlock.AddInstruction(instruction)
         else:
@@ -247,23 +255,25 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
     def v_ForStatement(self, expr: ast.ForStatement, ctx):
         # We split a loop as following: We always run the initializer, then
         # we emit the conditional test (which either continues to the body, or
-        # the exit node.) After the body, we place the increment, and an 
+        # the exit node.) After the body, we place the increment, and an
         # unconditional branch back to the conditional test
-        
-        init = self.v_Visit(expr.GetInitialization (), ctx)
+
+        init = self.v_Visit(expr.GetInitialization(), ctx)
 
         # Basic block containing the conditional test
-        condBB = ctx.CreateBasicBlock ()
+        condBB = ctx.CreateBasicBlock()
         cond = self.v_Visit(expr.GetCondition(), ctx)
         condBranch = LinearIR.BranchInstruction(
             # Will be replaced later
-            None, None,
-            cond)
+            None,
+            None,
+            cond,
+        )
         ctx.BasicBlock.AddInstruction(condBranch)
 
         # Basic block containing the body
-        bodyBB = ctx.CreateBasicBlock ()
-        
+        bodyBB = ctx.CreateBasicBlock()
+
         # We start our loop here, so we can use break/continue inside the body.
         # Those will get fixed up later
         ctx.BeginLoop()
@@ -271,13 +281,13 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
         breakContinueInstructions = ctx.EndLoop()
 
         # Increment operation
-        incrementBB = ctx.CreateBasicBlock ()
-        self.v_Visit(expr.GetNext (), ctx)
+        incrementBB = ctx.CreateBasicBlock()
+        self.v_Visit(expr.GetNext(), ctx)
 
         # Unconditional branch back to the conditional test
         backBranch = LinearIR.BranchInstruction(condBB)
         ctx.BasicBlock.AddInstruction(backBranch)
-        endBB = ctx.CreateBasicBlock ()
+        endBB = ctx.CreateBasicBlock()
 
         # Fix up the condition to either continue with the body, or exit
         condBranch.SetTrueBlock(bodyBB)
@@ -297,7 +307,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
         # Loop body
         ctx.BeginLoop()
         self.v_Visit(expr.GetBody(), ctx)
-        breakContinueInstructions = ctx.EndLoop ()
+        breakContinueInstructions = ctx.EndLoop()
 
         # Conditional jump back to start or to end
         condition = self.v_Visit(expr.GetCondition(), ctx)
@@ -354,9 +364,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
         condition = self.v_Visit(expr.GetCondition(), ctx)
 
         # Insert branch, targets will be set later
-        branch = LinearIR.BranchInstruction(
-            None, None,
-            condition)
+        branch = LinearIR.BranchInstruction(None, None, condition)
         ctx.BasicBlock.AddInstruction(branch)
 
         # Process the "true" side
@@ -367,7 +375,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
         # Add branch to exit
         if expr.HasElsePath():
             exitBranch = LinearIR.BranchInstruction(
-                trueBlock # We will replace this later
+                trueBlock  # We will replace this later
             )
             ctx.BasicBlock.AddInstruction(exitBranch)
             falseBlock = ctx.CreateBasicBlock()
@@ -380,29 +388,29 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
         else:
             branch.SetFalseBlock(bb)
         return bb
-        
+
     def v_ConstructPrimitiveExpression(self, expr, ctx):
         values = [self.v_Visit(e, ctx) for e in expr]
-        
+
         cpi = LinearIR.ConstructPrimitiveInstruction(
-            ctx.AdaptType (expr.GetType()),
-            values)
+            ctx.AdaptType(expr.GetType()), values
+        )
         ctx.BasicBlock.AddInstruction(cpi)
 
         return cpi
 
     def v_LiteralExpression(self, expr, ctx):
         return ctx.Function.CreateConstant(
-            ctx.AdaptType (expr.GetType ()),
-            expr.GetValue())
+            ctx.AdaptType(expr.GetType()), expr.GetValue()
+        )
 
     def v_MemberAccessExpression(self, expr, ctx):
-        parent = expr.GetParent ()
-        member = expr.GetMember ()
+        parent = expr.GetParent()
+        member = expr.GetMember()
         if parent:
             value = self.v_Visit(parent, ctx)
         else:
-            Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise('Invalid member access')
+            Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise("Invalid member access")
             return
 
         assert isinstance(value, LinearIR.Value)
@@ -411,14 +419,14 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
             last = value
 
             swizzleComponentToIndex = {
-                'r' : 0,
-                'g' : 1,
-                'b' : 2,
-                'a' : 3,
-                'x' : 0,
-                'y' : 1,
-                'z' : 2,
-                'w' : 3,
+                "r": 0,
+                "g": 1,
+                "b": 2,
+                "a": 3,
+                "x": 0,
+                "y": 1,
+                "z": 2,
+                "w": 3,
             }
 
             # If it's a load, it's simple -- we just shuffle the elements in
@@ -432,8 +440,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
                 assert isinstance(value, LinearIR.Value)
 
                 si = LinearIR.ShuffleInstruction(
-                    ctx.AdaptType (expr.GetType()),
-                    value, value, indices)
+                    ctx.AdaptType(expr.GetType()), value, value, indices
+                )
                 ctx.BasicBlock.AddInstruction(si)
                 return si
             else:
@@ -448,8 +456,11 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
                 assert isinstance(value, LinearIR.Value)
 
                 si = LinearIR.ShuffleInstruction(
-                    ctx.AdaptType (expr.GetType()),
-                    value, ctx.AssignmentValue, indices)
+                    ctx.AdaptType(expr.GetType()),
+                    value,
+                    ctx.AssignmentValue,
+                    indices,
+                )
                 ctx.BasicBlock.AddInstruction(si)
 
                 ctx.BeginAssignment(si)
@@ -459,10 +470,10 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
                 return result
         else:
             assert isinstance(member, ast.PrimaryExpression)
-            
+
             mai = LinearIR.MemberAccessInstruction(
-                ctx.AdaptType (member.GetType ()),
-                value, member.GetName())
+                ctx.AdaptType(member.GetType()), value, member.GetName()
+            )
             ctx.BasicBlock.AddInstruction(mai)
 
             if ctx.InAssignment:
@@ -472,35 +483,35 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
     def v_PrimaryExpression(self, expr, ctx):
         accessScope = ctx.LookupVariableScope(expr.GetName())
         li = LinearIR.VariableAccessInstruction(
-            ctx.AdaptType (expr.GetType()),
-            expr.GetName (),
-            accessScope)
+            ctx.AdaptType(expr.GetType()), expr.GetName(), accessScope
+        )
 
         if ctx.InAssignment:
             li.SetStore(ctx.AssignmentValue)
-        
+
         ctx.BasicBlock.AddInstruction(li)
         return li
-        
+
     def v_CastExpression(self, ce, ctx):
         castValue = self.v_Visit(ce.GetArgument(), ctx)
 
         assert isinstance(castValue, LinearIR.Value)
 
-        instruction = LinearIR.CastInstruction(castValue,
-            ctx.AdaptType (ce.GetType()))
+        instruction = LinearIR.CastInstruction(
+            castValue, ctx.AdaptType(ce.GetType())
+        )
         ctx.BasicBlock.AddInstruction(instruction)
         return instruction
 
     def __GetMatrixRowType(self, m: LinearIR.MatrixType):
         return LinearIR.VectorType(m.ElementType, m.RowCount)
-            
+
     def v_BinaryExpression(self, be, ctx):
         assert isinstance(be.GetLeft().GetType(), types.PrimitiveType)
         assert isinstance(be.GetRight().GetType(), types.PrimitiveType)
 
-        left = self.v_Visit (be.GetLeft (), ctx)
-        right = self.v_Visit (be.GetRight (), ctx)
+        left = self.v_Visit(be.GetLeft(), ctx)
+        right = self.v_Visit(be.GetRight(), ctx)
 
         assert isinstance(left, LinearIR.Value)
         assert isinstance(right, LinearIR.Value)
@@ -511,8 +522,10 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
             if operation == op.Operation.MUL:
                 mul = LinearIR.BinaryInstruction(
                     LinearIR.OpCode.MATRIX_MUL_MATRIX,
-                    ctx.AdaptType (be.GetType()),
-                    left, right)
+                    ctx.AdaptType(be.GetType()),
+                    left,
+                    right,
+                )
                 ctx.BasicBlock.AddInstruction(mul)
                 return mul
             else:
@@ -521,80 +534,77 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
                 # combined back into a matrix result
                 leftType = left.Type
                 leftRowType = leftType.RowType
-                
+
                 rightType = right.Type
                 rightRowType = rightType.RowType
 
-                resultType = ctx.AdaptType (be.GetType())
+                resultType = ctx.AdaptType(be.GetType())
                 resultRowType = resultType.RowType
                 rows = []
                 for row in range(leftType.RowCount):
                     index = ctx.Function.CreateConstant(
-                        LinearIR.IntegerType(), row)
+                        LinearIR.IntegerType(), row
+                    )
                     leftRow = LinearIR.MatrixAccessInstruction(
-                        leftRowType,
-                        left, index)
+                        leftRowType, left, index
+                    )
                     ctx.BasicBlock.AddInstruction(leftRow)
 
                     rightRow = LinearIR.MatrixAccessInstruction(
-                        rightRowType,
-                        right, index)
+                        rightRowType, right, index
+                    )
                     ctx.BasicBlock.AddInstruction(rightRow)
 
-                    newRow = LinearIR.BinaryInstruction.FromOperation (operation,
-                        resultRowType,
-                        leftRow, rightRow)
+                    newRow = LinearIR.BinaryInstruction.FromOperation(
+                        operation, resultRowType, leftRow, rightRow
+                    )
                     ctx.BasicBlock.AddInstruction(newRow)
                     rows.append(newRow)
 
                 result = LinearIR.ConstructPrimitiveInstruction(
-                    resultType,
-                    rows)
+                    resultType, rows
+                )
                 ctx.BasicBlock.AddInstruction(result)
                 return result
-        elif left.Type.IsMatrix () and right.Type.IsVector ():
+        elif left.Type.IsMatrix() and right.Type.IsVector():
             # M <op> V, needs to get lowered to matrix-vector multiply
             pass
-        elif left.Type.IsMatrix () and right.Type.IsScalar ():
+        elif left.Type.IsMatrix() and right.Type.IsScalar():
             # M <op> S, needs to get lowered to vector-scalar multiply or
             # division
             leftType = left.Type
             leftRowType = leftType.RowType
-            
+
             rightType = left.Type
 
-            resultType = ctx.AdaptType (be.GetType())
+            resultType = ctx.AdaptType(be.GetType())
             resultRowType = resultType.RowType
             rows = []
             for row in range(leftType.RowCount):
                 leftRow = LinearIR.MatrixAccessInstruction(
                     leftRowType,
-                    left, ctx.Function.CreateConstant(
-                        LinearIR.IntegerType(), row
-                    )
+                    left,
+                    ctx.Function.CreateConstant(LinearIR.IntegerType(), row),
                 )
                 ctx.BasicBlock.AddInstruction(leftRow)
 
-                newRow = LinearIR.BinaryInstruction.FromOperation (
-                    be.GetOperation(),
-                    resultRowType,
-                    leftRow, right)
+                newRow = LinearIR.BinaryInstruction.FromOperation(
+                    be.GetOperation(), resultRowType, leftRow, right
+                )
                 ctx.BasicBlock.AddInstruction(newRow)
                 rows.append(newRow)
 
-            result = LinearIR.ConstructPrimitiveInstruction(
-                resultType,
-                rows)
+            result = LinearIR.ConstructPrimitiveInstruction(resultType, rows)
             ctx.BasicBlock.AddInstruction(result)
             return result
-        
-        instruction = LinearIR.BinaryInstruction.FromOperation (
-            be.GetOperation (),
-            ctx.AdaptType (be.GetType()), left, right)
+
+        instruction = LinearIR.BinaryInstruction.FromOperation(
+            be.GetOperation(), ctx.AdaptType(be.GetType()), left, right
+        )
         ctx.BasicBlock.AddInstruction(instruction)
         return instruction
-                    
-    def v_ReturnStatement (self, stmt, ctx):
+
+    def v_ReturnStatement(self, stmt, ctx):
         expr = stmt.GetExpression()
 
         if expr:
@@ -614,25 +624,36 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
     def v_VariableDeclaration(self, vd, ctx):
         ctx.RegisterFunctionLocalVariable(vd.GetName())
         dvi = LinearIR.DeclareVariableInstruction(
-            ctx.AdaptType (vd.GetType ()),
-            vd.GetName(), LinearIR.VariableAccessScope.FUNCTION_LOCAL)
+            ctx.AdaptType(vd.GetType()),
+            vd.GetName(),
+            LinearIR.VariableAccessScope.FUNCTION_LOCAL,
+        )
         ctx.BasicBlock.AddInstruction(dvi)
-    
+
         if vd.HasInitializerExpression():
             initValue = self.v_Visit(vd.GetInitializerExpression(), ctx)
             store = LinearIR.VariableAccessInstruction(
-                ctx.AdaptType (vd.GetType ()), vd.GetName(),
-                LinearIR.VariableAccessScope.FUNCTION_LOCAL)
+                ctx.AdaptType(vd.GetType()),
+                vd.GetName(),
+                LinearIR.VariableAccessScope.FUNCTION_LOCAL,
+            )
             ctx.BasicBlock.AddInstruction(store)
             store.SetStore(initValue)
 
-    def v_Module (self, module: ast.Module, ctx: Context):
+    def v_Module(self, module: ast.Module, ctx: Context):
         import itertools
+
         ctx.OnEnterModule(module)
 
-        ctx.Module.Metadata['functions'] = [f.GetType() for f in module.GetFunctions()]
-        ctx.Module.Metadata['types'] = {d.GetName(): d.GetType() for d in
-                                        itertools.chain(*[gd.GetDeclarations() for gd in module.GetDeclarations()])}
+        ctx.Module.Metadata["functions"] = [
+            f.GetType() for f in module.GetFunctions()
+        ]
+        ctx.Module.Metadata["types"] = {
+            d.GetName(): d.GetType()
+            for d in itertools.chain(
+                *[gd.GetDeclarations() for gd in module.GetDeclarations()]
+            )
+        }
 
         for importName in module.GetImports():
             ctx.Module.AddImport(importName)
@@ -647,22 +668,20 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
     def v_MethodCallExpression(self, expr, ctx):
         args = [self.v_Visit(arg, ctx) for arg in expr]
         ci = LinearIR.CallInstruction(
-            ctx.AdaptType (expr.GetType()),
+            ctx.AdaptType(expr.GetType()),
             expr.GetMemberAccess().member.GetName(),
-            args)
+            args,
+        )
         ctx.BasicBlock.AddInstruction(ci)
         return ci
 
     def v_CallExpression(self, expr, ctx):
         args = [self.v_Visit(arg, ctx) for arg in expr]
         name = self.__GetFunctionName(expr.GetFunction())
-        ci = LinearIR.CallInstruction(
-            ctx.AdaptType (expr.GetType()),
-            name,
-            args)
+        ci = LinearIR.CallInstruction(ctx.AdaptType(expr.GetType()), name, args)
         ctx.BasicBlock.AddInstruction(ci)
         return ci
-    
+
     def v_AssignmentExpression(self, expr, ctx):
         value = self.v_Visit(expr.GetRight(), ctx)
         ctx.BeginAssignment(value)
@@ -685,8 +704,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
         if isVector:
             cai = LinearIR.VectorAccessInstruction(
-                ctx.AdaptType (expr.GetType()),
-                array, index)
+                ctx.AdaptType(expr.GetType()), array, index
+            )
             ctx.BasicBlock.AddInstruction(cai)
 
             if ctx.InAssignment:
@@ -695,19 +714,19 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
                 ctx.BeginAssignment(cai)
                 result = self.v_Visit(expr.GetParent(), ctx)
                 ctx.EndAssignment()
-            
+
                 return result
             else:
                 return cai
         elif isMatrix:
             cai = LinearIR.MatrixAccessInstruction(
-                ctx.AdaptType (expr.GetType()),
-                array, index)
+                ctx.AdaptType(expr.GetType()), array, index
+            )
             ctx.BasicBlock.AddInstruction(cai)
 
             if ctx.InAssignment:
                 cai.SetStore(ctx.AssignmentValue)
-                            
+
                 ctx.BeginAssignment(cai)
                 result = self.v_Visit(expr.GetParent(), ctx)
                 ctx.EndAssignment()
@@ -717,7 +736,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
                 return cai
         else:
             ai = LinearIR.ArrayAccessInstruction(
-                ctx.AdaptType (expr.GetType()), array, index)
+                ctx.AdaptType(expr.GetType()), array, index
+            )
 
             if ctx.InAssignment:
                 ai.SetStore(ctx.AssignmentValue)
@@ -730,11 +750,13 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
     def OnLeave(self, _, ctx):
         ctx.OnLeaveNode()
-        
+
+
 def GetPass():
     import nsl.Pass
-        
+
     ctx = LowerToIRVisitor.Context()
 
-    return nsl.Pass.MakePassFromVisitor(LowerToIRVisitor (ctx),
-        'lower-to-linear-IR')
+    return nsl.Pass.MakePassFromVisitor(
+        LowerToIRVisitor(ctx), "lower-to-linear-IR"
+    )

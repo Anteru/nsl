@@ -1,11 +1,21 @@
 from abc import ABC
-from typing import Callable, DefaultDict, List, Dict, Iterable, Optional, Tuple, Union
+from typing import (
+    Callable,
+    DefaultDict,
+    List,
+    Dict,
+    Iterable,
+    Optional,
+    Tuple,
+    Union,
+)
 from . import op
 from enum import Enum
 import collections
 from . import Errors
 from .Visitor import Node, Visitor
 from collections import defaultdict
+
 
 class OpCode(Enum):
     INVALID = 0
@@ -26,7 +36,7 @@ class OpCode(Enum):
     MUL = 0x1_0004
     DIV = 0x1_0005
     MOD = 0x1_0006
-    
+
     VECTOR_ADD = 0x1_1002
     VECTOR_SUB = 0x1_1003
     VECTOR_MUL = 0x1_1004
@@ -45,7 +55,7 @@ class OpCode(Enum):
     CMP_GE = 0x1_0103
     CMP_NE = 0x1_0104
     CMP_EQ = 0x1_0105
-    
+
     VECTOR_CMP_GT = 0x1_1100
     VECTOR_CMP_LT = 0x1_1101
     VECTOR_CMP_LE = 0x1_1102
@@ -54,11 +64,11 @@ class OpCode(Enum):
     VECTOR_CMP_EQ = 0x1_1105
 
     # logic
-    LG_OR   = 0x1_0300
-    LG_AND  = 0x1_0301
-    LG_NOT  = 0x1_0302
+    LG_OR = 0x1_0300
+    LG_AND = 0x1_0301
+    LG_NOT = 0x1_0302
 
-    BIT_OR  = 0x1_0400
+    BIT_OR = 0x1_0400
     BIT_AND = 0x1_0401
     BIT_NOT = 0x1_0402
     BIT_XOR = 0x1_0403
@@ -69,7 +79,7 @@ class OpCode(Enum):
 
     LOAD = 0x6_0001
     STORE = 0x6_1001
-    
+
     LOAD_ARRAY = 0x6_0002
     STORE_ARRAY = 0x6_1002
 
@@ -84,6 +94,7 @@ class OpCode(Enum):
 
     SHUFFLE = 0x6_0010
 
+
 class TypeKind(Enum):
     Scalar = 1
     Vector = 2
@@ -93,6 +104,7 @@ class TypeKind(Enum):
     Void = 6
     Function = 7
     Unknown = -1
+
 
 class Type:
     @property
@@ -120,10 +132,12 @@ class Type:
     def IsPrimitive(self):
         return self.Kind in {TypeKind.Scalar, TypeKind.Vector, TypeKind.Matrix}
 
+
 class ScalarType(Type):
     @property
     def Kind(self):
         return TypeKind.Scalar
+
 
 class IntegerType(ScalarType):
     def __init__(self, *, unsigned: bool = False):
@@ -135,13 +149,15 @@ class IntegerType(ScalarType):
 
     def __str__(self):
         if self.Unsigned:
-            return 'uint'
-        
-        return 'int'
+            return "uint"
+
+        return "int"
+
 
 class FloatType(ScalarType):
     def __str__(self):
-        return 'float'
+        return "float"
+
 
 class VoidType(Type):
     @property
@@ -149,7 +165,8 @@ class VoidType(Type):
         return TypeKind.Void
 
     def __str__(self):
-        return 'void'
+        return "void"
+
 
 class FunctionType(Type):
     def __init__(self, returnType: Type, arguments: Dict[str, Type]):
@@ -167,6 +184,7 @@ class FunctionType(Type):
     @property
     def ReturnType(self):
         return self.__returnType
+
 
 class VectorType(Type):
     def __init__(self, elementType: ScalarType, size: int):
@@ -186,14 +204,15 @@ class VectorType(Type):
         return self.__elementType
 
     def __str__(self):
-        return f'<{self.Size} × {self.ElementType}>'
+        return f"<{self.Size} × {self.ElementType}>"
+
 
 class MatrixType(Type):
     def __init__(self, rowType: VectorType, rowCount: int):
         self.__rowType = rowType
         self.__rowCount = rowCount
         self.__columnCount = rowType.Size
-    
+
     @property
     def Kind(self):
         return TypeKind.Matrix
@@ -219,10 +238,11 @@ class MatrixType(Type):
         return (self.__columnCount, self.__rowCount)
 
     def __str__(self):
-        return f'<{self.RowCount} × {self.RowType}>'
+        return f"<{self.RowCount} × {self.RowType}>"
+
 
 class StructureType(Type):
-    def __init__(self, fields: Dict[str, Type], *, name: str =''):
+    def __init__(self, fields: Dict[str, Type], *, name: str = ""):
         self.__fields = fields
         self.__name = name
 
@@ -233,13 +253,16 @@ class StructureType(Type):
     @property
     def Name(self):
         return self.__name
-    
+
     @property
     def Kind(self):
         return TypeKind.Structure
 
     def __str__(self):
-        return '{' + ', '.join([f'{v} {k}' for k,v in self.Fields.items()]) + '}'
+        return (
+            "{" + ", ".join([f"{v} {k}" for k, v in self.Fields.items()]) + "}"
+        )
+
 
 class ArrayType(Type):
     def __init__(self, elementType: Type, size: List[int]):
@@ -259,7 +282,8 @@ class ArrayType(Type):
         return self.__elementType
 
     def __str__(self):
-        return f'{self.ElementType}' + ''.join([f'[{s}]' for s in self.__size])
+        return f"{self.ElementType}" + "".join([f"[{s}]" for s in self.__size])
+
 
 class Value(Node):
     # A value consists of a type and a reference, which uniquely identifies the
@@ -280,6 +304,7 @@ class Value(Node):
         assert number >= 0
         self.__reference = number
 
+
 class ConstantValue(Value):
     def __init__(self, valueType: Type, constantValue: Union[float, int, bool]):
         super().__init__(valueType)
@@ -290,7 +315,8 @@ class ConstantValue(Value):
         return self.__value
 
     def __str__(self):
-        return f'{self.Type}({self.Value})'
+        return f"{self.Type}({self.Value})"
+
 
 class ValueUser(Value):
     def __init__(self, valueType: Type):
@@ -305,17 +331,18 @@ class ValueUser(Value):
         # Replace all uses referencing ``ref`` with the new value
         raise NotImplementedError
 
+
 class Instruction(ValueUser, ABC):
     def __init__(self, opCode: OpCode, returnType: Type):
         super().__init__(returnType)
         self.__parent = None
         self.__opcode = opCode
 
-    def SetParent(self, basicBlock: 'BasicBlock'):
+    def SetParent(self, basicBlock: "BasicBlock"):
         self.__parent = basicBlock
 
     @property
-    def Parent(self) -> Optional['BasicBlock']:
+    def Parent(self) -> Optional["BasicBlock"]:
         return self.__parent
 
     @property
@@ -325,10 +352,13 @@ class Instruction(ValueUser, ABC):
     def _SetOpCode(self, opcode: OpCode):
         self.__opcode = opcode
 
-    def _ReplaceUsesInList(self, valueList: List[Value], ref: int, newValue: Value):
+    def _ReplaceUsesInList(
+        self, valueList: List[Value], ref: int, newValue: Value
+    ):
         for i in range(len(valueList)):
             if valueList[i].Reference == ref:
                 valueList[i] = newValue
+
 
 class BasicBlock(Value):
     def __init__(self, function: "Function"):
@@ -375,7 +405,9 @@ class BasicBlock(Value):
                     break
         return None
 
-    def _Traverse(self, function: Callable[[List[Instruction]], List[Instruction]]):
+    def _Traverse(
+        self, function: Callable[[List[Instruction]], List[Instruction]]
+    ):
         self.__replacements = {}
         self.__replaceUses = {}
         self.__instructions = function(self.__instructions)
@@ -413,8 +445,9 @@ class BasicBlock(Value):
         self.__instructions.append(instruction)
         return instruction
 
-    def AddInstructionBefore(self, instruction: Instruction,
-                            insertionPoint: Instruction):
+    def AddInstructionBefore(
+        self, instruction: Instruction, insertionPoint: Instruction
+    ):
         for i, e in enumerate(self.__instructions):
             if e == insertionPoint:
                 self.__instructions.insert(i, instruction)
@@ -424,8 +457,9 @@ class BasicBlock(Value):
         self.__function.RegisterValue(instruction)
         return instruction
 
-    def AddInstructionAfter(self, instruction: Instruction,
-                            insertionPoint: Instruction):
+    def AddInstructionAfter(
+        self, instruction: Instruction, insertionPoint: Instruction
+    ):
         for i, e in enumerate(self.__instructions):
             if e == insertionPoint:
                 self.__instructions.insert(i + 1, instruction)
@@ -465,6 +499,7 @@ class BasicBlock(Value):
 
         self.__instructions = newInstructions
 
+
 class Function(Value):
     def __init__(self, name: str, functionType: FunctionType):
         super().__init__(functionType)
@@ -475,9 +510,9 @@ class Function(Value):
         self.__uses = defaultdict(list)
 
     def CreateBasicBlock(self):
-        bb = BasicBlock (self)
+        bb = BasicBlock(self)
         self.RegisterValue(bb)
-        self.__basicBlocks.append (bb)
+        self.__basicBlocks.append(bb)
         return bb
 
     def UpdateUses(self):
@@ -486,8 +521,8 @@ class Function(Value):
 
         for bb in self.BasicBlocks:
             bb.UpdateUses()
-            self.__uses.update (bb.Uses)
-    
+            self.__uses.update(bb.Uses)
+
     @property
     def BasicBlocks(self):
         return self.__basicBlocks
@@ -499,7 +534,9 @@ class Function(Value):
             result.extend(bb.Instructions)
         return result
 
-    def _Traverse(self, function: Callable[[List[BasicBlock]], List[BasicBlock]]):
+    def _Traverse(
+        self, function: Callable[[List[BasicBlock]], List[BasicBlock]]
+    ):
         self.__basicBlocks = function(self.__basicBlocks)
 
     def RegisterValue(self, value: Value):
@@ -508,17 +545,19 @@ class Function(Value):
         self.__values.append(value)
         return n
 
-    def CreateConstant(self, constantType: Type, value: Union[int, float, bool]):
+    def CreateConstant(
+        self, constantType: Type, value: Union[int, float, bool]
+    ):
         result = self.__constants.get(value, None)
         if result:
             return result
-        
+
         cv = ConstantValue(constantType, value)
-        self.RegisterValue (cv)
+        self.RegisterValue(cv)
         self.__constants[value] = cv
 
         return cv
-    
+
     @property
     def Constants(self):
         return self.__constants.values()
@@ -535,6 +574,7 @@ class Function(Value):
         # We have replaced uses across several basic blocks, we need to let them
         # know that their uses are no longer valid
         self.UpdateUses()
+
 
 class Module(Node):
     def __init__(self):
@@ -565,17 +605,21 @@ class Module(Node):
         return f
 
     def CreateGlobalVariable(self, name: str, variableType: Type):
-        self.__globals[name]= variableType
+        self.__globals[name] = variableType
 
     def AddImport(self, name: str):
         self.__imports.add(name)
 
-    def _Traverse(self, function: Callable[[Dict[str, Function]], Dict[str, Function]]):
+    def _Traverse(
+        self, function: Callable[[Dict[str, Function]], Dict[str, Function]]
+    ):
         self.__functions = function(self.__functions)
 
+
 class BinaryInstruction(Instruction):
-    def __init__(self, operation: OpCode, returnType: Type,
-        v1: Value, v2: Value):
+    def __init__(
+        self, operation: OpCode, returnType: Type, v1: Value, v2: Value
+    ):
         super().__init__(operation, returnType)
         self.__values = [v1, v2]
 
@@ -587,8 +631,9 @@ class BinaryInstruction(Instruction):
         return [v.Reference for v in self.__values]
 
     @staticmethod
-    def FromOperation(operation: op.Operation, returnType: Type,
-        v1: Value, v2: Value):
+    def FromOperation(
+        operation: op.Operation, returnType: Type, v1: Value, v2: Value
+    ):
         assert returnType.IsPrimitive()
         assert v1.Type.IsPrimitive()
         assert v2.Type.IsPrimitive()
@@ -596,16 +641,13 @@ class BinaryInstruction(Instruction):
         if returnType.IsScalar():
             mapping = {
                 op.Operation.ASSIGN: OpCode.ASSIGN,
-
                 op.Operation.ADD: OpCode.ADD,
                 op.Operation.MUL: OpCode.MUL,
                 op.Operation.SUB: OpCode.SUB,
                 op.Operation.DIV: OpCode.DIV,
                 op.Operation.MOD: OpCode.MOD,
-
                 op.Operation.LG_AND: OpCode.LG_AND,
                 op.Operation.LG_OR: OpCode.LG_OR,
-                
                 op.Operation.CMP_GT: OpCode.CMP_GT,
                 op.Operation.CMP_GE: OpCode.CMP_GE,
                 op.Operation.CMP_LT: OpCode.CMP_LT,
@@ -616,12 +658,10 @@ class BinaryInstruction(Instruction):
         elif returnType.IsVector():
             mapping = {
                 op.Operation.ASSIGN: OpCode.ASSIGN,
-
                 op.Operation.ADD: OpCode.VECTOR_ADD,
                 op.Operation.MUL: OpCode.VECTOR_MUL,
                 op.Operation.SUB: OpCode.VECTOR_SUB,
                 op.Operation.DIV: OpCode.VECTOR_DIV,
-                
                 op.Operation.CMP_GT: OpCode.VECTOR_CMP_GT,
                 op.Operation.CMP_GE: OpCode.VECTOR_CMP_GE,
                 op.Operation.CMP_LT: OpCode.VECTOR_CMP_LT,
@@ -631,25 +671,37 @@ class BinaryInstruction(Instruction):
             }
         else:
             Errors.ERROR_INTERNAL_COMPILER_ERROR.Raise(
-                f"Cannot lower binary operation {operation} with types: {v1.Type}, {v2.Type}")
+                f"Cannot lower binary operation {operation} with types: {v1.Type}, {v2.Type}"
+            )
 
-        if operation == op.Operation.MUL and v1.Type.IsVector () and v2.Type.IsScalar():
-            return BinaryInstruction(OpCode.VECTOR_MUL_SCALAR, returnType,
-                v1, v2)
-        elif operation == op.Operation.DIV and v1.Type.IsVector () and v2.Type.IsScalar ():
-            return BinaryInstruction(OpCode.VECTOR_DIV_SCALAR, returnType,
-                v1, v2)        
+        if (
+            operation == op.Operation.MUL
+            and v1.Type.IsVector()
+            and v2.Type.IsScalar()
+        ):
+            return BinaryInstruction(
+                OpCode.VECTOR_MUL_SCALAR, returnType, v1, v2
+            )
+        elif (
+            operation == op.Operation.DIV
+            and v1.Type.IsVector()
+            and v2.Type.IsScalar()
+        ):
+            return BinaryInstruction(
+                OpCode.VECTOR_DIV_SCALAR, returnType, v1, v2
+            )
 
-        return BinaryInstruction(mapping[operation], returnType,
-            v1, v2)
+        return BinaryInstruction(mapping[operation], returnType, v1, v2)
 
     @property
     def Values(self):
         return self.__values
 
+
 class CompareInstruction(Instruction):
-    def __init__(self, predicate: OpCode, returnType: Type,
-        v1: Value, v2: Value):
+    def __init__(
+        self, predicate: OpCode, returnType: Type, v1: Value, v2: Value
+    ):
         super().__init__(predicate, returnType)
         self.__values = [v1, v2]
 
@@ -660,10 +712,14 @@ class CompareInstruction(Instruction):
     def Uses(self):
         return [v.Reference for v in self.__values]
 
+
 class BranchInstruction(Instruction):
-    def __init__(self, trueBlock: Optional[BasicBlock],
+    def __init__(
+        self,
+        trueBlock: Optional[BasicBlock],
         falseBlock: Optional[BasicBlock] = None,
-        predicate: Optional[Value] = None):
+        predicate: Optional[Value] = None,
+    ):
         super().__init__(OpCode.BRANCH, VoidType())
         self.__trueBlock: Optional[BasicBlock] = trueBlock
         self.__falseBlock: Optional[BasicBlock] = falseBlock
@@ -709,6 +765,7 @@ class BranchInstruction(Instruction):
     def Predicate(self):
         return self.__predicate
 
+
 class UnaryInstruction(Instruction):
     def __init__(self, operation: OpCode, returnType: Type, value: Value):
         super().__init__(operation, returnType)
@@ -726,9 +783,11 @@ class UnaryInstruction(Instruction):
     def Uses(self):
         yield self.__value.Reference
 
+
 class CastInstruction(UnaryInstruction):
     def __init__(self, value: Value, targetType: Type):
         super().__init__(OpCode.CAST, targetType, value)
+
 
 class ReturnInstruction(Instruction):
     def __init__(self, value: Optional[Value] = None):
@@ -753,14 +812,15 @@ class ReturnInstruction(Instruction):
         else:
             return []
 
+
 class VariableAccessScope(Enum):
     GLOBAL = 0
     FUNCTION_ARGUMENT = 1
     FUNCTION_LOCAL = 2
 
+
 class ConstructPrimitiveInstruction(Instruction):
-    def __init__(self, returnType: Type,
-        items: List[Value]):
+    def __init__(self, returnType: Type, items: List[Value]):
         super().__init__(OpCode.CONSTRUCT_PRIMITIVE, returnType)
         self.__values = items
 
@@ -775,9 +835,15 @@ class ConstructPrimitiveInstruction(Instruction):
     def Uses(self):
         return [v.Reference for v in self.__values]
 
+
 class MemberAccessInstruction(Instruction):
-    def __init__(self, memberType: Type, variable: Value, member: str,
-        accessScope: VariableAccessScope = VariableAccessScope.FUNCTION_LOCAL):
+    def __init__(
+        self,
+        memberType: Type,
+        variable: Value,
+        member: str,
+        accessScope: VariableAccessScope = VariableAccessScope.FUNCTION_LOCAL,
+    ):
         super().__init__(OpCode.LOAD_MEMBER, memberType)
         self.__variable = variable
         self.__member = member
@@ -797,7 +863,7 @@ class MemberAccessInstruction(Instruction):
         return self.__scope
 
     def SetStore(self, destination: Value):
-        self._SetOpCode (OpCode.STORE_MEMBER)
+        self._SetOpCode(OpCode.STORE_MEMBER)
         self.__store = destination
 
     @property
@@ -817,11 +883,15 @@ class MemberAccessInstruction(Instruction):
         if self.__store:
             yield self.__store.Reference
 
+
 class ShuffleInstruction(Instruction):
-    def __init__(self, returnType: VectorType,
+    def __init__(
+        self,
+        returnType: VectorType,
         first: Value,
         second: Value,
-        indices: List[int]):
+        indices: List[int],
+    ):
         super().__init__(OpCode.SHUFFLE, returnType)
         self.__first = first
         self.__second = second
@@ -842,7 +912,7 @@ class ShuffleInstruction(Instruction):
     def ReplaceUses(self, ref, newValue):
         if self.__first.Reference == ref:
             self.__first = newValue
-        
+
         if self.__second.Reference == ref:
             self.__second = newValue
 
@@ -851,9 +921,14 @@ class ShuffleInstruction(Instruction):
         yield self.__first.Reference
         yield self.__second.Reference
 
+
 class VariableAccessInstruction(Instruction):
-    def __init__(self, returnType: Type, variableName: Union[str, int],
-            accessScope: VariableAccessScope = VariableAccessScope.GLOBAL):
+    def __init__(
+        self,
+        returnType: Type,
+        variableName: Union[str, int],
+        accessScope: VariableAccessScope = VariableAccessScope.GLOBAL,
+    ):
         super().__init__(OpCode.LOAD, returnType)
         self.__variable = variableName
         self.__store = None
@@ -861,8 +936,9 @@ class VariableAccessInstruction(Instruction):
 
     def WithVariable(self, newVariableName: Union[str, int]):
         """Create a copy of this instruction with a different variable name."""
-        result = VariableAccessInstruction(self.Type, newVariableName,
-            self.__scope)
+        result = VariableAccessInstruction(
+            self.Type, newVariableName, self.__scope
+        )
         if self.Store:
             result.SetStore(self.Store)
         result.SetParent(self.Parent)
@@ -896,9 +972,11 @@ class VariableAccessInstruction(Instruction):
         else:
             return []
 
+
 class CallInstruction(Instruction):
-    def __init__(self, returnType: Type, functionName: str,
-        arguments: List[Value] = []):
+    def __init__(
+        self, returnType: Type, functionName: str, arguments: List[Value] = []
+    ):
         super().__init__(OpCode.CALL, returnType)
         self.__function = functionName
         self.__arguments = arguments
@@ -918,9 +996,15 @@ class CallInstruction(Instruction):
     def Uses(self):
         return [a.Reference for a in self.__arguments]
 
+
 class _IndexedAccessBase(Instruction):
-    def __init__(self, returnType: Type, array: Value, index: Value,
-        opCodes: Tuple[OpCode, OpCode]):
+    def __init__(
+        self,
+        returnType: Type,
+        array: Value,
+        index: Value,
+        opCodes: Tuple[OpCode, OpCode],
+    ):
         super().__init__(opCodes[0], returnType)
 
         assert index.Type.IsScalar()
@@ -966,27 +1050,35 @@ class _IndexedAccessBase(Instruction):
         if self.__store:
             yield self.__store.Reference
 
+
 class ArrayAccessInstruction(_IndexedAccessBase):
     def __init__(self, returnType: Type, array: Value, index: Value):
-        super().__init__(returnType, array, index,
-            (OpCode.LOAD_ARRAY, OpCode.STORE_ARRAY))
+        super().__init__(
+            returnType, array, index, (OpCode.LOAD_ARRAY, OpCode.STORE_ARRAY)
+        )
         assert array.Type.IsArray()
+
 
 class VectorAccessInstruction(_IndexedAccessBase):
     def __init__(self, returnType: Type, vector: Value, index: Value):
-        super().__init__(returnType, vector, index,
-            (OpCode.VECTOR_GET, OpCode.VECTOR_SET))
+        super().__init__(
+            returnType, vector, index, (OpCode.VECTOR_GET, OpCode.VECTOR_SET)
+        )
         assert vector.Type.IsVector()
+
 
 class MatrixAccessInstruction(_IndexedAccessBase):
     def __init__(self, returnType: Type, matrix: Value, index: Value):
-        super().__init__(returnType, matrix, index,
-            (OpCode.MATRIX_GET, OpCode.MATRIX_SET))
+        super().__init__(
+            returnType, matrix, index, (OpCode.MATRIX_GET, OpCode.MATRIX_SET)
+        )
         assert matrix.Type.IsMatrix()
 
+
 class DeclareVariableInstruction(Instruction):
-    def __init__(self, variableType, name = None,
-        scope = VariableAccessScope.GLOBAL):
+    def __init__(
+        self, variableType, name=None, scope=VariableAccessScope.GLOBAL
+    ):
         super().__init__(OpCode.NEW_VARIABLE, variableType)
         self.__name = name
         self.__scope = scope
@@ -1005,192 +1097,240 @@ class DeclareVariableInstruction(Instruction):
     def SetReference(self, reference: int):
         super().SetReference(reference)
         if self.__name is None:
-            self.__name = f'${self.Reference}'
+            self.__name = f"${self.Reference}"
+
 
 class InstructionPrinter(Visitor):
     def __init__(self, printFunction=print):
         self.__printFunction = printFunction
 
-    def __Print(self, *args, end='\n'):
+    def __Print(self, *args, end="\n"):
         self.__printFunction(*args, end=end)
 
     def __FormatReference(self, v: Value):
         if isinstance(v, ConstantValue):
             return str(v.Value)
         else:
-            return f'%{v.Reference}'
+            return f"%{v.Reference}"
 
     def __FormatType(self, t: Type):
         return str(t)
 
     def __FormatLabel(self, label: Value):
-        return f'label bb_{label.Reference}'
+        return f"label bb_{label.Reference}"
 
     def Print(self, i):
         self.v_Visit(i)
 
     def v_Function(self, function: Function, ctx=None):
-        self.__Print('function', function.Name,
-            '(' + ', '.join(map(str, function.Type.Arguments)) + ')')
+        self.__Print(
+            "function",
+            function.Name,
+            "(" + ", ".join(map(str, function.Type.Arguments)) + ")",
+        )
         for basicBlock in function.BasicBlocks:
             self.v_Visit(basicBlock, 1)
         self.__Print()
 
     def v_BasicBlock(self, bb: BasicBlock, ctx=None):
-        self.__Print(f'bb_{bb.Reference}: ')
+        self.__Print(f"bb_{bb.Reference}: ")
         for i in bb.Instructions:
-            self.__Print(' ' * (ctx * 4), end='')
+            self.__Print(" " * (ctx * 4), end="")
             self.v_Visit(i, ctx + 1)
-    
+
     def v_ReturnInstruction(self, ri: ReturnInstruction, ctx=None):
         if ri.Value:
-            self.__Print('ret', self.__FormatReference(ri.Value))
+            self.__Print("ret", self.__FormatReference(ri.Value))
         else:
-            self.__Print('ret')
+            self.__Print("ret")
 
     def v_CastInstruction(self, ci: CastInstruction, ctx=None):
-        self.__Print(self.__FormatReference(ci), '=',
-            f'cast {self.__FormatType(ci.Type)}',
-            self.__FormatReference (ci.Value))
+        self.__Print(
+            self.__FormatReference(ci),
+            "=",
+            f"cast {self.__FormatType(ci.Type)}",
+            self.__FormatReference(ci.Value),
+        )
 
     def v_BinaryInstruction(self, bi: BinaryInstruction, ctx=None):
-        self.__Print(self.__FormatReference(bi), '=',
-            f'{bi.OpCode.name.lower()} {self.__FormatType(bi.Type)}',
+        self.__Print(
+            self.__FormatReference(bi),
+            "=",
+            f"{bi.OpCode.name.lower()} {self.__FormatType(bi.Type)}",
             self.__FormatReference(bi.Values[0]),
-            self.__FormatReference(bi.Values[1]))
+            self.__FormatReference(bi.Values[1]),
+        )
 
     def v_CallInstruction(self, ci: CallInstruction, ctx=None):
-        self.__Print(self.__FormatReference(ci), '=',
-            'call',
+        self.__Print(
+            self.__FormatReference(ci),
+            "=",
+            "call",
             self.__FormatType(ci.Type),
             ci.Function,
-            ", ".join([self.__FormatReference(arg) for arg in ci.Arguments]))
+            ", ".join([self.__FormatReference(arg) for arg in ci.Arguments]),
+        )
 
     def __FormatScope(self, vas: VariableAccessScope):
         if vas == VariableAccessScope.GLOBAL:
-            return 'global'
+            return "global"
         elif vas == VariableAccessScope.FUNCTION_ARGUMENT:
-            return 'arg'
+            return "arg"
         else:
-            return 'local'
+            return "local"
 
-    def v_VariableAccessInstruction(self, li: VariableAccessInstruction, ctx=None):
+    def v_VariableAccessInstruction(
+        self, li: VariableAccessInstruction, ctx=None
+    ):
         scope = self.__FormatScope(li.Scope)
 
         if li.Store:
-            self.__Print(f'store.{scope}',
+            self.__Print(
+                f"store.{scope}",
                 self.__FormatType(li.Type),
                 li.Variable,
-                self.__FormatReference(li.Store))
+                self.__FormatReference(li.Store),
+            )
         else:
-            self.__Print(self.__FormatReference(li), '=',
-                f'load.{scope}',
+            self.__Print(
+                self.__FormatReference(li),
+                "=",
+                f"load.{scope}",
                 self.__FormatType(li.Type),
-                li.Variable)
+                li.Variable,
+            )
 
     def v_ArrayAccessInstruction(self, aai: ArrayAccessInstruction, ctx=None):
         if aai.Store:
-            self.__Print(f'store',
+            self.__Print(
+                f"store",
                 self.__FormatReference(aai.Array),
                 self.__FormatReference(aai.Index),
-                self.__FormatReference(aai.Store))
+                self.__FormatReference(aai.Store),
+            )
         else:
-            self.__Print(self.__FormatReference(aai), '=',
-                f'load',
+            self.__Print(
+                self.__FormatReference(aai),
+                "=",
+                f"load",
                 self.__FormatType(aai.Type),
                 self.__FormatReference(aai.Array),
-                self.__FormatReference(aai.Index))
+                self.__FormatReference(aai.Index),
+            )
 
-    def __printAccessInstruction(self, read: str, write: str,
-        instruction: _IndexedAccessBase, ctx=None):
+    def __printAccessInstruction(
+        self, read: str, write: str, instruction: _IndexedAccessBase, ctx=None
+    ):
         if instruction.Store:
             self.__Print(
-                self.__FormatReference(instruction), '=',
+                self.__FormatReference(instruction),
+                "=",
                 write,
                 self.__FormatReference(instruction.Array),
                 self.__FormatReference(instruction.Index),
-                self.__FormatReference(instruction.Store))
+                self.__FormatReference(instruction.Store),
+            )
         else:
-            self.__Print(self.__FormatReference(instruction), '=',
+            self.__Print(
+                self.__FormatReference(instruction),
+                "=",
                 read,
                 self.__FormatType(instruction.Type),
                 self.__FormatReference(instruction.Array),
-                self.__FormatReference(instruction.Index))
-
+                self.__FormatReference(instruction.Index),
+            )
 
     def v_VectorAccessInstruction(self, vai: VectorAccessInstruction, ctx=None):
-        self.__printAccessInstruction('vectorget', 'vectorset',
-            vai, ctx)
+        self.__printAccessInstruction("vectorget", "vectorset", vai, ctx)
 
     def v_MatrixAccessInstruction(self, mai: MatrixAccessInstruction, ctx=None):
-        self.__printAccessInstruction('matrixget', 'matrixset',
-            mai, ctx)
+        self.__printAccessInstruction("matrixget", "matrixset", mai, ctx)
 
     def v_MemberAccessInstruction(self, mai: MemberAccessInstruction, ctx=None):
         if mai.Store:
             self.__Print(
-                f'fieldset',
+                f"fieldset",
                 self.__FormatReference(mai.Parent),
                 mai.Member,
-                self.__FormatReference(mai.Store))
+                self.__FormatReference(mai.Store),
+            )
         else:
-            self.__Print(self.__FormatReference(mai), '=',
-                f'fieldget',
+            self.__Print(
+                self.__FormatReference(mai),
+                "=",
+                f"fieldget",
                 self.__FormatType(mai.Type),
                 self.__FormatReference(mai.Parent),
-                mai.Member)
+                mai.Member,
+            )
 
     def v_BranchInstruction(self, bi: BranchInstruction, ctx=None):
         if bi.Predicate is None:
-            self.__Print('branch', self.__FormatLabel(bi.TrueBlock))
+            self.__Print("branch", self.__FormatLabel(bi.TrueBlock))
         else:
-            self.__Print('branch', self.__FormatReference(bi.Predicate), end='')
-            self.__Print(',', self.__FormatLabel (bi.TrueBlock), end='')
+            self.__Print("branch", self.__FormatReference(bi.Predicate), end="")
+            self.__Print(",", self.__FormatLabel(bi.TrueBlock), end="")
             if bi.FalseBlock:
-                self.__Print(',', self.__FormatLabel (bi.FalseBlock), end='')
+                self.__Print(",", self.__FormatLabel(bi.FalseBlock), end="")
             self.__Print()
 
-    def v_DeclareVariableInstruction(self, dvi: DeclareVariableInstruction, ctx=None):
+    def v_DeclareVariableInstruction(
+        self, dvi: DeclareVariableInstruction, ctx=None
+    ):
         scope = self.__FormatScope(dvi.Scope)
-        self.__Print(self.__FormatReference(dvi), '=',
-            f'var.{scope}',
+        self.__Print(
+            self.__FormatReference(dvi),
+            "=",
+            f"var.{scope}",
             self.__FormatType(dvi.Type),
-            dvi.Name)
+            dvi.Name,
+        )
 
-    def v_ConstructPrimitiveInstruction(self, cpi: ConstructPrimitiveInstruction, ctx=None):
-        self.__Print(self.__FormatReference(cpi), '=',
-            'constructprimitive',
+    def v_ConstructPrimitiveInstruction(
+        self, cpi: ConstructPrimitiveInstruction, ctx=None
+    ):
+        self.__Print(
+            self.__FormatReference(cpi),
+            "=",
+            "constructprimitive",
             self.__FormatType(cpi.Type),
-            ', '.join([self.__FormatReference(v) for v in cpi.Values]))
+            ", ".join([self.__FormatReference(v) for v in cpi.Values]),
+        )
 
     def v_ShuffleInstruction(self, si: ShuffleInstruction, ctx=None):
-        self.__Print(self.__FormatReference(si), '=',
-            'shuffle',
+        self.__Print(
+            self.__FormatReference(si),
+            "=",
+            "shuffle",
             self.__FormatReference(si.First),
             self.__FormatReference(si.Second),
-            ', '.join(map(str, si.Indices)))
+            ", ".join(map(str, si.Indices)),
+        )
 
 
 class ModuleLoader:
     def Load(self, moduleName: str) -> Module:
         raise NotImplementedError
 
+
 class FilesystemModuleLoader(ModuleLoader):
     def Load(self, moduleName: str) -> Module:
         import pickle
         import pathlib
+
         # Try to open the full path first, and if missing, try with '.nslir'
         path = pathlib.Path(moduleName)
         if path.exists():
-            module = pickle.load(path.open('rb'))
+            module = pickle.load(path.open("rb"))
         else:
-            path = path.with_suffix('.nslir')
+            path = path.with_suffix(".nslir")
             if path.exists():
-                module = pickle.load(path.open('rb'))
+                module = pickle.load(path.open("rb"))
             else:
                 raise RuntimeError(f"Could not find module '{moduleName}'")
         assert isinstance(module, Module)
         return module
+
 
 class MemoryModuleLoader(ModuleLoader):
     def __init__(self):
@@ -1201,6 +1341,7 @@ class MemoryModuleLoader(ModuleLoader):
 
     def Load(self, moduleName: str) -> Module:
         return self.__modules[moduleName]
+
 
 class Program:
     def __init__(self, functions, globalSymbols):
@@ -1215,21 +1356,22 @@ class Program:
     def Globals(self):
         return self.__globals
 
+
 class Linker:
-    def __init__(self, *, loader = FilesystemModuleLoader()):
+    def __init__(self, *, loader=FilesystemModuleLoader()):
         self.__modules = []
         self.__functions = {}
-        self.__globals =  {}
+        self.__globals = {}
         self.__loader = loader
         self.__pendingImports = set()
 
     def AddModule(self, module: Module):
         self.__modules.append(module)
-        for k,v in module.Functions.items():
+        for k, v in module.Functions.items():
             assert k not in self.__functions
             self.__functions[k] = v
 
-        for k,v in module.Globals.items():
+        for k, v in module.Globals.items():
             assert k not in self.__globals
             self.__globals[k] = v
 

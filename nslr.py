@@ -2,6 +2,7 @@
 from nsl import LinearIR, VM
 import argparse
 
+
 def run(args):
 	if args.wasm:
 		print("Executing '{}' using '{}'".format(args.MODULE, args.wasm_runtime))

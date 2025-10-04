@@ -1,7 +1,9 @@
 from nsl import Errors, Visitor
 
+
 class ValidateExportedFunctionsVisitor(Visitor.DefaultVisitor):
     """Validate that exported functions have no overloads."""
+
     def __init__(self):
         super().__init__()
         self.valid = True
@@ -17,13 +19,18 @@ class ValidateExportedFunctionsVisitor(Visitor.DefaultVisitor):
                 self._exportedFunctions.add(name)
 
     def v_Function(self, f, ctx=None):
-        with Errors.CompileExceptionToErrorHandler (self.errorHandler):
+        with Errors.CompileExceptionToErrorHandler(self.errorHandler):
             self._ValidateFunction(f)
-            
+
+
 def GetPass():
     from nsl import Pass
-    def IsValid (visitor):
+
+    def IsValid(visitor):
         return visitor.valid
-    return Pass.MakePassFromVisitor(ValidateExportedFunctionsVisitor(),
-                                    'validate-exported-functions',
-                                    validator = IsValid)
+
+    return Pass.MakePassFromVisitor(
+        ValidateExportedFunctionsVisitor(),
+        "validate-exported-functions",
+        validator=IsValid,
+    )
