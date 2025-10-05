@@ -23,7 +23,7 @@ class Pass:
 
 
 def MakePassFromVisitor(
-    visitor, name, validator=None | Callable[[Visitor], bool], *,
+    visitor, name, validator: Callable[[Visitor], bool] | None = None, *,
     flags=PassFlags.Default
 ):
     class VisitorPass(Pass):
@@ -49,6 +49,7 @@ def MakePassFromVisitor(
             if validator is None:
                 return True
             else:
+                print(repr(validator))
                 return validator(self.__visitor)
 
         @property

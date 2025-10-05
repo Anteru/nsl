@@ -17,7 +17,7 @@ class TestValidateExportedFunctions:
 
         validatePass = ValidateExportedFunctionsVisitor()
         validatePass.Visit(p)
-        assert validatePass.valid == False
+        assert not validatePass.valid
 
     def testOverloadNonExportedWorks(self):
         p = nsl.ast.Module()
@@ -28,4 +28,4 @@ class TestValidateExportedFunctions:
 
         validatePass = ValidateExportedFunctionsVisitor()
         validatePass.Visit(p)
-        assert validatePass.valid == True
+        assert validatePass.valid

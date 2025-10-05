@@ -52,7 +52,7 @@ def testSimpleAddIntToTwoDimensionalGlobalArray():
     g = [[1, 2], [3, 4]]
     vm.SetGlobal("g", g)
 
-    r = vm.Invoke("f", a=3, i=1, j=0)
+    vm.Invoke("f", a=3, i=1, j=0)
     assert g[1][0] == 6
 
 
@@ -64,7 +64,7 @@ def testSimpleWriteToGlobal():
     g = 0
     vm.SetGlobal("g", g)
 
-    r = vm.Invoke("f", v=5)
+    vm.Invoke("f", v=5)
     g = vm.GetGlobal("g")
     assert g == 5
 
@@ -78,7 +78,7 @@ def testSimpleWriteToGlobalArray():
     g = [0, 1, 2, 3, 4, 5]
     vm.SetGlobal("g", g)
 
-    r = vm.Invoke("f", i=3, v=1337)
+    vm.Invoke("f", i=3, v=1337)
     assert g[3] == 1337
 
 

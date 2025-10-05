@@ -16,4 +16,4 @@ class TestValidateVariableNames:
         v = ValidateVariableNamesVisitor()
         v.Visit(f)
 
-        assert v.valid == False
+        assert not v.valid
