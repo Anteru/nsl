@@ -10,9 +10,9 @@ class UpdateLocationsVisitor(Visitor.DefaultVisitor):
             locations.append(obj.GetLocation())
 
         def GetLocation(c, ctx=None):
-            l = c.GetLocation()
-            if not l.IsUnknown:
-                locations.append(l)
+            location = c.GetLocation()
+            if not location.IsUnknown:
+                locations.append(location)
 
         obj.ForEachChild(GetLocation)
 

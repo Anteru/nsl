@@ -1,8 +1,9 @@
 from nsl.ast import SourceMapping
 
+
 class TestAstSourceMapping:
     def testLineOffsets(self):
-        sm = SourceMapping('''0\n11\n\n2''')
+        sm = SourceMapping("""0\n11\n\n2""")
         #                     0 123 4 56
         #                     0 011 1 23
         assert sm.GetLineFromOffset(0) == 0

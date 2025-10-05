@@ -1,4 +1,4 @@
-﻿from nsl import ast, Visitor
+﻿from nsl import Visitor
 
 
 class PrettyPrintVisitor(Visitor.DefaultVisitor):

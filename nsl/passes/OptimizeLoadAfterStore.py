@@ -1,4 +1,4 @@
-from nsl import Errors, types, Visitor
+from nsl import Visitor
 from .. import LinearIR
 
 

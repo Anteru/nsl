@@ -1,5 +1,7 @@
 from io import StringIO
 import enum
+from typing import Callable
+from .Visitor import Visitor
 
 
 class PassFlags(enum.IntFlag):
@@ -13,15 +15,16 @@ class Pass:
         return self.__class__.__name__
 
     @property
-    def Flags(self):
+    def Flags(self) -> PassFlags:
         return PassFlags.Default
 
-    def Process(self, ast, ctx=None, output=StringIO()):
+    def Process(self, root, ctx=None, output=StringIO()) -> bool:
         return False
 
 
 def MakePassFromVisitor(
-    visitor, name, validator=None, *, flags=PassFlags.Default
+    visitor, name, validator=None | Callable[[Visitor], bool], *,
+    flags=PassFlags.Default
 ):
     class VisitorPass(Pass):
         def __init__(self):
@@ -32,18 +35,18 @@ def MakePassFromVisitor(
         def Flags(self):
             return self.__flags
 
-        def Process(self, ast, ctx=None, output=StringIO()):
+        def Process(self, root, ctx=None, output=StringIO()):
             import nsl.Errors
 
             errorHandler = nsl.Errors.ErrorHandler()
             self.__visitor.SetErrorHandler(errorHandler)
             self.__visitor.SetOutput(output)
-            self.__visitor.Visit(ast)
+            self.__visitor.Visit(root)
 
             for message in errorHandler.messages:
                 print(message)
 
-            if not validator:
+            if validator is None:
                 return True
             else:
                 return validator(self.__visitor)

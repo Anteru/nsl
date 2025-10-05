@@ -1,10 +1,10 @@
 from nsl import LinearIR, Visitor, WebAssembly
-import collections
-from typing import Tuple, Dict, cast
+from typing import Dict, cast
 import math
 
 
-def _MakeStructForArray(elementType: WebAssembly.Type, length: int | list[int]):
+def _MakeStructForArray(elementType: WebAssembly.Type,
+                        length: int | list[int]):
     if isinstance(length, int):
         return WebAssembly.StructType([elementType for _ in range(length)])
     else:
@@ -12,7 +12,7 @@ def _MakeStructForArray(elementType: WebAssembly.Type, length: int | list[int]):
         return _MakeStructForArray(elementType, size)
 
 
-def _ConvertType(t: LinearIR.Type) -> WebAssembly.ValueType:
+def _ConvertType(t: LinearIR.Type) -> WebAssembly.Type:
     if t.IsScalar():
         if isinstance(t, LinearIR.IntegerType):
             return WebAssembly.ValueType.i32
@@ -118,6 +118,7 @@ class GenerateWasmVisitor(Visitor.DefaultVisitor):
             self.__refToLocalMap = {}
 
         def OnLeaveFunction(self):
+            assert self.__code
             self.__module.AddCode(self.__code)
             self.__code = None
 
@@ -127,6 +128,7 @@ class GenerateWasmVisitor(Visitor.DefaultVisitor):
     def v_VariableAccessInstruction(
         self, vai: LinearIR.VariableAccessInstruction, ctx: Context
     ):
+        assert ctx.Code
         if vai.Scope == LinearIR.VariableAccessScope.FUNCTION_ARGUMENT:
             index = vai.Variable
             ctx.Code.AddInstruction(
@@ -142,6 +144,7 @@ class GenerateWasmVisitor(Visitor.DefaultVisitor):
             )
 
     def __PushValueOntoStack(self, value: LinearIR.Value, ctx: Context):
+        assert ctx.Code
         if isinstance(value, LinearIR.ConstantValue):
             ctx.Code.AddInstruction(_GenerateConstant(value))
         else:
@@ -153,6 +156,8 @@ class GenerateWasmVisitor(Visitor.DefaultVisitor):
             )
 
     def v_BinaryInstruction(self, bi: LinearIR.BinaryInstruction, ctx: Context):
+        assert ctx.Code
+
         if isinstance(bi.Type, LinearIR.IntegerType):
             operationType = "i32"
             unsigned = bi.Type.Unsigned
@@ -192,6 +197,7 @@ class GenerateWasmVisitor(Visitor.DefaultVisitor):
             WebAssembly.Instruction(WebAssembly.opcodes[opCode])
         )
 
+        assert ctx.Code
         ctx.Code.AddInstruction(
             WebAssembly.Instruction(
                 WebAssembly.opcodes["local.set"],
@@ -203,15 +209,17 @@ class GenerateWasmVisitor(Visitor.DefaultVisitor):
         if ri.Value:
             self.__PushValueOntoStack(ri.Value, ctx)
 
+        assert ctx.Code
         ctx.Code.AddInstruction(
             WebAssembly.Instruction(WebAssembly.opcodes["return"])
         )
 
     def v_Function(self, function: LinearIR.Function, ctx: Context):
         ctx.OnEnterFunction(function.Name)
-        functionType = _ConvertFunctionType(function.Type)
-        functionTypeIdx = ctx.Module.AddFunctionType(functionType)
-        functionIdx = ctx.Module.AddFunction(functionTypeIdx)
+        assert ctx.Code
+
+        functionType = _ConvertFunctionType(
+            cast(LinearIR.FunctionType, function.Type))
 
         # Check if function is exported - for now assume yes
 

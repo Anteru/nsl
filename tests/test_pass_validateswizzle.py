@@ -1,10 +1,11 @@
 ﻿from nsl.passes.ValidateSwizzle import ValidateSwizzleMask
 import pytest
 
+
 class TestValidateSwizzlePass:
     def testMixFail(self):
         with pytest.raises(Exception):
-            ValidateSwizzleMask('xyrg')
+            ValidateSwizzleMask("xyrg")
 
     def testRepeatedWorks(self):
-        ValidateSwizzleMask('rrrr')
+        ValidateSwizzleMask("rrrr")

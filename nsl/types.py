@@ -2,7 +2,7 @@
 from nsl import op, Errors
 from enum import Enum
 import collections
-from typing import List, Iterable, Tuple, OrderedDict, Optional
+from typing import List, Tuple, Optional
 
 
 class UnknownSymbolException(Exception):
@@ -106,8 +106,8 @@ class ArrayType(AggregateType):
         Type.__init__(self)
         assert isinstance(arraySize, collections.abc.Sequence)
         assert len(arraySize) > 0
-        for l in arraySize:
-            assert l > 0
+        for el in arraySize:
+            assert el > 0
         self.__elementType = elementType
         self.__arraySize = tuple(arraySize)
 
@@ -827,7 +827,7 @@ class Scope:
                 )
             )
 
-        if not functionName in self.__functions:
+        if functionName not in self.__functions:
             self.__functions[functionName] = []
         self.__functions[functionName].append(typeinfo)
         self.__registeredObjects.add(functionName)
@@ -838,8 +838,8 @@ class Scope:
         If the function is overloaded, this will find the best candidate."""
 
         # Resolve overloaded __functions
-        if not functionName in self.__functions:
-            if not self.__parent is None:
+        if functionName not in self.__functions:
+            if self.__parent is not None:
                 return self.__parent.FindFunction(functionName, argumentTypes)
             else:
                 Errors.ERROR_UNKNOWN_FUNCTION_CALL.Raise(functionName)

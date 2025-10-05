@@ -1,9 +1,11 @@
 ﻿from nsl.passes.ValidateExportedFunctions import (
-    ValidateExportedFunctionsVisitor
+    ValidateExportedFunctionsVisitor,
 )
 
-import nsl.ast, nsl.types
+import nsl.ast
+import nsl.types
 import nsl.Errors
+
 
 class TestValidateExportedFunctions:
     def testOverloadExportedFails(self):

@@ -117,6 +117,8 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
             self.__startNewBlock = True
 
         def OnLeaveFunction(self):
+            assert self.__function
+
             self.__function.UpdateUses()
             self.__functions.append(self.__function)
             self.__function = None
@@ -176,12 +178,14 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
 
         @property
         def BasicBlock(self):
+            assert self.__function
             if self.__startNewBlock:
                 self.__function.CreateBasicBlock()
                 self.__startNewBlock = False
             return self.__function.BasicBlocks[-1]
 
         def CreateBasicBlock(self):
+            assert self.__function
             self.__startNewBlock = False
             return self.__function.CreateBasicBlock()
 
@@ -258,7 +262,7 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
         # the exit node.) After the body, we place the increment, and an
         # unconditional branch back to the conditional test
 
-        init = self.v_Visit(expr.GetInitialization(), ctx)
+        self.v_Visit(expr.GetInitialization(), ctx)
 
         # Basic block containing the conditional test
         condBB = ctx.CreateBasicBlock()
@@ -416,8 +420,6 @@ class LowerToIRVisitor(Visitor.DefaultVisitor):
         assert isinstance(value, LinearIR.Value)
 
         if expr.isSwizzle:
-            last = value
-
             swizzleComponentToIndex = {
                 "r": 0,
                 "g": 1,

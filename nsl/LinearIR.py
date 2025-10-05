@@ -1203,7 +1203,7 @@ class InstructionPrinter(Visitor):
     def v_ArrayAccessInstruction(self, aai: ArrayAccessInstruction, ctx=None):
         if aai.Store:
             self.__Print(
-                f"store",
+                "store",
                 self.__FormatReference(aai.Array),
                 self.__FormatReference(aai.Index),
                 self.__FormatReference(aai.Store),
@@ -1212,7 +1212,7 @@ class InstructionPrinter(Visitor):
             self.__Print(
                 self.__FormatReference(aai),
                 "=",
-                f"load",
+                "load",
                 self.__FormatType(aai.Type),
                 self.__FormatReference(aai.Array),
                 self.__FormatReference(aai.Index),
@@ -1249,7 +1249,7 @@ class InstructionPrinter(Visitor):
     def v_MemberAccessInstruction(self, mai: MemberAccessInstruction, ctx=None):
         if mai.Store:
             self.__Print(
-                f"fieldset",
+                "fieldset",
                 self.__FormatReference(mai.Parent),
                 mai.Member,
                 self.__FormatReference(mai.Store),
@@ -1258,7 +1258,7 @@ class InstructionPrinter(Visitor):
             self.__Print(
                 self.__FormatReference(mai),
                 "=",
-                f"fieldget",
+                "fieldget",
                 self.__FormatType(mai.Type),
                 self.__FormatReference(mai.Parent),
                 mai.Member,

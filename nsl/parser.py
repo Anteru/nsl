@@ -112,8 +112,6 @@ class NslParser:
 
     def p_argument_2(self, p):
         """argument : arg_mod_opt type"""
-        if not p[3]:
-            arraySize = None
 
         if p[1]:
             p[1] = set(p[1])

@@ -1,5 +1,5 @@
 ﻿from collections import OrderedDict
-from nsl import ast, types, Errors, Visitor, LinearIR
+from nsl import ast, types, Errors, Visitor, LinearIR, Pass
 from enum import Enum
 from typing import List
 
@@ -206,7 +206,6 @@ class ComputeTypeVisitor(Visitor.DefaultVisitor):
         ctx.pop()
 
     def v_Module(self, module: ast.Module, ctx: List[types.Scope]):
-        import pickle
 
         # Module imports are added first, so the symbols exported from a module
         # are available to everyone
@@ -233,12 +232,8 @@ class ComputeTypeVisitor(Visitor.DefaultVisitor):
             self.v_Visit(func, ctx)
 
 
-import nsl.Pass
-
-
-class ComputeTypesPass(nsl.Pass.Pass):
+class ComputeTypesPass(Pass.Pass):
     def __init__(self):
-        import os, pickle, nsl.parser
 
         # register default functions and types
         self.visitor = ComputeTypeVisitor()

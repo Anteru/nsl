@@ -28,8 +28,8 @@ class HeapType(Type, Enum):
         WriteByte(output, self.value)
 
 
-class StructType:
-    def __init__(self, fields: [Type]):
+class StructType(Type):
+    def __init__(self, fields: list[Type]):
         self.__fields = fields
 
     def WriteTo(self, output: BinaryIO):
@@ -339,7 +339,7 @@ class ElementSection(Section):
 
 
 class Local:
-    def __init__(self, valueType: ValueType, count: int = 1):
+    def __init__(self, valueType: ValueType | StructType, count: int = 1):
         self.__n = count
         self.__valueType = valueType
 
