@@ -163,7 +163,7 @@ class Expression(Node):
     def __init__(self, children=[]):
         super().__init__()
         self.children = children
-        self.__type = None
+        self.__type: types.Type | None = None
 
     def GetType(self):
         return self.__type
@@ -216,7 +216,7 @@ class CastExpression(UnaryExpression):
 class ConstructPrimitiveExpression(UnaryExpression):
     """Expression of the type primitive_type (expr, ...)."""
 
-    def __init__(self, targetType, expressions):
+    def __init__(self, targetType: types.PrimitiveType, expressions):
         super().__init__(expressions)
         assert isinstance(targetType, types.PrimitiveType)
         self.SetType(targetType)
@@ -238,7 +238,7 @@ class CallExpression(UnaryExpression):
     """A function call of the form ID ([expr], ...). ID references
     an unresolved function type at first."""
 
-    def __init__(self, function: types.Type, expressions: List[Expression]):
+    def __init__(self, function: types.Function, expressions: List[Expression]):
         super().__init__(expressions)
         self.function = function
 
@@ -253,7 +253,7 @@ class CallExpression(UnaryExpression):
     def SetArguments(self, arguments: List[Expression]):
         self.children = arguments
 
-    def GetFunction(self) -> types.Type:
+    def GetFunction(self) -> types.Function:
         return self.function
 
     def ResolveType(self, scope):
@@ -330,7 +330,7 @@ class BinaryExpression(Expression):
     def __init__(self, op, left, right):
         super().__init__([left, right])
         self.op = op
-        self._operator = None
+        self._operator: types.ExpressionType | None = None
 
     def GetLeft(self):
         return self.children[0]

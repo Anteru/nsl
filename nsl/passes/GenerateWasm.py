@@ -3,8 +3,7 @@ from typing import Dict, cast
 import math
 
 
-def _MakeStructForArray(elementType: WebAssembly.Type,
-                        length: int | list[int]):
+def _MakeStructForArray(elementType: WebAssembly.Type, length: int | list[int]):
     if isinstance(length, int):
         return WebAssembly.StructType([elementType for _ in range(length)])
     else:
@@ -219,7 +218,8 @@ class GenerateWasmVisitor(Visitor.DefaultVisitor):
         assert ctx.Code
 
         functionType = _ConvertFunctionType(
-            cast(LinearIR.FunctionType, function.Type))
+            cast(LinearIR.FunctionType, function.Type)
+        )
 
         # Check if function is exported - for now assume yes
 

@@ -27,6 +27,7 @@ def ComputeSwizzleType(inType, mask):
     if outComponentCount == 1:
         return swizzleType
     else:
+        assert isinstance(swizzleType, types.ScalarType)
         result = types.VectorType(swizzleType, outComponentCount)
 
         return result
@@ -93,7 +94,7 @@ class ComputeTypeVisitor(Visitor.DefaultVisitor):
             type(expr), expr
         )
         # We type-cast here so we can process access trees separately
-        if isinstance(expr, ast.VariableAccessExpression):
+        if isinstance(expr, ast.MemberAccessExpression | ast.ArrayExpression):
             p = expr.GetParent()
             # Figure out the parent type
             self._ProcessExpression(p, scope)

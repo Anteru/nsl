@@ -1,15 +1,18 @@
 ﻿from nsl import ast, types, Visitor
+from typing import cast
 
 
 class AddImplicitCastVisitor(Visitor.DefaultVisitor):
     def _GetTargetType(self, sourceType: types.Type, componentType: types.Type):
-        assert isinstance(sourceType, types.Type)
-        assert isinstance(componentType, types.Type)
+        assert isinstance(sourceType, types.PrimitiveType)
+        assert isinstance(componentType, types.PrimitiveType)
 
         if sourceType.IsVector() or sourceType.IsMatrix():
+            sourceType = cast(types.VectorType | types.MatrixType, sourceType)
             return sourceType.WithComponentType(componentType)
         else:
             # Must be a scalar
+            assert isinstance(componentType, types.ScalarType)
             return componentType
 
     def v_ArrayExpression(self, node, ctx=None):
@@ -32,21 +35,25 @@ class AddImplicitCastVisitor(Visitor.DefaultVisitor):
         self.v_Generic(node.GetLeft(), ctx)
         self.v_Generic(node.GetRight(), ctx)
 
-        if node.GetLeft().GetType() != node.GetOperator().GetOperandType(0):
+        operator = node.GetOperator()
+        assert operator
+
+        if node.GetLeft().GetType() != operator.GetOperandType(0):
             node.SetLeft(
                 ast.CastExpression(
-                    node.GetLeft(), node.GetOperator().GetOperandType(0), True
+                    node.GetLeft(), operator.GetOperandType(0), True
                 )
             )
 
-        if node.GetRight().GetType() != node.GetOperator().GetOperandType(1):
+        if node.GetRight().GetType() != operator.GetOperandType(1):
             node.SetRight(
                 ast.CastExpression(
-                    node.GetRight(), node.GetOperator().GetOperandType(1), True
+                    node.GetRight(), operator.GetOperandType(1), True
                 )
             )
 
     def v_ConstructPrimitiveExpression(self, node, ctx=None):
+        assert node
         assert isinstance(node, ast.ConstructPrimitiveExpression)
 
         # The primitive type of each argument must be the same as the result

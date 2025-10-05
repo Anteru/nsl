@@ -1,7 +1,7 @@
 ﻿from collections import OrderedDict
 from nsl import op, Errors
 from enum import Enum
-import collections
+import collections.abc
 from typing import List, Tuple, Optional
 
 
@@ -92,8 +92,7 @@ class PrimitiveType(Type):
     def IsMatrix(self):
         return self.GetKind() == PrimitiveTypeKind.Matrix
 
-    def GetKind(self):
-        return None
+    def GetKind(self) -> PrimitiveTypeKind: ...
 
 
 class AggregateType(Type):
@@ -349,7 +348,7 @@ class VectorType(PrimitiveType):
 
 
 class MatrixType(PrimitiveType):
-    def __init__(self, componentType: Type, rows: int, columns: int):
+    def __init__(self, componentType: ScalarType, rows: int, columns: int):
         assert rows > 0 and columns > 0
         assert isinstance(componentType, ScalarType)
         super(MatrixType, self).__init__()
@@ -365,7 +364,7 @@ class MatrixType(PrimitiveType):
     def GetColumnCount(self) -> int:
         return self.__size[1]
 
-    def GetComponentType(self) -> Type:
+    def GetComponentType(self) -> ScalarType:
         return self.__componentType
 
     def GetSize(self) -> Tuple[int, int]:
@@ -551,7 +550,9 @@ def ResolveType(theType: Type, scope: "Scope"):
         return theType
 
 
-def ResolveFunction(theType: Type, scope, argumentTypes):
+def ResolveFunction(
+    theType: Function, scope: "Scope", argumentTypes
+) -> Function:
     if theType.NeedsResolve():
         return scope.FindFunction(theType.GetName(), argumentTypes)
     else:
@@ -634,6 +635,9 @@ def ResolveBinaryExpressionType(
 
         leftShape = _GetRowsColumns(left)
         rightShape = _GetRowsColumns(right)
+
+        assert leftShape
+        assert rightShape
 
         # At this point, must be a MUL of matrix * vector or matrix * matrix
         # We must prevent vector * vector
@@ -756,7 +760,7 @@ class Scope:
         self.__symbols = collections.OrderedDict()
         self.__types = collections.OrderedDict()
         self.__parent = parent
-        self.__functions = collections.OrderedDict()
+        self.__functions: dict[str, list[Function]] = collections.OrderedDict()
 
         self.__registeredObjects = set()
 
@@ -816,7 +820,7 @@ class Scope:
             else:
                 raise UnknownTypeException(typename)
 
-    def RegisterFunction(self, functionName, typeinfo):
+    def RegisterFunction(self, functionName: str, typeinfo: Function):
         if (
             functionName in self.__registeredObjects
             and functionName in self.__symbols
@@ -832,7 +836,9 @@ class Scope:
         self.__functions[functionName].append(typeinfo)
         self.__registeredObjects.add(functionName)
 
-    def FindFunction(self, functionName: str, argumentTypes: List[Type]):
+    def FindFunction(
+        self, functionName: str, argumentTypes: List[Type]
+    ) -> Function:
         """Find a function with the specified name matching the argument types.
 
         If the function is overloaded, this will find the best candidate."""
@@ -844,10 +850,10 @@ class Scope:
             else:
                 Errors.ERROR_UNKNOWN_FUNCTION_CALL.Raise(functionName)
 
-        def GetFirst(t):
+        def GetFirst(t: Tuple[int, Function]):
             return t[0]
 
-        def IsValidCandidate(candidate):
+        def IsValidCandidate(candidate: Tuple[int, Function]):
             return candidate[0] >= 0
 
         candidates = self.__functions[functionName]

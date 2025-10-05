@@ -126,7 +126,7 @@ class Visitor:
         )
         return None
 
-    def GetContext(self):
+    def GetContext(self) -> object | None:
         return None
 
     def v_Visit(self, obj, ctx=None):
